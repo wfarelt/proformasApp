@@ -9,6 +9,8 @@ from django.template.loader import get_template
 from weasyprint import HTML
 from nlt import numlet as nl
 
+from faker import Faker
+
 # Create your views here.
 
 def home(request):
@@ -27,7 +29,7 @@ def producto_new(request):
         form = ProductoForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('productos_list')
+            return redirect('product_list')
     title = 'Nuevo producto'
     context = {'form': form, 'title': title}
     return render(request, 'core/producto_new.html', context)  
@@ -39,23 +41,40 @@ def product_edit(request, id):
         form = ProductoForm(request.POST, instance=producto)
         if form.is_valid():
             form.save()
-            return redirect('productos_list')
+            return redirect('product_list')
     else:
         form = ProductoForm(instance=producto)
     return render(request, 'core/producto_new.html', {'form': form, 'title': title})
 
 # Listar productos
-def productos_list(request):
-    productos = Producto.objects.all()
-    title = 'Listado de productos'
-    context = {'productos': productos, 'title': title}
-    return render(request, 'core/productos_list.html', context)
+class ProductListView(ListView):
+    model = Producto
+    template_name = 'core/productos_list.html'  # Nombre de la plantilla
+    context_object_name = 'productos'
+    context_title = 'Listado de productos'
+    paginate_by = 10  # Número de productos por página
+
+    def get_queryset(self):
+        query = self.request.GET.get('q')
+        object_list = Producto.objects.all()
+        if query:
+            object_list = object_list.filter(nombre__icontains=query) | object_list.filter(descripcion__icontains=query)
+        return object_list
 
 # Listar proformas
-def proformas_list(request):
-    proformas = Proforma.objects.all()
-    context = {'proformas': proformas}
-    return render(request, 'core/proformas_list.html', context)
+class ProformaListView(ListView):
+    model = Proforma
+    template_name = 'core/proformas_list.html'  # Nombre de la plantilla
+    context_object_name = 'proformas'
+    context_title = 'Listado de proformas'
+    paginate_by = 10  # Número de proformas por página
+
+    def get_queryset(self):
+            query = self.request.GET.get('q')
+            object_list = Proforma.objects.all()
+            if query:
+                object_list = object_list.filter(id__icontains=query) | object_list.filter(cliente__icontains=query)
+            return object_list
 
 # Crear proforma
 def proforma_new(request):
@@ -139,9 +158,29 @@ def cliente_new(request):
         form = ClienteForm(request.POST)
         if form.is_valid():
             form.save()
+            # crear_clientes(50)
             return redirect('client_list')
     context = {'form': form}
     return render(request, 'core/cliente_form.html', context)
+
+
+def crear_clientes(n):
+    fake = Faker()
+    for _ in range(n):
+        name = fake.name()
+        nit = fake.bothify(text='########-#')
+        email = fake.email()
+        phone = fake.phone_number()
+        address = fake.address()
+        
+        cliente = Cliente(
+            name=name,
+            nit=nit,
+            email=email,
+            phone=phone,
+            address=address
+        )
+        cliente.save()
 
 def cliente_edit(request, id):
     cliente = get_object_or_404(Cliente, pk=id)

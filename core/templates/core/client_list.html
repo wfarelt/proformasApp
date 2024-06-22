@@ -1,16 +1,16 @@
 {% extends 'core/base.html' %}
 
-{% block title %}Clients List{% endblock %}
+{% block title %}Lista de Clientes{% endblock %}
 
 {% block content %}
 
-<h1>Lista de Clientes</h1>
+<h2>Lista de Clientes</h2>
     <form method="get">
         <input type="text" name="q" id="search-field" placeholder="Buscar por nombre o NIT" value="{{ request.GET.q }}">
         <button type="submit">Buscar</button>
     </form>
     <br>
-    <table border="1">
+    <table class="table table-sm">
         <thead>
             <tr>
                 <th>Nombre</th>
@@ -30,8 +30,8 @@
                     <td>{{ cliente.phone }}</td>
                     <td>{{ cliente.address }}</td>
                     <td>
-                        <a href="{% url 'cliente_edit' cliente.id %}" class="btn btn-primary">Edit</a>
-                        <a href="{% url 'cliente_delete' cliente.id %}" class="btn btn-danger">Delete</a>
+                        <a href="{% url 'cliente_edit' cliente.id %}" class=" btn-warning btn-sm"><i class="bi bi-pencil-square"></i></a>
+                        <a href="{% url 'cliente_delete' cliente.id %}" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></a>
                     </td>
                 </tr>
             {% empty %}
@@ -60,7 +60,8 @@
         </span>
     </div>
     <br>
-    <a href="{% url 'cliente_new' %}" class="btn btn-success">Create</a>
+    
+    <a href="{% url 'cliente_new' %}" class="btn btn-success btn-sm">Cliente <i class="bi bi-plus"></i></a>
     
 {% endblock content %}
 

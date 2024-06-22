@@ -1,10 +1,10 @@
 # core/urls.py
 
 from django.urls import path
-from .views import home, proformas_list, proforma_add_client , proforma_new, proforma_edit,\
+from .views import home, ProformaListView, proforma_add_client , proforma_new, proforma_edit,\
     agregar_producto_a_detalle, producto_new, eliminar_producto_a_detalle, \
         cliente_new, cliente_edit, cliente_delete, ClientListView,\
-            product_detail, product_edit, productos_list, generate_proforma_pdf, \
+            product_detail, product_edit, ProductListView, generate_proforma_pdf, \
                 reportes
 
 urlpatterns = [
@@ -13,9 +13,9 @@ urlpatterns = [
     path('producto/<int:id>/', product_detail, name='product_detail'),
     path('producto/new/', producto_new, name='producto_new'),
     path('producto/edit/<int:id>/', product_edit, name='product_edit'),
-    path('productos/', productos_list, name='productos_list'),
+    path('productos/', ProductListView.as_view(), name='product_list'),
     #proformas
-    path('proformas/', proformas_list, name='proformas_list'),
+    path('proformas/', ProformaListView.as_view(), name='proforma_list'),
     path('proforma/new/', proforma_new, name='proforma_new'),
     path('proforma/edit/<int:id>/', proforma_edit, name='proforma_edit'),
     path('proforma/agregar_producto_a_detalle/', agregar_producto_a_detalle, name='agregar_producto_a_detalle'),

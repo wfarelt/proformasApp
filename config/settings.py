@@ -29,7 +29,12 @@ SECRET_KEY = 'django-insecure-ctpqyd^wq@^n(sc!5qjq*)=f7qffhdmqi&o(i#e1ifxqml7!%9
 
 # Cargar los ALLOWED_HOSTS desde el archivo .env o establecer un valor por defecto
 
-DEBUG = config('DEBUG', default=False, cast=bool)
+# Detectar el entorno actual
+DJANGO_ENV = config('DJANGO_ENV', default='local')
+if DJANGO_ENV == 'local':
+    DEBUG = True
+else:
+    DEBUG = False
 
 # Application definition
 
@@ -41,6 +46,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'core',
+    'import_export',
+    'bootstrap4',
 ]
 
 MIDDLEWARE = [
@@ -58,7 +65,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -77,8 +84,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-# Detectar el entorno actual
-DJANGO_ENV = config('DJANGO_ENV', default='local')
+
 
 if DJANGO_ENV == 'local':
     # Configuración de la base de datos para el entorno local
@@ -140,7 +146,8 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 STATICFILES_DIRS = [
-    BASE_DIR / 'static',
+    BASE_DIR / "static",
+    "/var/www/static/",
 ]
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'

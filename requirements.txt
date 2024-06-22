@@ -9,4 +9,5 @@ django-import-export==4.0.7
 pillow==10.3.0
 # Generar PDF a partir de HTML
 weasyprint==62.2
-
+# Crear datos falsos
+Faker==25.9.1
