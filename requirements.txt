@@ -7,4 +7,6 @@ numlet==2.0.0
 django-import-export==4.0.7
 # Edicion de imagenes en Python
 pillow==10.3.0
+# Generar PDF a partir de HTML
+weasyprint==62.2
 

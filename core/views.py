@@ -6,7 +6,7 @@ from .forms import ProductoForm, ClienteForm, ProformaAddClientForm
 #reporte pdf
 from django.http import HttpResponse
 from django.template.loader import get_template
-#from weasyprint import HTML
+from weasyprint import HTML
 from nlt import numlet as nl
 
 # Create your views here.
@@ -185,7 +185,7 @@ def generate_proforma_pdf(request, id):
     # Generar el PDF usando WeasyPrint
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = 'inline; filename="proforma.pdf"'
-   #HTML(string=html).write_pdf(response)
+    HTML(string=html).write_pdf(response)
     return response
 
 # ReportesGenerales
