@@ -1,0 +1,11 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+    <h2>Proforma Add Client</h2>
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Agregar cliente</button>
+    </form>
+    <a href="{% url 'proforma_new' %}" class="btn btn-primary">Volver</a>
+{% endblock %}

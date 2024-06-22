@@ -1,0 +1,74 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Clients List{% endblock %}
+
+{% block content %}
+
+<h1>Lista de Clientes</h1>
+    <form method="get">
+        <input type="text" name="q" id="search-field" placeholder="Buscar por nombre o NIT" value="{{ request.GET.q }}">
+        <button type="submit">Buscar</button>
+    </form>
+    <br>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>NIT</th>
+                <th>Email</th>
+                <th>Teléfono</th>
+                <th>Dirección</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cliente in clientes %}
+                <tr>
+                    <td>{{ cliente.name }}</td>
+                    <td>{{ cliente.nit }}</td>
+                    <td>{{ cliente.email }}</td>
+                    <td>{{ cliente.phone }}</td>
+                    <td>{{ cliente.address }}</td>
+                    <td>
+                        <a href="{% url 'cliente_edit' cliente.id %}" class="btn btn-primary">Edit</a>
+                        <a href="{% url 'cliente_delete' cliente.id %}" class="btn btn-danger">Delete</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5">No se encontraron clientes.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="pagination">
+        <span class="step-links">
+            {% if page_obj.has_previous %}
+                <a href="?q={{ request.GET.q }}&page=1">&laquo; primera</a>
+                <a href="?q={{ request.GET.q }}&page={{ page_obj.previous_page_number }}">anterior</a>
+            {% endif %}
+
+            <span class="current">
+                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}.
+            </span>
+
+            {% if page_obj.has_next %}
+                <a href="?q={{ request.GET.q }}&page={{ page_obj.next_page_number }}">siguiente</a>
+                <a href="?q={{ request.GET.q }}&page={{ page_obj.paginator.num_pages }}">última &raquo;</a>
+            {% endif %}
+        </span>
+    </div>
+    <br>
+    <a href="{% url 'cliente_new' %}" class="btn btn-success">Create</a>
+    
+{% endblock content %}
+
+{% block scripts %}
+    <!-- JavaScript para enfocar el campo de búsqueda -->
+    <script type="text/javascript">
+        document.addEventListener("DOMContentLoaded", function() {
+            document.getElementById("search-field").focus();
+        });
+    </script>
+{% endblock %}

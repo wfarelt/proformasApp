@@ -1,0 +1,87 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Proforma New{% endblock %}
+{% load static %}
+
+{% block content %}
+
+        Proforma: {{proforma.id}}
+        <br>
+        Fecha: {{proforma.fecha}}
+        <br>
+        Cliente: {{proforma.cliente}} 
+        <a href="{% url 'proforma_add_client' proforma.id %}" class="btn btn-primary">Cambiar cliente</a>
+        <br>
+        Total: {{proforma.total}}
+        <br>
+        <a href="{% url 'generate_proforma_pdf' proforma.id %}" class="btn btn-primary">Generar PDF</a>
+        <br>
+
+      <h2>PRODUCTOS</h2>
+      <table>
+          <tr>
+            <th>Codigo</th>
+            <th>Descripcion</th>
+            <th>Stock</th>
+            <th>Precio</th>
+            <th>Cantidad</th>
+            <th>Subtotal</th>
+            <th></th>
+          </tr>      
+          
+          {% for producto in productos_list %}
+          <tr>
+            <form method="POST" action="{% url 'agregar_producto_a_detalle' %}">
+              {% csrf_token %}
+              <input type="hidden" name="proforma_id" value="{{ proforma.id }}">
+              <input type="hidden" name="producto_id" value="{{ producto.id }}">
+              <td>{{ producto.nombre }}</td>
+              <td>{{ producto.descripcion }}</td>
+              <td>{{ producto.stock }}</td>
+              <td><input type="number" id="precio{{ producto.id}}" name="precio" value="{{ producto.precio  }}" step="0.01"></td>
+              <td><input type="number" id="cantidad{{ producto.id}}" name="cantidad" placeholder="0"></td>
+              <td><input type="number" id="subtotal{{ producto.id}}" name="subtotal" value="{{ producto.precio  }}" readonly></td>    
+              <td><button type="submit">Agregar producto</button></td>
+            </form>
+          </tr>
+          {% endfor %}
+      </table>
+      <br>
+
+      <h2>DETALLE DE COMPRA</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Producto</th>
+            <th>Descripción</th>
+            <th>Cantidad</th>
+            <th>Precio_Bs.</th>
+            <th>Subtotal_Bs.</th>
+            <th>Ubicación</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for detalle in detalles %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ detalle.producto }}</td>
+            <td>{{ detalle.producto.descripcion }}</td>
+            <td style="text-align: center;">{{ detalle.cantidad }}</td>
+            <td style="text-align: right;">{{ detalle.precio_venta }}</td>
+            <td style="text-align: right;">{{ detalle.subtotal }}</td>
+            <td style="text-align: center;">{{ detalle.producto.location }}</td>
+            <td><a href="{% url 'eliminar_producto_a_detalle' detalle.id %}" class="btn btn-danger">Eliminar</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    <br>
+    <a href="{% url 'proformas_list' %}" class="btn btn-primary"> <-- Volver a proformas</a>
+
+{% endblock %}
+
+{% block scripts %}
+    <script src="{% static 'core/js/script.js' %}"></script>
+{% endblock %}

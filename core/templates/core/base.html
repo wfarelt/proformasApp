@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Mi Proyecto Django con Consola Mono{% endblock %}</title>
+    <!-- Bootstrap CSS 
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    -->
+    <!-- Consola Mono Font -->
+    <link href="https://fonts.cdnfonts.com/css/consola-mono" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="{% static 'core/css/styles.css' %}" rel="stylesheet">
+
+</head>
+<body>
+
+    <div class="container">
+        
+        <div class="navbar">
+            <a href="{% url 'home' %}">Home</a>
+            <a href="{% url 'proformas_list' %}">Profomas</a>
+            <a href="{% url 'productos_list' %}">Productos</a>
+            <a href="{% url 'client_list' %}">Clientes</a>
+            <a href="{% url 'reportes' %}">Reportes</a>
+        </div>
+        <br>
+
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <!-- Bootstrap JS, Popper.js, and jQuery -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    {% block scripts %}
+    {% endblock %}
+</body>
+</html>

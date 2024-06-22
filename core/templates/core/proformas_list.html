@@ -1,0 +1,33 @@
+{% extends 'core/base.html' %}
+{% block title %}Proformas List{% endblock %}
+
+
+{% block content %}
+    <h1>Proformas List</h1>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Fecha</th>
+                <th>Cliente</th>
+                <th>Total</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for proforma in proformas %}
+                <tr>
+                    <td>{{ proforma.id }}</td>
+                    <td>{{ proforma.fecha }}</td>
+                    <td>{{ proforma.cliente }}</td>
+                    <td>{{ proforma.total }}</td>
+                    <td>
+                        <a href="{% url 'proforma_edit' proforma.id %}" class="btn btn-primary">Editar</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <br>
+    <a href="{% url 'proforma_new' %}" class="btn btn-success">Create</a> 
+{% endblock %}

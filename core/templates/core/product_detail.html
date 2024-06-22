@@ -1,0 +1,25 @@
+{% extends 'core/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% load static %}
+
+{% block content %}
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-6">
+            IMAGE
+        </div>
+        <div class="col-md-6">
+            <h2>{{ producto.nombre }}</h2>
+            <p>{{ producto.descripcion }}</p>
+            <p>Precio: ${{ producto.precio }}</p>
+            <p>Stock: {{ producto.stock }}</p>
+            <p>Ubicación: {{ producto.location }}</p>
+            <a href="{% url 'productos_list' %}" class="btn btn-primary">Volver</a>
+        </div>
+    </div>
+</div>
+    
+{% endblock %}

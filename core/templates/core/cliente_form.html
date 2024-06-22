@@ -1,0 +1,11 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<h1>{{ form.instance.id|yesno:"Edit Customer,Add New Customer" }}</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Save</button>
+</form>
+<a href="{% url 'client_list' %}">Back to list</a>
+{% endblock %}

@@ -1,0 +1,10 @@
+Django==5.0.6
+# Configuración de la base de datos
+python-decouple==3.8
+# Convertir numeros a letras
+numlet==2.0.0
+# Importar y exportar archivos de excel
+django-import-export==4.0.7
+# Edicion de imagenes en Python
+pillow==10.3.0
+

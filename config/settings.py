@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 
+from decouple import config, Csv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -23,10 +25,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-ctpqyd^wq@^n(sc!5qjq*)=f7qffhdmqi&o(i#e1ifxqml7!%9'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Cargar el valor de DEBUG desde el archivo .env (opcional, por defecto False)
 
-ALLOWED_HOSTS = ['192.168.0.22','localhost']
+# Cargar los ALLOWED_HOSTS desde el archivo .env o establecer un valor por defecto
 
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 # Application definition
 
@@ -74,17 +77,31 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'proformas',
-        'USER': 'wfarel',
-        'PASSWORD': 'wf12345*',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
-}
+# Detectar el entorno actual
+DJANGO_ENV = config('DJANGO_ENV', default='local')
 
+if DJANGO_ENV == 'local':
+    # Configuración de la base de datos para el entorno local
+    DATABASES = {
+        'default': {
+            'ENGINE': config('LOCAL_DATABASE_ENGINE'),
+            'NAME': BASE_DIR / config('LOCAL_DATABASE_NAME'),
+        }
+    }
+    ALLOWED_HOSTS = ['*']
+else:
+    # Configuración de la base de datos para el entorno de producción
+    DATABASES = {
+        'default': {
+            'ENGINE': config('PROD_DATABASE_ENGINE'),
+            'NAME': config('PROD_DATABASE_NAME'),
+            'USER': config('PROD_DATABASE_USER'),
+            'PASSWORD': config('PROD_DATABASE_PASSWORD'),
+            'HOST': config('PROD_DATABASE_HOST'),
+            'PORT': config('PROD_DATABASE_PORT'),
+        }
+    }
+    ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=Csv())
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -121,6 +138,12 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
