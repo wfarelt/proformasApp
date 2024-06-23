@@ -11,3 +11,5 @@ pillow==10.3.0
 weasyprint==62.2
 # Crear datos falsos
 Faker==25.9.1
+# Bootstrap 4
+django-bootstrap4==24.3
