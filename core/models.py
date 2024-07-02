@@ -28,7 +28,7 @@ class Proforma(models.Model):
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def __str__(self):
-        return self.id
+        return str(self.id)
     
     class Meta:
         verbose_name = "Proforma"
@@ -59,5 +59,22 @@ class Cliente(models.Model):
     phone = models.CharField(blank=True, null=True, max_length=15)
     address = models.CharField(blank=True, null=True, max_length=100)
     
+    def __str__(self):
+        return self.name
+
+
+# PROVEEDOR
+class Supplier(models.Model):
+    name = models.CharField(max_length=100)
+    contact_person = models.CharField(max_length=100, blank=True, null=True)
+    phone = models.CharField(max_length=15, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True, max_length=100)
+    address = models.TextField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Supplier"
+        verbose_name_plural = "Suppliers"
+        ordering = ['name']
+
     def __str__(self):
         return self.name

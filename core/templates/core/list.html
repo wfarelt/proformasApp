@@ -1,0 +1,71 @@
+{% extends 'core/base.html' %}
+
+{% block title %}
+Lista de {{title}}
+{% endblock %}
+
+{% block content %}
+
+<h2>Lista de {{title}}</h2>
+<form method="get">
+    <input type="text" name="q" id="search-field" placeholder="{{placeholder}}" value="{{ request.GET.q }}">
+    <button type="submit">Buscar</button>
+</form>
+<br>
+<table class="table table-sm">
+    <thead>
+        <tr>
+            {% block columns %}
+            {% endblock columns %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for obj in object_list %}
+        <tr>
+            {% block rows %}
+            {% endblock rows %}
+            <td>
+                {% block actions %}
+                {% endblock actions %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5">No se encontraron {{title}}.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="pagination">
+    <span class="step-links">
+        {% if page_obj.has_previous %}
+        <a href="?q={{ request.GET.q }}&page=1">&laquo; primera</a>
+        <a href="?q={{ request.GET.q }}&page={{ page_obj.previous_page_number }}">anterior</a>
+        {% endif %}
+
+        <span class="current">
+            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}.
+        </span>
+
+        {% if page_obj.has_next %}
+        <a href="?q={{ request.GET.q }}&page={{ page_obj.next_page_number }}">siguiente</a>
+        <a href="?q={{ request.GET.q }}&page={{ page_obj.paginator.num_pages }}">última &raquo;</a>
+        {% endif %}
+    </span>
+</div>
+<br>
+
+{% block create %}
+{% endblock create %}
+
+{% endblock content %}
+
+{% block scripts %}
+<!-- JavaScript para enfocar el campo de búsqueda -->
+<script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", function () {
+        document.getElementById("search-field").focus();
+    });
+</script>
+{% endblock %}

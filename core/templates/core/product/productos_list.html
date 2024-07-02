@@ -1,0 +1,31 @@
+{% extends 'core/list.html' %}
+
+{% block columns %}                
+<th>Id</th>
+<th>Código</th>
+<th>Descripción</th>
+<th>Precio</th>
+<th style="text-align: center;">Stock</th>
+<th>Ubicación</th>
+<th></th>
+{% endblock columns %}
+
+{% block rows %}                       
+<td>{{ obj.id }}</td>
+<td>{{ obj.nombre }}</td>
+<td>{{ obj.descripcion }}</td>
+<td style="text-align: right;">{{ obj.precio }}</td>
+<td style="text-align: center;">{{ obj.stock }}</td>
+<td>{{ obj.location }}</td>
+{% endblock rows %}
+
+{% block actions %}
+<a href="{% url 'product_detail' obj.id %}" class="btn btn-info btn-sm"><i class="bi bi-eye"></i></a>
+<a href="{% url 'product_edit' obj.id %}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i></a>
+{% endblock actions %}
+
+{% block create %}
+<a href="{% url 'producto_new' %}" class="btn btn-success btn-sm">Producto <i class="bi bi-plus-circle"></i></a>
+{% endblock create %}
+
+

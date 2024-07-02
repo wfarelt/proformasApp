@@ -1,6 +1,6 @@
 
 from django import forms
-from .models import Producto, Cliente, Proforma
+from .models import Producto, Cliente, Proforma, Supplier
 
 # CREAR UN FORMULARIO PARA PRODUCTO
 class ProductoForm(forms.ModelForm):
@@ -54,3 +54,25 @@ class ProformaAddClientForm(forms.ModelForm):
             'cliente': forms.TextInput(attrs={'class': 'form-control'}),
         }
         
+# FORMULARIO PROVEEDOR
+class SupplierForm(forms.ModelForm):
+    class Meta:
+        model = Supplier
+        fields = ['name', 'contact_person', 'phone', 'email', 'address']
+        labels = {
+            'name': 'Nombre',
+            'contact_person': 'Contacto',
+            'phone': 'Teléfono',
+            'email': 'Correo',
+            'address': 'Dirección',
+        }
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'contact_person': forms.TextInput(attrs={'class': 'form-control'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'address': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+        
+    
+

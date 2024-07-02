@@ -1,0 +1,27 @@
+{% extends 'core/list.html' %}
+
+{% block columns %}                
+    <th>Nombre</th>
+    <th>Contacto</th>
+    <th>Teléfono</th>
+    <th>Email</th>
+    <th>Dirección</th>
+    <th>Acciones</th>    
+{% endblock columns %}
+
+{% block rows %}                       
+    <td>{{ obj.name }}</td>
+    <td>{{ obj.contact }}</td>
+    <td>{{ obj.phone }}</td>
+    <td>{{ obj.email }}</td>
+    <td>{{ obj.address }}</td>
+{% endblock rows %}
+
+{% block actions %}
+    <a href="{% url 'supplier_update' obj.id %}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i></a>
+{% endblock actions %}
+
+{% block create %}
+    <a href="{% url 'supplier_create' %}" class="btn btn-success btn-sm">Proveedor <i class="bi bi-plus"></i></a>
+{% endblock create %}
+ 

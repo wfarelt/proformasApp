@@ -5,7 +5,8 @@ from .views import home, ProformaListView, proforma_add_client , proforma_new, p
     agregar_producto_a_detalle, producto_new, eliminar_producto_a_detalle, \
         cliente_new, cliente_edit, cliente_delete, ClientListView,\
             product_detail, product_edit, ProductListView, generate_proforma_pdf, \
-                reportes
+                reportes, \
+                    SupplierListView, supplier_create, supplier_update
 
 urlpatterns = [
     path('', home, name='home'),
@@ -30,4 +31,8 @@ urlpatterns = [
     #reporte pdf
     path('proforma/pdf/<int:id>', generate_proforma_pdf, name='generate_proforma_pdf'),
     path('reportes/', reportes, name='reportes'),
+    #supplier
+    path('suppliers/', SupplierListView.as_view(), name='supplier_list'),
+    path('suppliers/new/', supplier_create, name='supplier_create'),
+    path('suppliers/edit/<int:pk>/', supplier_update, name='supplier_update'),
 ]

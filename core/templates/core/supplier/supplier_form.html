@@ -1,0 +1,14 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+
+<h2>{{ form.instance.id|yesno:"Editar proveedor,Nuevo proveedor" }}</h2>
+<div class="col-md-3 center">
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}        
+        <button type="submit" class="btn btn-success btn-sm">Guardar <i class="bi bi-save"></i></button>
+        <a href="{% url 'supplier_list' %}"><--Volver a proveedores</a>    
+    </form>
+</div>
+{% endblock %}

@@ -1,8 +1,9 @@
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
-from django.views.generic import ListView
-from .models import Proforma, Producto, Detalle, Cliente
-from .forms import ProductoForm, ClienteForm, ProformaAddClientForm
+from django.core.paginator import Paginator
+from django.views.generic import ListView, UpdateView
+from .models import Proforma, Producto, Detalle, Cliente, Supplier
+from .forms import ProductoForm, ClienteForm, ProformaAddClientForm, SupplierForm
 #reporte pdf
 from django.http import HttpResponse
 from django.template.loader import get_template
@@ -21,7 +22,7 @@ def product_detail(request, id):
     producto = Producto.objects.get(id=id)
     title = 'Detalle de producto'
     context = {'producto': producto, 'title': title}
-    return render(request, 'core/product_detail.html', context)
+    return render(request, 'core/product/product_detail.html', context)
 
 def producto_new(request):
     form = ProductoForm()
@@ -32,7 +33,7 @@ def producto_new(request):
             return redirect('product_list')
     title = 'Nuevo producto'
     context = {'form': form, 'title': title}
-    return render(request, 'core/producto_new.html', context)  
+    return render(request, 'core/product/producto_new.html', context)  
 
 def product_edit(request, id):
     title = 'Editar producto'
@@ -44,19 +45,25 @@ def product_edit(request, id):
             return redirect('product_list')
     else:
         form = ProductoForm(instance=producto)
-    return render(request, 'core/producto_new.html', {'form': form, 'title': title})
+    return render(request, 'core/product/producto_new.html', {'form': form, 'title': title})
 
 # Listar productos
 class ProductListView(ListView):
     model = Producto
-    template_name = 'core/productos_list.html'  # Nombre de la plantilla
+    template_name = 'core/product/productos_list.html'  # Nombre de la plantilla
     context_object_name = 'productos'
     context_title = 'Listado de productos'
     paginate_by = 10  # Número de productos por página
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'productos'
+        context['placeholder'] = 'Buscar por codigo o descripción'
+        return context
+       
     def get_queryset(self):
         query = self.request.GET.get('q')
-        object_list = Producto.objects.all()
+        object_list = Producto.objects.all().order_by('nombre')
         if query:
             object_list = object_list.filter(nombre__icontains=query) | object_list.filter(descripcion__icontains=query)
         return object_list
@@ -71,7 +78,7 @@ class ProformaListView(ListView):
 
     def get_queryset(self):
             query = self.request.GET.get('q')
-            object_list = Proforma.objects.all()
+            object_list = Proforma.objects.all().order_by('-fecha')
             if query:
                 object_list = object_list.filter(id__icontains=query) | object_list.filter(cliente__icontains=query)
             return object_list
@@ -79,8 +86,21 @@ class ProformaListView(ListView):
 # Crear proforma
 def proforma_new(request):
     proforma = Proforma.objects.create()
+    detalles = Detalle.productos_list(proforma)
+    query = request.GET.get('q')
     productos_list = Producto.objects.all()
-    context = {'proforma': proforma, 'productos_list': productos_list}
+    if query := request.GET.get('q'):
+        productos_list = productos_list.filter(nombre__icontains=query)
+        paginator = Paginator(productos_list, 5)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        context = {'proforma': proforma, 'productos_list': page_obj, 'detalles': detalles, 'page_obj': page_obj}
+    else:
+        paginator = Paginator(productos_list, 5)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        context = {'proforma': proforma, 'productos_list': page_obj, 'detalles': detalles, 'page_obj': page_obj}
+        
     return render(request, 'core/proforma_new.html', context)
 
 def proforma_add_client(request, id):
@@ -94,12 +114,25 @@ def proforma_add_client(request, id):
         form = ProformaAddClientForm(instance=proforma)
     return render(request, 'core/proforma_add_client.html', {'form': form})
 
-# Editar proforma
+# Editar proforma 
 def proforma_edit(request, id):
     proforma = Proforma.objects.get(id=id)
     detalles = Detalle.productos_list(proforma)
     productos_list = Producto.objects.all()
-    context = {'proforma': proforma, 'productos_list': productos_list, 'detalles': detalles}
+    literal = numero_a_literal(proforma.total)
+    
+    if query := request.GET.get('q'):
+        productos_list = productos_list.filter(nombre__icontains=query)
+        paginator = Paginator(productos_list, 5)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        context = {'proforma': proforma, 'productos_list': page_obj, 'detalles': detalles, 'page_obj': page_obj, 'literal': literal}
+    else:
+        paginator = Paginator(productos_list, 5)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        context = {'proforma': proforma, 'productos_list': page_obj, 'detalles': detalles, 'page_obj': page_obj, 'literal': literal}
+        
     return render(request, 'core/proforma_new.html', context)
 
 # Agregar producto a detalle
@@ -141,9 +174,15 @@ def eliminar_producto_a_detalle(request, id):
     
 class ClientListView(ListView):
     model = Cliente
-    template_name = 'core/client_list.html'  # Nombre de la plantilla
+    template_name = 'core/client/client_list.html'  # Nombre de la plantilla
     context_object_name = 'clientes'
     paginate_by = 10  # Número de clientes por página
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'clientes'
+        context['placeholder'] = 'Buscar por nombre o NIT'
+        return context
 
     def get_queryset(self):
         query = self.request.GET.get('q')
@@ -161,7 +200,7 @@ def cliente_new(request):
             # crear_clientes(50)
             return redirect('client_list')
     context = {'form': form}
-    return render(request, 'core/cliente_form.html', context)
+    return render(request, 'core/client/cliente_form.html', context)
 
 
 def crear_clientes(n):
@@ -191,7 +230,7 @@ def cliente_edit(request, id):
             return redirect('client_list')
     else:
         form = ClienteForm(instance=cliente)
-    return render(request, 'core/cliente_form.html', {'form': form})   
+    return render(request, 'core/client/cliente_form.html', {'form': form})   
 
 def cliente_delete(request, id):
     cliente = Cliente.objects.get(id=id)
@@ -216,18 +255,53 @@ def generate_proforma_pdf(request, id):
         'total': proforma.total,
         'literal': literal
     }
-
-    # Renderizar la plantilla HTML con el contexto
-    template = get_template('core/proforma_template.html')
-    html = template.render(context)
-
-    # Generar el PDF usando WeasyPrint
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'inline; filename="proforma.pdf"'
-    HTML(string=html).write_pdf(response)
-    return response
+   
+    return render(request, 'core/proforma_pdf.html', context)
 
 # ReportesGenerales
 def reportes(request):
     return render(request, 'core/reportes.html')
 
+
+# PROVEEDOR
+
+class SupplierListView(ListView):
+    model = Supplier
+    template_name = 'core/supplier/supplier_list.html'
+    context_object_name = 'suppliers'
+    paginate_by = 10
+    
+    # añadir "title" a context para mostrar en la plantilla
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'proveedores'
+        context['placeholder'] = 'Buscar por nombre'
+        return context
+    
+    def get_queryset(self):
+        query = self.request.GET.get('q')
+        object_list = Supplier.objects.all()
+        if query:
+            object_list = object_list.filter(name__icontains=query)
+        return object_list
+
+def supplier_create(request):
+    if request.method == 'POST':
+        form = SupplierForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('supplier_list')
+    else:
+        form = SupplierForm()
+    return render(request, 'core/supplier/supplier_form.html', {'form': form})
+
+def supplier_update(request, pk):
+    supplier = get_object_or_404(Supplier, pk=pk)
+    if request.method == 'POST':
+        form = SupplierForm(request.POST, instance=supplier)
+        if form.is_valid():
+            form.save()
+            return redirect('supplier_list')
+    else:
+        form = SupplierForm(instance=supplier)
+    return render(request, 'core/supplier/supplier_form.html', {'form': form})

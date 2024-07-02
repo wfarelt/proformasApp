@@ -3,67 +3,127 @@
 {% block title %}Proforma New{% endblock %}
 {% load static %}
 
-{% block content %}
-    <strong>
-      <h2>Proforma: {{proforma.id}}</h2>
-    </strong>       
-    Fecha: {{proforma.fecha}}
-    <br>
-    Cliente: {{proforma.cliente}} 
-    <a href="{% url 'proforma_add_client' proforma.id %}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i></a>
-    <br>
-    Total: {{proforma.total}}
-    <br>
-    <hr>
 
-    <h2>PRODUCTOS</h2>
-    <table class="table table-sm">
-        <tr>
-        <th>Codigo</th>
-        <th>Descripcion</th>
-        <th>Stock</th>
-        <th>Precio</th>
-        <th>Cantidad</th>
-        <th>Subtotal</th>
-        <th></th>
-    </tr>      
+{% block style %}
+<style>
+  /* Estilos generales */
+  @media print {
+
+    .total {
+      visibility: visible;
+    }
+
+    .no-mostrar{
+      visibility: hidden;
+    }
+
+    .productos,
+    .productos * {
+      visibility: hidden;
+    }
+
+    .no-mostrar,
+    .productos {
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+  }
+</style>
+{% endblock style %}
+
+
+{% block content %}
+<strong>
+  <h2>Proforma: {{proforma.id}}</h2>
+</strong>
+Fecha: {{proforma.fecha|date:"d/m/Y"}}
+<br>
+Cliente: {{proforma.cliente}}
+<a href="{% url 'proforma_add_client' proforma.id %}" class="btn btn-warning btn-sm no-mostrar"><i
+    class="bi bi-pencil-square"></i></a>
+<br>
+<hr class="no-mostrar">
+
+
+<div class="productos">
+  <h2>PRODUCTOS</h2>
+  <form method="get">
+    <input type="text" name="q" id="search-field" placeholder="{{placeholder}}" value="{{ request.GET.q }}">
+    <button type="submit">Buscar</button>
+  </form>
+  <br>
+  <table class="table table-sm">
+    <tr>
+      <th>Codigo</th>
+      <th>Descripcion</th>
+      <th>Stock</th>
+      <th>Precio</th>
+      <th>Cantidad</th>
+      <th>Subtotal</th>
+      <th></th>
+    </tr>
 
     {% for producto in productos_list %}
     <tr>
-    <form method="POST" action="{% url 'agregar_producto_a_detalle' %}">
-    {% csrf_token %}
-    <input type="hidden" name="proforma_id" value="{{ proforma.id }}">
-    <input type="hidden" name="producto_id" value="{{ producto.id }}">
-    <td>{{ producto.nombre }}</td>
-    <td>{{ producto.descripcion }}</td>
-    <td>{{ producto.stock }}</td>
-    <td><input type="number" id="precio{{ producto.id}}" name="precio" value="{{ producto.precio  }}" step="0.01"></td>
-    <td><input type="number" id="cantidad{{ producto.id}}" name="cantidad" placeholder="0"></td>
-    <td><input type="number" id="subtotal{{ producto.id}}" name="subtotal" value="{{ producto.precio  }}" readonly></td>    
-    <td><button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus"></i></button></td>
-    </form>
+      <form method="POST" action="{% url 'agregar_producto_a_detalle' %}">
+        {% csrf_token %}
+        <input type="hidden" name="proforma_id" value="{{ proforma.id }}">
+        <input type="hidden" name="producto_id" value="{{ producto.id }}">
+        <td>{{ producto.nombre }}</td>
+        <td>{{ producto.descripcion }}</td>
+        <td>{{ producto.stock }}</td>
+        <td><input type="number" id="precio{{ producto.id}}" name="precio" value="{{ producto.precio  }}" step="0.01">
+        </td>
+        <td><input type="number" id="cantidad{{ producto.id}}" name="cantidad" placeholder="0"></td>
+        <td><input type="number" id="subtotal{{ producto.id}}" name="subtotal" value="{{ producto.precio  }}" readonly>
+        </td>
+        <td><button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus"></i></button></td>
+      </form>
     </tr>
     {% endfor %}
-    </table>
-    <br>
-    <hr>
-    <h2>DETALLE DE COMPRA</h2>
-    <table class="table table-sm">
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th>Producto</th>
-            <th>Descripción</th>
-            <th>Cantidad</th>
-            <th>Precio_Bs.</th>
-            <th>Subtotal_Bs.</th>
-            <th>Ubicación</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-        {% for detalle in detalles %}
-        <tr>
+  </table>
+
+  <div class="pagination">
+    <span class="step-links">
+      {% if page_obj.has_previous %}
+      <a href="?q={{ request.GET.q }}&page=1">&laquo; primera</a>
+      <a href="?q={{ request.GET.q }}&page={{ page_obj.previous_page_number }}">anterior</a>
+      {% endif %}
+
+      <span class="current">
+        Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}.
+      </span>
+
+      {% if page_obj.has_next %}
+      <a href="?q={{ request.GET.q }}&page={{ page_obj.next_page_number }}">siguiente</a>
+      <a href="?q={{ request.GET.q }}&page={{ page_obj.paginator.num_pages }}">última &raquo;</a>
+      {% endif %}
+    </span>
+  </div>
+</div>
+<br>
+<hr class="no-mostrar">
+
+
+<div class="detalle">
+  <h2>DETALLE DE COMPRA</h2>
+  <table class="table table-sm">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Producto</th>
+        <th>Descripción</th>
+        <th>Cantidad</th>
+        <th>Precio</th>
+        <th>Subtotal</th>
+        <th>Ubicación</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for detalle in detalles %}
+      <tr>
         <td>{{ forloop.counter }}</td>
         <td>{{ detalle.producto }}</td>
         <td>{{ detalle.producto.descripcion }}</td>
@@ -71,17 +131,44 @@
         <td style="text-align: right;">{{ detalle.precio_venta }}</td>
         <td style="text-align: right;">{{ detalle.subtotal }}</td>
         <td style="text-align: center;">{{ detalle.producto.location }}</td>
-        <td><a href="{% url 'eliminar_producto_a_detalle' detalle.id %}" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></a></td>
-        </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    <br>
-    <a href="{% url 'generate_proforma_pdf' proforma.id %}" class="btn btn-info btn-sm">Generar PDF <i class="bi bi-file-earmark-pdf"></i></a>
-    <a href="{% url 'proforma_list' %}"><-- Volver a proformas</a>
+        <td><a href="{% url 'eliminar_producto_a_detalle' detalle.id %}" class="btn btn-danger btn-sm no-mostrar"><i
+              class="bi bi-trash"></i></a></td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5">No se encontraron productos.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="total">
+  <table class="table table-sm">
+    <tr>
+      <td>Total: {{literal}}</td>
+      <td>{{ proforma.total }}</td>
+    </tr>
+  </table>
+</div>
+<br>
+
+<div class="text-center mb-5" id="botones">
+  <a href="" class="btn btn-success btn-sm no-mostrar"><i class="bi bi-check"></i> Ejecutada</a>
+  <button onclick="window.print()" class="no-mostrar">Imprimir</button>
+  <a href="{% url 'proforma_list' %}" class="no-mostrar"><-- Volver a proformas</a>
+</div>
+<br>
 
 {% endblock %}
 
 {% block scripts %}
 <script src="{% static 'core/js/script.js' %}"></script>
+
+<!-- JavaScript para enfocar el campo de búsqueda -->
+<script type="text/javascript">
+  document.addEventListener("DOMContentLoaded", function () {
+    document.getElementById("search-field").focus();
+  });
+</script>
 {% endblock %}
