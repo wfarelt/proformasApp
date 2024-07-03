@@ -2,12 +2,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.core.paginator import Paginator
 from django.views.generic import ListView, UpdateView
-from .models import Proforma, Producto, Detalle, Cliente, Supplier
-from .forms import ProductoForm, ClienteForm, ProformaAddClientForm, SupplierForm
+from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand
+from .forms import ProductoForm, ClienteForm, ProformaAddClientForm, SupplierForm, BrandForm
 #reporte pdf
-from django.http import HttpResponse
-from django.template.loader import get_template
-from weasyprint import HTML
+#from django.http import HttpResponse
+#from django.template.loader import get_template
+#from weasyprint import HTML
 from nlt import numlet as nl
 
 from faker import Faker
@@ -305,3 +305,56 @@ def supplier_update(request, pk):
     else:
         form = SupplierForm(instance=supplier)
     return render(request, 'core/supplier/supplier_form.html', {'form': form})
+
+# Marcas
+
+class BrandListView(ListView):
+    model = Brand
+    template_name = 'core/brand/brand_list.html'
+    context_object_name = 'brands'
+    paginate_by = 10
+    
+    # añadir "title" a context para mostrar en la plantilla
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'marcas'
+        context['placeholder'] = 'Buscar por nombre'
+        return context
+    
+    def get_queryset(self):
+        query = self.request.GET.get('q')
+        object_list = Brand.objects.all()
+        if query:
+            object_list = object_list.filter(name__icontains=query)
+        return object_list
+
+def brand_create(request):
+    if request.method == 'POST':
+        form = BrandForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('brand_list')
+    else:
+        form = BrandForm()
+    return render(request, 'core/brand/brand_form.html', {'form': form})
+
+def brand_update(request, pk):
+    brand = get_object_or_404(Brand, pk=pk)
+    if request.method == 'POST':
+        form = BrandForm(request.POST, instance=brand)
+        if form.is_valid():
+            form.save()
+            return redirect('brand_list')
+    else:
+        form = BrandForm(instance=brand)
+    return render(request, 'core/brand/brand_form.html', {'form': form})
+
+def brand_status(request, pk):
+    brand = Brand.objects.get(pk=pk)
+    if brand.status:
+        brand.status = False
+    else:
+        brand.status = True
+    brand.save()
+    return redirect('brand_list')
+    

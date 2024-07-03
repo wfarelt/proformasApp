@@ -3,9 +3,25 @@ from django.utils import timezone
 
 # Create your models here.
 
+# MARCA
+class Brand(models.Model):
+    name = models.CharField(max_length=100)
+    initials = models.CharField(max_length=10, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    status = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = "Brand"
+        verbose_name_plural = "Brands"
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
 class Producto(models.Model):
     nombre = models.CharField(max_length=100)
     descripcion = models.TextField(blank=True, null=True)
+    brand = models.ForeignKey(Brand, on_delete=models.CASCADE, blank=True, null=True)
     precio = models.DecimalField(max_digits=10, decimal_places=2)
     stock = models.PositiveIntegerField(default=0, blank=True, null=True)
     location = models.CharField(max_length=10, blank=True, null=True)
@@ -62,7 +78,6 @@ class Cliente(models.Model):
     def __str__(self):
         return self.name
 
-
 # PROVEEDOR
 class Supplier(models.Model):
     name = models.CharField(max_length=100)
@@ -78,3 +93,4 @@ class Supplier(models.Model):
 
     def __str__(self):
         return self.name
+

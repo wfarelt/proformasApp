@@ -1,0 +1,27 @@
+{% extends 'core/list.html' %}
+
+{% block columns%}
+<th>Nombre</th>
+<th>Inicial</th>
+<th>Descripción</th>
+<th>Estado</th>
+<th>Acciones</th>
+{% endblock %}
+
+{% block rows %}
+    <td>{{ obj.name }}</td>
+    <td>{{ obj.initials }}</td>
+    <td>{{ obj.description }}</td>
+    <td>{{ obj.status|yesno:"Activo,Inactivo" }}</td>
+{% endblock rows %}
+
+{% block actions %}
+<a href="{% url 'brand_update' obj.id %}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i></a>
+<a href="{% url 'brand_status' obj.id %}" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></a>
+{% endblock actions %}
+
+{% block create %}
+<a href="{% url 'brand_create' %}" class="btn btn-success btn-sm">Marca <i class="bi bi-plus"></i></a>
+{% endblock create %}
+
+                

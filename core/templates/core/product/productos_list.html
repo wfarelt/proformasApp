@@ -4,6 +4,7 @@
 <th>Id</th>
 <th>Código</th>
 <th>Descripción</th>
+<th>Marca</th>
 <th>Precio</th>
 <th style="text-align: center;">Stock</th>
 <th>Ubicación</th>
@@ -14,6 +15,7 @@
 <td>{{ obj.id }}</td>
 <td>{{ obj.nombre }}</td>
 <td>{{ obj.descripcion }}</td>
+<td>{{ obj.marca.initials }}</td>
 <td style="text-align: right;">{{ obj.precio }}</td>
 <td style="text-align: center;">{{ obj.stock }}</td>
 <td>{{ obj.location }}</td>

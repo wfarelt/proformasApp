@@ -6,7 +6,8 @@ from .views import home, ProformaListView, proforma_add_client , proforma_new, p
         cliente_new, cliente_edit, cliente_delete, ClientListView,\
             product_detail, product_edit, ProductListView, generate_proforma_pdf, \
                 reportes, \
-                    SupplierListView, supplier_create, supplier_update
+                    SupplierListView, supplier_create, supplier_update,\
+                        BrandListView, brand_create, brand_update, brand_status
 
 urlpatterns = [
     path('', home, name='home'),
@@ -35,4 +36,10 @@ urlpatterns = [
     path('suppliers/', SupplierListView.as_view(), name='supplier_list'),
     path('suppliers/new/', supplier_create, name='supplier_create'),
     path('suppliers/edit/<int:pk>/', supplier_update, name='supplier_update'),
+    #brand
+    path('brands/', BrandListView.as_view(), name='brand_list'),
+    path('brands/new/', brand_create, name='brand_create'),
+    path('brands/edit/<int:pk>/', brand_update, name='brand_update'),
+    path('brands/status/<int:pk>/', brand_status, name='brand_status'),
+    
 ]
