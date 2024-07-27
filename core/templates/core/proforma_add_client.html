@@ -2,10 +2,69 @@
 
 {% block content %}
     <h2>Proforma Add Client</h2>
-    <form method="POST">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Agregar cliente</button>
+    <form method="get">
+        <input type="text" name="q" id="search-field" placeholder="Buscar por nombre" value="{{ request.GET.q }}">
+        <button type="submit">Buscar</button>
     </form>
-    <a href="{% url 'proforma_new' %}" class="btn btn-primary">Volver</a>
+
+    <table class="table table-sm mt-4">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Nombre</th>
+                <th>NIT</th>
+                <th style="text-align: center;">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for obj in clients_list %}
+            <tr>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="cliente" value="{{obj.id}}" class="form-control" id="id_cliente">                
+                <th>{{ obj.id }}</th>
+                <td>{{ obj.name }}</td>
+                <td>{{ obj.nit }}</td>
+                <td style="text-align: center;">
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus"></i> Agregar cliente</button>
+                </td>
+            </form>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5">No se encontraron {{title}}.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="pagination">
+        <span class="step-links">
+            {% if page_obj.has_previous %}
+                <a href="?q={{ request.GET.q }}&page=1">&laquo; primera</a>
+                <a href="?q={{ request.GET.q }}&page={{ page_obj.previous_page_number }}">anterior</a>
+            {% endif %}
+
+            <span class="current">
+                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}.
+            </span>
+
+            {% if page_obj.has_next %}
+                <a href="?q={{ request.GET.q }}&page={{ page_obj.next_page_number }}">siguiente</a>
+                <a href="?q={{ request.GET.q }}&page={{ page_obj.paginator.num_pages }}">última &raquo;</a>
+            {% endif %}
+        </span>
+    </div>
+    <br>
+   
+    <a href="{% url 'proforma_edit' proforma.id %}" class="btn btn-primary">Volver</a>
+{% endblock %}
+
+{% block scripts %}
+    <!-- JavaScript para enfocar el campo de búsqueda -->
+    <script type="text/javascript">
+        document.addEventListener("DOMContentLoaded", function() {
+            document.getElementById("search-field").focus();
+        });
+    </script>
 {% endblock %}

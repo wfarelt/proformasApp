@@ -3,6 +3,17 @@ from django.utils import timezone
 
 # Create your models here.
 
+# CLIENTE
+class Cliente(models.Model):
+    name = models.CharField(max_length=100)
+    nit = models.CharField(blank=True, null=True, max_length=15)
+    email = models.EmailField(blank=True, null=True, max_length=100)
+    phone = models.CharField(blank=True, null=True, max_length=15)
+    address = models.CharField(blank=True, null=True, max_length=100)
+    
+    def __str__(self):
+        return self.name
+
 # MARCA
 class Brand(models.Model):
     name = models.CharField(max_length=100)
@@ -42,7 +53,7 @@ class Producto(models.Model):
 # PROFORMA
 class Proforma(models.Model):
     fecha = models.DateTimeField(default=timezone.now)
-    cliente = models.CharField(max_length=100, blank=True, null=True, default="Cliente")
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, blank=True, null=True)
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def __str__(self):
@@ -68,16 +79,6 @@ class Detalle(models.Model):
         detalles = Detalle.objects.filter(proforma=proforma)
         return detalles
 
-# CLIENTE
-class Cliente(models.Model):
-    name = models.CharField(max_length=100)
-    nit = models.CharField(blank=True, null=True, max_length=15)
-    email = models.EmailField(blank=True, null=True, max_length=100)
-    phone = models.CharField(blank=True, null=True, max_length=15)
-    address = models.CharField(blank=True, null=True, max_length=100)
-    
-    def __str__(self):
-        return self.name
 
 # PROVEEDOR
 class Supplier(models.Model):

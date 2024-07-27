@@ -3,7 +3,7 @@
 from django.urls import path
 from .views import home, ProformaListView, proforma_add_client , proforma_new, proforma_edit,\
     agregar_producto_a_detalle, producto_new, eliminar_producto_a_detalle, \
-        cliente_new, cliente_edit, cliente_delete, ClientListView,\
+        cliente_new, cliente_edit, cliente_delete, ClientListView, crear_clientes,\
             product_detail, product_edit, ProductListView, generate_proforma_pdf, \
                 reportes, \
                     SupplierListView, supplier_create, supplier_update,\
@@ -29,6 +29,7 @@ urlpatterns = [
     path('cliente/new/', cliente_new, name='cliente_new'),
     path('cliente/edit/<int:id>/', cliente_edit, name='cliente_edit'),
     path('cliente/delete/<int:id>/', cliente_delete, name='cliente_delete'),
+    path('cliente/crear_clientes/', crear_clientes, name='crear_clientes'),
     #reporte pdf
     path('proforma/pdf/<int:id>', generate_proforma_pdf, name='generate_proforma_pdf'),
     path('reportes/', reportes, name='reportes'),

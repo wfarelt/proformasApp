@@ -90,7 +90,7 @@ class ProformaListView(ListView):
             query = self.request.GET.get('q')
             object_list = Proforma.objects.all().order_by('-fecha')
             if query:
-                object_list = object_list.filter(id__icontains=query) | object_list.filter(cliente__icontains=query)
+                object_list = self.model.objects.filter(cliente__name__icontains = query) | object_list.filter(id__icontains=query)
             return object_list
 
 # Crear proforma
@@ -121,8 +121,31 @@ def proforma_add_client(request, id):
             form.save()
             return redirect('proforma_edit', id)
     else:
+        clients_list = Cliente.objects.all()
         form = ProformaAddClientForm(instance=proforma)
-    return render(request, 'core/proforma_add_client.html', {'form': form})
+        if query := request.GET.get('q'):
+            clients_list = clients_list.filter(name__icontains=query)
+            paginator = Paginator(clients_list, 5)
+            page_number = request.GET.get('page')
+            page_obj = paginator.get_page(page_number)
+            context = {
+                'form': form,
+                'clients_list': page_obj,
+                'proforma': proforma, 
+                'page_obj': page_obj
+            }
+        else:
+            paginator = Paginator(clients_list, 5)
+            page_number = request.GET.get('page')
+            page_obj = paginator.get_page(page_number)
+            context = {
+                'form': form,
+                'clients_list': page_obj,
+                'proforma': proforma, 
+                'page_obj': page_obj
+            }
+            
+    return render(request, 'core/proforma_add_client.html', context)
 
 # Editar proforma 
 def proforma_edit(request, id):
@@ -212,16 +235,14 @@ def cliente_new(request):
     context = {'form': form}
     return render(request, 'core/client/cliente_form.html', context)
 
-
-def crear_clientes(n):
+def crear_clientes(request):
     fake = Faker()
-    for _ in range(n):
+    for i in range(10):
         name = fake.name()
         nit = fake.bothify(text='########-#')
         email = fake.email()
         phone = fake.phone_number()
         address = fake.address()
-        
         cliente = Cliente(
             name=name,
             nit=nit,
@@ -230,6 +251,7 @@ def crear_clientes(n):
             address=address
         )
         cliente.save()
+    return redirect('client_list')
 
 def cliente_edit(request, id):
     cliente = get_object_or_404(Cliente, pk=id)
