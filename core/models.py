@@ -18,6 +18,7 @@ class Brand(models.Model):
     def __str__(self):
         return self.name
 
+# PRODUCTO
 class Producto(models.Model):
     nombre = models.CharField(max_length=100)
     descripcion = models.TextField(blank=True, null=True)
@@ -32,12 +33,13 @@ class Producto(models.Model):
     class Meta:
         verbose_name = "Producto"
         verbose_name_plural = "Productos"
+        ordering = ['id']
 
     # devolver precio de producto
     def get_precio(self):
         return self.precio
 
-
+# PROFORMA
 class Proforma(models.Model):
     fecha = models.DateTimeField(default=timezone.now)
     cliente = models.CharField(max_length=100, blank=True, null=True, default="Cliente")
@@ -50,7 +52,7 @@ class Proforma(models.Model):
         verbose_name = "Proforma"
         verbose_name_plural = "Proformas" 
 
-
+# DETALLE PROFORMA
 class Detalle(models.Model):
     proforma = models.ForeignKey(Proforma, related_name='detalles', on_delete=models.CASCADE)
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
@@ -67,7 +69,6 @@ class Detalle(models.Model):
         return detalles
 
 # CLIENTE
-#name (string); #email (string); #phone (string); #address (string)
 class Cliente(models.Model):
     name = models.CharField(max_length=100)
     nit = models.CharField(blank=True, null=True, max_length=15)
@@ -89,7 +90,7 @@ class Supplier(models.Model):
     class Meta:
         verbose_name = "Supplier"
         verbose_name_plural = "Suppliers"
-        ordering = ['name']
+        ordering = ['id']
 
     def __str__(self):
         return self.name

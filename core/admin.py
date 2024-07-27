@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Producto, Proforma, Cliente, Detalle
+from .models import Producto, Proforma, Cliente, Detalle, Brand
 
 from import_export.admin import ImportExportModelAdmin
 from .resources import ProductResource
@@ -10,6 +10,8 @@ admin.site.register(Proforma)
 admin.site.register(Detalle)
 
 admin.site.register(Cliente)
+
+admin.site.register(Brand)
 
 
 class ProductAdmin(ImportExportModelAdmin):

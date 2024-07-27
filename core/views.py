@@ -15,7 +15,17 @@ from faker import Faker
 # Create your views here.
 
 def home(request):
-    return render(request, 'core/home.html')
+    quanty_products = Producto.objects.count()
+    quanty_clients = Cliente.objects.count()
+    quanty_suppliers = Supplier.objects.count()
+    quanty_brans = Brand.objects.count()
+    context = {
+        'quanty_products': quanty_products,
+        'quanty_clients':quanty_clients,
+        'quanty_suppliers':quanty_suppliers,
+        'quanty_brans':quanty_brans
+    }
+    return render(request, 'core/home.html', context)
 
 # Nuevo producto
 def product_detail(request, id):
