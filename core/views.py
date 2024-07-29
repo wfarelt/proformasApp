@@ -18,12 +18,12 @@ def home(request):
     quanty_products = Producto.objects.count()
     quanty_clients = Cliente.objects.count()
     quanty_suppliers = Supplier.objects.count()
-    quanty_brans = Brand.objects.count()
+    quanty_proformas = Proforma.objects.count()
     context = {
         'quanty_products': quanty_products,
         'quanty_clients':quanty_clients,
         'quanty_suppliers':quanty_suppliers,
-        'quanty_brans':quanty_brans
+        'quanty_proformas':quanty_proformas
     }
     return render(request, 'core/home.html', context)
 

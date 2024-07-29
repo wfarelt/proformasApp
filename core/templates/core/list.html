@@ -67,5 +67,9 @@ Lista de {{title}}
     document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("search-field").focus();
     });
+    // Quitar los especios en blancos del imput
+    document.getElementById('search-field').addEventListener('change', function() {
+        this.value = this.value.trim();
+    });
 </script>
 {% endblock %}
