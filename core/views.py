@@ -95,23 +95,36 @@ class ProformaListView(ListView):
 
 # Crear proforma
 def proforma_new(request):
-    proforma = Proforma.objects.create()
-    detalles = Detalle.productos_list(proforma)
     query = request.GET.get('q')
-    productos_list = Producto.objects.all()
-    if query := request.GET.get('q'):
-        productos_list = productos_list.filter(nombre__icontains=query)
-        paginator = Paginator(productos_list, 5)
-        page_number = request.GET.get('page')
-        page_obj = paginator.get_page(page_number)
-        context = {'proforma': proforma, 'productos_list': page_obj, 'detalles': detalles, 'page_obj': page_obj}
+    
+    # Verificar si la última proforma creada no tiene productos en su detalle
+    last_proforma = Proforma.objects.last()
+    if last_proforma and Detalle.productos_list(last_proforma).count() < 1:
+        proforma = last_proforma
     else:
-        paginator = Paginator(productos_list, 5)
-        page_number = request.GET.get('page')
-        page_obj = paginator.get_page(page_number)
-        context = {'proforma': proforma, 'productos_list': page_obj, 'detalles': detalles, 'page_obj': page_obj}
+        proforma = Proforma.objects.create()
         
+    detalles = Detalle.productos_list(proforma)
+    productos_list = Producto.objects.all()
+    literal = numero_a_literal(proforma.total)    
+    
+    if query:
+        productos_list = productos_list.filter(nombre__icontains=query)
+    
+    paginator = Paginator(productos_list, 5)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'proforma': proforma,
+        'productos_list': page_obj,
+        'detalles': detalles,
+        'page_obj': page_obj,
+        'literal': literal
+    }
+
     return render(request, 'core/proforma_new.html', context)
+    
 
 def proforma_add_client(request, id):
     proforma = Proforma.objects.get(id=id)

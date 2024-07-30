@@ -42,23 +42,15 @@
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarNavDropdown">
-      <ul class="navbar-nav">
+      <ul class="navbar-nav mr-auto">
         <li class="nav-item active">
           <a class="nav-link" href="{% url 'client_list' %}">Clientes</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="{% url 'product_list' %}">Productos</a>
         </li>
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown"
-            aria-haspopup="true" aria-expanded="false">
-            Ventas
-          </a>
-          <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-            <a class="dropdown-item" href="{% url 'proforma_new' %}">Nueva Proforma</a>
-            <a class="dropdown-item" href="{% url 'proforma_list' %}">Proformas</a>
-            <a class="dropdown-item" href="#">Ventas</a>
-          </div>
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'proforma_list' %}">Proformas</a>
         </li>
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown"
@@ -79,6 +71,24 @@
         </li>
         <li class="nav-item">
           <a class="nav-link" href="{% url 'reportes' %}">Reportes</a>
+        </li>
+      </ul>
+
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+            <a class="nav-link text-warning" href="{% url 'cliente_new' %}"><i class="bi bi-person-plus"></i></a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link text-primary" href="{% url 'producto_new' %}"><i class="bi bi-box-seam"></i></a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link text-danger" href="{% url 'proforma_new' %}"><i class="bi bi-file-earmark-plus"></i></a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link text-success" href="{% url 'supplier_create' %}"><i class="bi bi-truck"></i></a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link text-info" href="{% url 'brand_create' %}"><i class="bi bi-tags"></i></a>
         </li>
       </ul>
     </div>
