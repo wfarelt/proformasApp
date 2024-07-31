@@ -16,7 +16,7 @@ class ProductoForm(forms.ModelForm):
             'location': 'Ubicación',
         }
         widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
             'descripcion': forms.Textarea(attrs={'class': 'form-control'}),
             'brand': forms.Select(attrs={'class': 'form-control'}), # 'type': 'text
             'stock': forms.NumberInput(attrs={'class': 'form-control'}), # 'type': 'number
@@ -41,7 +41,7 @@ class ClienteForm(forms.ModelForm):
             'address': 'Dirección',
         }
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'name': forms.TextInput(attrs={'class': 'form-control','autofocus': 'autofocus'}),
             'nit': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
@@ -73,7 +73,7 @@ class SupplierForm(forms.ModelForm):
             'address': 'Dirección',
         }
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
             'contact_person': forms.TextInput(attrs={'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
@@ -92,7 +92,7 @@ class BrandForm(forms.ModelForm):
             'status': 'Estado',
         }
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
             'initials': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control'}),
             'status': forms.CheckboxInput(attrs={'class': 'form-check-input'}),

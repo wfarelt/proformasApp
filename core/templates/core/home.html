@@ -3,7 +3,7 @@
 {% block title %}Home{% endblock %}
 
 {% block content %}
-<div class="row">
+<div class="row mt-4">
     <div class="col-xl-3 col-md-6">
         <div class="card bg-primary text-white mb-4">
             <div class="card-body">
@@ -11,9 +11,6 @@
             </div>
             <div class="card-footer d-flex align-items-center justify-content-between">
                 <a class="small text-white stretched-link" href="{% url 'product_list' %}">{{quanty_products}}</a>
-                <div class="icon-circle bg-white-50">
-                    <i class="bi bi-trash text-white"></i>
-                </div>
             </div>
         </div>
     </div>
