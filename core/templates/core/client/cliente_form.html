@@ -1,7 +1,8 @@
 {% extends 'core/base.html' %}
 
-{% block content %}
+{% block title %}{{title}}{% endblock %}
 
+{% block content %}
 <h2>{{ form.instance.id|yesno:"Editar cliente,Nuevo cliente" }}</h2>
 <div class="col-md-3 center">
     <form method="post">

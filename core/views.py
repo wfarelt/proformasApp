@@ -243,9 +243,9 @@ def cliente_new(request):
         form = ClienteForm(request.POST)
         if form.is_valid():
             form.save()
-            # crear_clientes(50)
             return redirect('client_list')
-    context = {'form': form}
+    title = 'Nuevo Cliente'
+    context = {'form': form, 'title': title}
     return render(request, 'core/client/cliente_form.html', context)
 
 def crear_clientes(request):
@@ -338,7 +338,9 @@ def supplier_create(request):
             return redirect('supplier_list')
     else:
         form = SupplierForm()
-    return render(request, 'core/supplier/supplier_form.html', {'form': form})
+    title = 'Nuevo Proveedor'
+    context = {'form': form, 'title': title}
+    return render(request, 'core/supplier/supplier_form.html', context )
 
 def supplier_update(request, pk):
     supplier = get_object_or_404(Supplier, pk=pk)
@@ -381,7 +383,9 @@ def brand_create(request):
             return redirect('brand_list')
     else:
         form = BrandForm()
-    return render(request, 'core/brand/brand_form.html', {'form': form})
+    title = 'Nueva Marca'
+    context = {'form': form, 'title': title}
+    return render(request, 'core/brand/brand_form.html', context)
 
 def brand_update(request, pk):
     brand = get_object_or_404(Brand, pk=pk)
