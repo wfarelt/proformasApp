@@ -1,0 +1,39 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+<h1>Crear Movimiento</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <h2>Detalles</h2>
+    <div class="card mt-4">
+        {{ formset.management_form }}
+    </div>
+    <table class="table mb-4">
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Costo</th>
+                <th>Subtotal</th>
+                <th>Eliminar</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for form in formset %}
+            <tr>
+                <td>{{ form.product }}</td>
+                <td>{{ form.quantity }}</td>
+                <td>{{ form.cost }}</td>
+                <td>{{ form.subtotal }}</td>
+                <td>{{ form.DELETE }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <button type="submit" class="btn btn-success">Guardar</button>
+</form>
+<br>
+<br>
+{% endblock %}
+

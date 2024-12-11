@@ -1,0 +1,32 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+<h1>Movimientos</h1>
+<a href="{% url 'movement_create' %}" class="btn btn-primary">Crear Movimiento</a>
+<br>
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Tipo</th>
+            <th>Fecha</th>
+            <th>Descripción</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for movement in movements %}
+        <tr>
+            <td>{{ movement.id }}</td>
+            <td>{{ movement.movement_type }}</td>
+            <td>{{ movement.date }}</td>
+            <td>{{ movement.description }}</td>
+            <td>
+                <a href="{% url 'movement_update' movement.id %}">Editar</a>
+                <a href="{% url 'movement_delete' movement.id %}">Eliminar</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
