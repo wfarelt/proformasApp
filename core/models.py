@@ -52,9 +52,16 @@ class Producto(models.Model):
 
 # PROFORMA
 class Proforma(models.Model):
+    # ESTADO (PENDIENTE, EJECUTADO, ANULADO)
+    ESTADO = (
+        ('PENDIENTE', 'Pendiente'),
+        ('EJECUTADO', 'Ejecutado'),
+        ('ANULADO', 'Anulado'),
+    )
     fecha = models.DateTimeField(default=timezone.now)
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, blank=True, null=True)
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    estado = models.CharField(max_length=10, choices=ESTADO, default='PENDIENTE')
 
     def __str__(self):
         return str(self.id)

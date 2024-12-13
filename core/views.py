@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
+from django.contrib import messages  # Importa el framework de mensajes
 from django.core.paginator import Paginator
 from django.views.generic import ListView, UpdateView
 from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand
@@ -81,7 +82,7 @@ class ProductListView(ListView):
 # Listar proformas
 class ProformaListView(ListView):
     model = Proforma
-    template_name = 'core/proformas_list.html'  # Nombre de la plantilla
+    template_name = 'core/proforma/proformas_list.html'  # Nombre de la plantilla
     context_object_name = 'proformas'
     context_title = 'Listado de proformas'
     paginate_by = 10  # Número de proformas por página
@@ -123,7 +124,7 @@ def proforma_new(request):
         'literal': literal
     }
 
-    return render(request, 'core/proforma_new.html', context)
+    return render(request, 'core/proforma/proforma_new.html', context)
     
 
 def proforma_add_client(request, id):
@@ -158,7 +159,7 @@ def proforma_add_client(request, id):
                 'page_obj': page_obj
             }
             
-    return render(request, 'core/proforma_add_client.html', context)
+    return render(request, 'core/proforma/proforma_add_client.html', context)
 
 # Editar proforma 
 def proforma_edit(request, id):
@@ -179,7 +180,7 @@ def proforma_edit(request, id):
         page_obj = paginator.get_page(page_number)
         context = {'proforma': proforma, 'productos_list': page_obj, 'detalles': detalles, 'page_obj': page_obj, 'literal': literal}
         
-    return render(request, 'core/proforma_new.html', context)
+    return render(request, 'core/proforma/proforma_new.html', context)
 
 # Agregar producto a detalle
 def agregar_producto_a_detalle(request):
@@ -189,9 +190,11 @@ def agregar_producto_a_detalle(request):
         producto_id = request.POST.get('producto_id')
         cantidad = request.POST.get('cantidad')  
         precio = request.POST.get('precio')
-        if not cantidad:
+        if not cantidad or int(cantidad) <= 0:
+            messages.error(request, f'No se puede agregar una cantidad menor o igual a 0.')
             return redirect(reverse_lazy('proforma_edit', args=[proforma_id]))
-        if not precio:
+        if not precio or float(precio) <= 0:
+            messages.error(request, f'No se puede agregar un precio menor o igual a 0.')
             return redirect(reverse_lazy('proforma_edit', args=[proforma_id]))
         #añadir a subtotal en float
         subtotal =  float(cantidad) * float(precio)
@@ -217,6 +220,21 @@ def eliminar_producto_a_detalle(request, id):
     proforma.save()
     detalle.delete()
     return redirect(reverse_lazy('proforma_edit', args=[proforma.id]))
+
+# Cambiar estado de proforma
+def cambiar_estado_proforma(request, id):
+    proforma = Proforma.objects.get(id=id)
+    if request.POST.get('estado') == 'EJECUTADO':
+        proforma.estado = 'EJECUTADO'
+        for detalle in Detalle.productos_list(proforma):
+            producto = Producto.objects.get(id=detalle.producto.id)
+            if producto.stock < detalle.cantidad:
+                messages.error(request, f'No hay suficiente stock para el producto "{producto.nombre}".')
+                return redirect('proforma_edit', id)
+            producto.stock = producto.stock - detalle.cantidad
+            producto.save()
+        proforma.save()
+    return redirect('proforma_list')
     
 class ClientListView(ListView):
     model = Cliente

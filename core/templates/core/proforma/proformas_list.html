@@ -16,6 +16,7 @@
                 <th>Fecha</th>
                 <th>Cliente</th>
                 <th>Total</th>
+                <th>Estado</th>
                 <th></th>
             </tr>
         </thead>
@@ -26,8 +27,11 @@
                     <td>{{ proforma.fecha|date:"d/m/Y" }}</td>
                     <td>{{ proforma.cliente }}</td>
                     <td>{{ proforma.total }}</td>
+                    <td>{{ proforma.estado }}</td>
                     <td>
-                        <a href="{% url 'proforma_edit' proforma.id %}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i></a>
+                        {% if proforma.estado == 'PENDIENTE' %}
+                            <a href="{% url 'proforma_edit' proforma.id %}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i></a>
+                        {% endif %} 
                     </td>
                 </tr>
             {% empty %}

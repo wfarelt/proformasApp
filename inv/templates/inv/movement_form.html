@@ -22,6 +22,7 @@
         <tbody>
             {% for form in formset %}
             <tr>
+                <td hidden>{{ form.id }}</td>
                 <td>{{ form.product }}</td>
                 <td>{{ form.quantity }}</td>
                 <td>{{ form.cost }}</td>

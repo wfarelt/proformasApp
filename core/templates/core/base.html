@@ -43,32 +43,31 @@
     </button>
     <div class="collapse navbar-collapse" id="navbarNavDropdown">
       <ul class="navbar-nav mr-auto">
-        <li class="nav-item active">
-          <a class="nav-link" href="{% url 'client_list' %}">Clientes</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'product_list' %}">Productos</a>
+        <!-- Nav-item Mantenimiento -->
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="Mantenimiento" data-toggle="dropdown" aria-haspopup="true"
+            aria-expanded="false">
+            Mantenimiento
+          </a>
+          <div class="dropdown-menu" aria-labelledby="Mantenimiento">
+            <a class="dropdown-item" href="{% url 'client_list' %}">Clientes</a>
+            <a class="dropdown-item" href="{% url 'product_list' %}">Productos</a>
+            <a class="dropdown-item" href="{% url 'supplier_list' %}">Proveedores</a>
+            <a class="dropdown-item" href="{% url 'brand_list' %}">Marcas</a>
+          </div>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="{% url 'proforma_list' %}">Proformas</a>
         </li>
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown"
-            aria-haspopup="true" aria-expanded="false">
+          <a class="nav-link dropdown-toggle" href="#" id="Movimientos" data-toggle="dropdown" aria-haspopup="true"
+            aria-expanded="false">
             Movimientos
           </a>
-          <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-            <a class="dropdown-item" href="{% url 'movement_list' %}">Listar</a>
-            <a class="dropdown-item" href="#">Ingresos</a>
-            <a class="dropdown-item" href="#">Egresos</a>
-            <a class="dropdown-item" href="#">Compras</a>
+          <div class="dropdown-menu" aria-labelledby="Movimiento">
+            <a class="dropdown-item" href="{% url 'movement_list' %}">Registrados</a>
+            <a class="dropdown-item" href="{% url 'movement_create' %}">Nuevo</a>
           </div>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'supplier_list' %}">Proveedores</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'brand_list' %}">Marcas</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="{% url 'reportes' %}">Reportes</a>

@@ -15,6 +15,10 @@
 
     .no-mostrar{
       visibility: hidden;
+      display: flex;
+      align-items: center; /* Alinea verticalmente */
+      gap: 10px; /* Espaciado entre los botones */
+      flex-wrap: wrap; /* Permite que los botones se ajusten si no hay espacio */
     }
 
     .productos,
@@ -34,17 +38,18 @@
 
 
 {% block content %}
-<strong>
-  <h2>Proforma: {{proforma.id}}</h2>
-</strong>
-Fecha: {{proforma.fecha|date:"d/m/Y"}}
-<br>
-Cliente: {{proforma.cliente}}
-<a href="{% url 'proforma_add_client' proforma.id %}" class="btn btn-warning btn-sm no-mostrar"><i
-    class="bi bi-pencil-square"></i></a>
-<br>
-<hr class="no-mostrar">
-
+<div id="proforma">
+  <strong>
+    <h2>Proforma: {{proforma.id}}</h2>
+  </strong>
+  Fecha: {{proforma.fecha|date:"d/m/Y"}}
+  <br>
+  Cliente: {{proforma.cliente}}
+  <a href="{% url 'proforma_add_client' proforma.id %}" class="btn btn-warning btn-sm no-mostrar"><i
+      class="bi bi-pencil-square"></i></a>
+  <br>
+  <hr class="no-mostrar">
+</div>
 
 <div class="productos">
   <h2>PRODUCTOS</h2>
@@ -57,6 +62,7 @@ Cliente: {{proforma.cliente}}
     <tr>
       <th>Codigo</th>
       <th>Descripcion</th>
+      <th>Marca</th>
       <th>Stock</th>
       <th>Precio</th>
       <th>Cantidad</th>
@@ -72,6 +78,12 @@ Cliente: {{proforma.cliente}}
         <input type="hidden" name="producto_id" value="{{ producto.id }}">
         <td>{{ producto.nombre }}</td>
         <td>{{ producto.descripcion }}</td>
+        {% if producto.brand == None %}
+          <td>--</td>
+        {% else %}
+          <td>{{ producto.brand.initials }}</td>
+        {% endif %}
+        
         <td>{{ producto.stock }}</td>
         <td><input type="number" id="precio{{ producto.id}}" name="precio" value="{{ producto.precio  }}" step="0.01">
         </td>
@@ -105,6 +117,17 @@ Cliente: {{proforma.cliente}}
 <br>
 <hr class="no-mostrar">
 
+<div id="mensaje">
+  {% if messages %}
+  <div>
+    {% for message in messages %}
+      <div class="alert alert-danger alert-sm" role="alert">
+        {{ message }}
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
 
 <div class="detalle">
   <h2>DETALLE DE COMPRA</h2>
@@ -153,13 +176,24 @@ Cliente: {{proforma.cliente}}
 </div>
 <br>
 
-<div class="text-center mb-5" id="botones">
-  <a href="" class="btn btn-success btn-sm no-mostrar"><i class="bi bi-check"></i> Ejecutada</a>
-  <button onclick="window.print()" class="no-mostrar">Imprimir</button>
-  <a href="{% url 'proforma_list' %}" class="no-mostrar"><-- Volver a proformas</a>
+<div class="no-mostrar text-center mb-5 pb-5">
+  <h3>ESTADO DE LA PROFORMA</h3>
+  <form method="POST" action="{% url 'cambiar_estado_proforma' proforma.id %}" class="d-inline">
+    {% csrf_token %}
+    <div class="form-check mt-4">
+      <input class="form-check-input" type="checkbox" value="EJECUTADO" id="estado" name="estado"
+        {% if proforma.estado == 'EJECUTADO' %} checked {% endif %}>
+      <label class="form-check-label" for="estado">
+        EJECUTADO
+      </label>
+    </div>
+    <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-save"></i> Guardar</button>
+  </form>
+  
+  <!-- Botones fuera del formulario -->
+  <button onclick="window.print()" class="btn btn-info btn-sm"><i class="bi bi-printer"></i> Imprimir</button>
+  <a href="{% url 'proforma_list' %}" class="btn btn-danger btn-sm">Volver a proformas</a>
 </div>
-<br>
-
 {% endblock %}
 
 {% block scripts %}

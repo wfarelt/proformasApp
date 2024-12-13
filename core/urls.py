@@ -7,7 +7,8 @@ from .views import home, ProformaListView, proforma_add_client , proforma_new, p
             product_detail, product_edit, ProductListView, generate_proforma_pdf, \
                 reportes, \
                     SupplierListView, supplier_create, supplier_update,\
-                        BrandListView, brand_create, brand_update, brand_status
+                        BrandListView, brand_create, brand_update, brand_status, \
+                            cambiar_estado_proforma
 
 urlpatterns = [
     path('', home, name='home'),
@@ -16,6 +17,7 @@ urlpatterns = [
     path('producto/new/', producto_new, name='producto_new'),
     path('producto/edit/<int:id>/', product_edit, name='product_edit'),
     path('productos/', ProductListView.as_view(), name='product_list'),
+
     #proformas
     path('proformas/', ProformaListView.as_view(), name='proforma_list'),
     path('proforma/new/', proforma_new, name='proforma_new'),
@@ -23,6 +25,8 @@ urlpatterns = [
     path('proforma/agregar_producto_a_detalle/', agregar_producto_a_detalle, name='agregar_producto_a_detalle'),
     path('proforma/eliminar_producto_a_detalle/<int:id>/', eliminar_producto_a_detalle, name='eliminar_producto_a_detalle'),
     path('proforma/add_client/<int:id>/', proforma_add_client, name='proforma_add_client'),
+    path('proforma/cambiar_estado_proforma/<int:id>/', cambiar_estado_proforma, name='cambiar_estado_proforma'),
+
     #clientes
     #path('clientes/', clientes_list, name='clientes_list'),
     path('clientes/', ClientListView.as_view(), name='client_list'),
