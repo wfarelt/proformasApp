@@ -60,5 +60,9 @@ class MovementDetail(models.Model):
 
         # Llama al método `save` del modelo base
         super().save(*args, **kwargs)
+    
+    def productos_list(movement):
+        detalles = MovementDetail.objects.filter(movement=movement)
+        return detalles
 
     

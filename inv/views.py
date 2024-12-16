@@ -4,6 +4,8 @@ from django.urls import reverse_lazy
 from django.views.generic import View
 from .forms import MovementDetailFormSet, MovementForm
 from .models import Movement, MovementDetail
+from core.models import Producto
+from django.core.paginator import Paginator
 
 
 
@@ -63,3 +65,40 @@ class MovementDeleteView(DeleteView):
     model = Movement
     template_name = 'inv/movement_confirm_delete.html'
     success_url = reverse_lazy('movement_list')
+
+
+def cambiar_estado_movimiento(request, pk):
+    movimiento = get_object_or_404(Movement, pk=pk)
+    movimiento.estado = not movimiento.estado
+    movimiento.save()
+    return redirect('movement_list')
+
+# Crear proforma
+def movement_new(request):
+    query = request.GET.get('q')
+    
+    last_movement = Movement.objects.last()
+    if last_movement and MovementDetail.productos_list(last_movement).count() < 1:
+        movement = last_movement
+    else:
+        movement = Movement.objects.create()
+    
+    detalles = MovementDetail.productos_list(movement)
+    productos_list = Producto.objects.all()
+
+    
+    if query:
+        productos_list = productos_list.filter(nombre__icontains=query)
+    
+    paginator = Paginator(productos_list, 5)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'movement': movement,
+        'productos_list': page_obj,
+        'detalles': detalles,
+        'page_obj': page_obj,
+    }
+
+    return render(request, 'inv/movement_form.html', context)

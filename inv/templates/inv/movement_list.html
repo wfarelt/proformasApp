@@ -18,12 +18,16 @@
         {% for movement in movements %}
         <tr>
             <td>{{ movement.id }}</td>
-            <td>{{ movement.movement_type }}</td>
-            <td>{{ movement.date }}</td>
+            {% if movement.movement_type == 'IN' %}
+                <td>Ingreso</td>
+            {% else %}
+                <td>Egreso</td>
+            {% endif %}
+            <td>{{ movement.date|date:"d/m/Y" }}</td>
             <td>{{ movement.description }}</td>
             <td>
-                <a href="{% url 'movement_update' movement.id %}">Editar</a>
-                <a href="{% url 'movement_delete' movement.id %}">Eliminar</a>
+                <a href="{% url 'movement_update' movement.id %}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i></a>
+                <a href="{% url 'movement_delete' movement.id %}" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></a>
             </td>
         </tr>
         {% endfor %}
