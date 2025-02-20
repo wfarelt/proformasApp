@@ -11,4 +11,11 @@ class MovementAdmin(admin.ModelAdmin):
     inlines = [MovementDetailInline]
 
 admin.site.register(Movement, MovementAdmin)
-admin.site.register(MovementDetail)
+
+# Mostrar el detalle de movimiento en el admin (Id, fecha, tipo, proveedor, cantidad total)
+class MovementDetailAdmin(admin.ModelAdmin):
+    list_display = ('id', 'movement', 'product', 'quantity', 'cost', 'subtotal')
+    
+admin.site.register(MovementDetail, MovementDetailAdmin)
+
+

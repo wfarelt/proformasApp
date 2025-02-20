@@ -27,7 +27,13 @@
                     <td>{{ proforma.fecha|date:"d/m/Y" }}</td>
                     <td>{{ proforma.cliente }}</td>
                     <td>{{ proforma.total }}</td>
-                    <td>{{ proforma.estado }}</td>
+                    {% if proforma.estado == 'PENDIENTE' %}
+                        <td><span class="badge bg-warning text-dark">{{ proforma.estado }}</span></td>
+                    {% elif proforma.estado == 'EJECUTADO' %}
+                        <td><span class="badge bg-success">{{ proforma.estado }}</span></td>
+                    {% else %}
+                        <td><span class="badge bg-danger">{{ proforma.estado }}</span></td>
+                    {% endif %}
                     <td>
                         {% if proforma.estado == 'PENDIENTE' %}
                             <a href="{% url 'proforma_edit' proforma.id %}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i></a>

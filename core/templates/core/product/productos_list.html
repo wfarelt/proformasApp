@@ -18,7 +18,11 @@
 <td>{{ obj.brand.initials }}</td>
 <td style="text-align: right;">{{ obj.precio }}</td>
 <td style="text-align: center;">{{ obj.stock }}</td>
-<td>{{ obj.location }}</td>
+{% if obj.location %}
+    <td>{{ obj.location }}</td>
+{% else %}
+    <td>-</td>
+{% endif %}
 {% endblock rows %}
 
 {% block actions %}

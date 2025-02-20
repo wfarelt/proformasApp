@@ -59,16 +59,8 @@
         <li class="nav-item">
           <a class="nav-link" href="{% url 'proforma_list' %}">Proformas</a>
         </li>
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="Movimientos" data-toggle="dropdown" aria-haspopup="true"
-            aria-expanded="false">
-            Movimientos
-          </a>
-          <div class="dropdown-menu" aria-labelledby="Movimiento">
-            <a class="dropdown-item" href="{% url 'movement_list' %}">Registrados</a>
-            <a class="dropdown-item" href="{% url 'movement_new' %}">Nuevo</a>
-            <a class="dropdown-item" href="{% url 'movement_create' %}">Nuevo2</a>
-          </div>
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'movement_list' %}">Movimientos</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="{% url 'reportes' %}">Reportes</a>
@@ -95,7 +87,7 @@
     </div>
   </nav>
 
-  <div class="m-4">{% block content %} {% endblock %}</div>
+  <div class="m-5 pb-5">{% block content %} {% endblock %}</div>
 
   <footer class="fixed-footer bg-dark text-center text-lg-start">
     <!-- Copyright -->

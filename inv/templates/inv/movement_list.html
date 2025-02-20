@@ -2,15 +2,15 @@
 
 {% block content %}
 <h1>Movimientos</h1>
-<a href="{% url 'movement_create' %}" class="btn btn-primary">Crear Movimiento</a>
 <br>
 <table class="table">
     <thead>
         <tr>
             <th>ID</th>
+            <th>Descripción</th>
             <th>Tipo</th>
             <th>Fecha</th>
-            <th>Descripción</th>
+            <th>Estado</th>
             <th>Acciones</th>
         </tr>
     </thead>
@@ -18,19 +18,29 @@
         {% for movement in movements %}
         <tr>
             <td>{{ movement.id }}</td>
-            {% if movement.movement_type == 'IN' %}
-                <td>Ingreso</td>
+            {% if movement.description %}
+                <td>{{ movement.description }}</td>
             {% else %}
-                <td>Egreso</td>
+                <td>Sin descripción</td>
+            {% endif %}
+            {% if movement.movement_type == 'IN' %}
+                <td><span class="badge bg-warning">Ingreso</span></td>                
+            {% else %}
+                <td><span class="badge bg-info text-white">Egreso</span></td>
             {% endif %}
             <td>{{ movement.date|date:"d/m/Y" }}</td>
-            <td>{{ movement.description }}</td>
+            {% if movement.status == 'F' %}
+                <td><span class="badge bg-success text-dark">Finalizado</span></td>
+            {% else %}
+                <td><span class="badge bg-danger text-white">Pendiente</span></td>
+            {% endif %}
             <td>
-                <a href="{% url 'movement_update' movement.id %}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i></a>
+                <a href="{% url 'movement_edit' movement.id %}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i></a>
                 <a href="{% url 'movement_delete' movement.id %}" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></a>
             </td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+<a href="{% url 'movement_new' %}" class="btn btn-success btn-sm"><span class="bi bi-plus-lg"></span> Nuevo Movimiento</a>
 {% endblock %}

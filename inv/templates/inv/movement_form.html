@@ -1,5 +1,9 @@
 {% extends "core/base.html" %}
 
+{% load static %}
+
+{% block title %}MOVIMIENTO{% endblock %}
+
 {% block content %}
 <h2>MOVIMIENTO: {{ movement.id }}</h2>
 
@@ -8,12 +12,12 @@
         <div class="form-group">
             Movement type
             {% if movement.type == 'IN' %}
-                <select name="type" class="form-control" id="id_type">
+                <select name="movement_type" class="form-control" id="id_type">
                     <option value="IN" selected="">INGRESO</option>
                     <option value="OUT">EGRESO</option>
                 </select>
             {% else %}
-                <select name="type" class="form-control" id="id_type">
+                <select name="movement_type" class="form-control" id="id_type">
                     <option value="IN">INGRESO</option>
                     <option value="OUT" selected="">EGRESO</option>
                 </select>
@@ -65,7 +69,7 @@
       <tr>
         <th>Codigo</th>
         <th>Descripcion</th>
-        <th>Precio</th>
+        <th>Costo</th>
         <th>Cantidad</th>
         <th>Subtotal</th>
         <th></th>
@@ -73,15 +77,16 @@
   
       {% for producto in productos_list %}
       <tr>
-        <form method="POST" action="{% url 'agregar_producto_a_detalle' %}">
+        <form method="POST" action="{% url 'agregar_producto_a_movimiento' %}">
           {% csrf_token %}
           <input type="hidden" name="movement_id" value="{{ movement.id }}">
           <input type="hidden" name="producto_id" value="{{ producto.id }}">
+          <input type="hidden" name="movement_type" value="{{ movement.type }}">
           <td>{{ producto.nombre }}</td>
           <td>{{ producto.descripcion }}</td>          
-          <td><input type="number" id="precio{{ producto.id}}" name="precio" value="{{ producto.precio  }}" step="0.01">
+          <td><input type="number" id="cost{{ producto.id}}" name="cost" value="{{ producto.precio  }}" step="0.01">
           </td>
-          <td><input type="number" id="cantidad{{ producto.id}}" name="cantidad" placeholder="0"></td>
+          <td><input type="number" id="quantity{{ producto.id}}" name="quantity" placeholder="0"></td>
           <td><input type="number" id="subtotal{{ producto.id}}" name="subtotal" value="{{ producto.precio  }}" readonly>
           </td>
           <td><button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus"></i></button></td>
@@ -116,6 +121,7 @@
 <table class="table mb-4">
     <thead>
         <tr>
+            <th>#</th>
             <th>Producto</th>
             <th>Cantidad</th>
             <th>Costo</th>
@@ -124,14 +130,14 @@
         </tr>
     </thead>
     <tbody>
-        {% for form in formset %}
+        {% for item in detalles %}
         <tr>
-            <td hidden>{{ form.id }}</td>
-            <td>{{ form.product }}</td>
-            <td>{{ form.quantity }}</td>
-            <td>{{ form.cost }}</td>
-            <td>{{ form.subtotal }}</td>
-            <td>{{ form.DELETE }}</td>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ item.product }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>{{ item.cost }}</td>
+            <td>{{ item.subtotal }}</td>
+            <td><a href="{% url 'eliminar_producto_de_movimiento' item.id %}" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></a></td>
         </tr>
         {% endfor %}
     </tbody>
@@ -164,8 +170,9 @@
 <br>
 {% endblock %}
 
-
 {% block scripts %}
+<script src="{% static 'inv/js/script.js' %}"></script>
+
 <!-- JavaScript para enfocar el campo de búsqueda -->
 <script type="text/javascript">
   document.addEventListener("DOMContentLoaded", function () {

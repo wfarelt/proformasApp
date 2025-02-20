@@ -1,6 +1,5 @@
-from decimal import Decimal
 from django.utils import timezone
-from django.db import models
+from django.db import models, transaction
 from core.models import Producto, Supplier
 # Create your models here.
 
@@ -10,14 +9,26 @@ class Movement(models.Model):
         ('IN', 'Ingreso'),
         ('OUT', 'Egreso'),
     ]
-    movement_type = models.CharField(max_length=3, choices=TYPE_CHOICES)
+    STATUS_CHOICES = [
+        ('P', 'Pendiente'),
+        ('F', 'Finalizado'),
+        ('A', 'Anulado'),
+    ]
+    movement_type = models.CharField(max_length=3, choices=TYPE_CHOICES, default='IN')
     date = models.DateTimeField(default=timezone.now)
     description = models.TextField(blank=True, null=True)
     supplier = models.ForeignKey(Supplier, on_delete=models.SET_NULL, blank=True, null=True)  # Solo para ingresos
     total_quantity = models.PositiveIntegerField(default=0)
-
+    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default='P')
+    
+    # Mostrar id, fecha(d/m/Y), tipo, total    
     def __str__(self):
-        return f"{self.get_movement_type_display()} - {self.date.strftime('%Y-%m-%d')}"
+        return f"{self.id} - {self.date.strftime('%d/%m/%Y')} - {self.get_movement_type_display()} - {self.total_quantity}"
+    
+    def update_total_quantity(self):
+        """ Actualiza la cantidad total basada en los detalles. """
+        self.total_quantity = self.details.aggregate(total=models.Sum('quantity'))['total'] or 0
+        self.save()
 
     class Meta:
         verbose_name = "Movement"
@@ -35,34 +46,24 @@ class MovementDetail(models.Model):
         return f"{self.quantity} x {self.product.nombre} ({self.movement.get_movement_type_display()})"
 
     def save(self, *args, **kwargs):
-        # Calcula el subtotal
-        self.subtotal = self.quantity * self.cost
+        with transaction.atomic():  # Transacción para evitar inconsistencias
+            if self.movement.movement_type == 'IN':
+                self.product.stock += self.quantity
+            elif self.movement.movement_type == 'OUT':
+                if self.product.stock < self.quantity:
+                    raise ValueError("Stock insuficiente para realizar el egreso.")
+                self.product.stock -= self.quantity
 
-        # Actualizar total_quantity en el movimiento
-        self.movement.total_quantity += self.quantity
-        self.movement.save()
-
-        # Actualizar precio del producto * 1.35 
-        if self.movement.movement_type == 'IN':
-            self.product.precio = self.cost * Decimal('1.35')
+            # Guarda el stock actualizado del producto
             self.product.save()
-        
-        # Actualizar stock
-        if self.movement.movement_type == 'IN':
-            self.product.stock += self.quantity
-        elif self.movement.movement_type == 'OUT':
-            if self.product.stock < self.quantity:
-                raise ValueError("Stock insuficiente para realizar el egreso.")
-            self.product.stock -= self.quantity
 
-        # Guarda los cambios en el producto
-        self.product.save()
+            # Guardar el detalle
+            super().save(*args, **kwargs)
 
-        # Llama al método `save` del modelo base
-        super().save(*args, **kwargs)
-    
-    def productos_list(movement):
-        detalles = MovementDetail.objects.filter(movement=movement)
-        return detalles
+
+    @classmethod
+    def productos_list(cls, movement):
+        """ Obtiene todos los detalles de un movimiento """
+        return cls.objects.filter(movement=movement)
 
     
