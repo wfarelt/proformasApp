@@ -1,182 +1,21 @@
 {% extends "core/base.html" %}
 
-{% load static %}
-
-{% block title %}MOVIMIENTO{% endblock %}
-
 {% block content %}
-<h2>MOVIMIENTO: {{ movement.id }}</h2>
-
-<div class="row">
-    <div class="col-md-6">
-        <div class="form-group">
-            Movement type
-            {% if movement.type == 'IN' %}
-                <select name="movement_type" class="form-control" id="id_type">
-                    <option value="IN" selected="">INGRESO</option>
-                    <option value="OUT">EGRESO</option>
-                </select>
-            {% else %}
-                <select name="movement_type" class="form-control" id="id_type">
-                    <option value="IN">INGRESO</option>
-                    <option value="OUT" selected="">EGRESO</option>
-                </select>
-            {% endif %}
-
-        </div>
-        <div class="form-group">
-            Date
-            <input type="date" name="date" value="{{ movement.date }}" class="form-control" required="" id="id_date">
+<div class="container">
+    <h2>Registrar Movimiento</h2>
+    <form method="post">
+        {% csrf_token %}
+        
+        <!-- Movimiento -->
+        <div class="card p-3 mb-3">
+            <h4>Datos del Movimiento</h4>
+            {{ form.as_p }}
         </div>
         
-        <div class="form-group">           
-            
-                Supplier
-            
-                <div class="input-group mb-3">
-                    <input type="text" name="supplier" value="{{ movement.supplier }}" class="form-control" required="" id="id_supplier", readonly="readonly">
-                    <div class="input-group-append">
-                      
-                      <a href="{% url 'supplier_list' %}" class="btn btn-warning"><i class="bi bi-pencil-square"></i></a>
-                    </div>
-                </div>
-            
-        </div>           
-        
-        <div class="form-group">
-            Total quantity
-            <input type="number" name="total_quantity" value="0" min="0" class="form-control" readonly="readonly" required="" id="id_total_quantity">
-        </div>
-    </div>    
-    <div class="col-md-6">
-        <div class="form-group">
-            Description
-            <textarea name="description" cols="40" rows="10" class="form-control" id="id_description"></textarea>
-        </div>
-    </div>    
-</div>
-
-<hr>
-
-<div class="productos">
-    <h2>PRODUCTOS</h2>
-    <form method="get">
-      <input type="text" name="q" id="search-field" placeholder="{{placeholder}}" value="{{ request.GET.q }}">
-      <button type="submit">Buscar</button>
+        <!-- Detalles -->
+        <a href="" class="btn btn-success"><span class="bi bi-plus-lg"></span> Agregar producto</a>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <a href="{% url 'movement_list' %}" class="btn btn-secondary">Cancelar</a>
     </form>
-    <br>
-    <table class="table table-sm">
-      <tr>
-        <th>Codigo</th>
-        <th>Descripcion</th>
-        <th>Costo</th>
-        <th>Cantidad</th>
-        <th>Subtotal</th>
-        <th></th>
-      </tr>
-  
-      {% for producto in productos_list %}
-      <tr>
-        <form method="POST" action="{% url 'agregar_producto_a_movimiento' %}">
-          {% csrf_token %}
-          <input type="hidden" name="movement_id" value="{{ movement.id }}">
-          <input type="hidden" name="producto_id" value="{{ producto.id }}">
-          <input type="hidden" name="movement_type" value="{{ movement.type }}">
-          <td>{{ producto.nombre }}</td>
-          <td>{{ producto.descripcion }}</td>          
-          <td><input type="number" id="cost{{ producto.id}}" name="cost" value="{{ producto.precio  }}" step="0.01">
-          </td>
-          <td><input type="number" id="quantity{{ producto.id}}" name="quantity" placeholder="0"></td>
-          <td><input type="number" id="subtotal{{ producto.id}}" name="subtotal" value="{{ producto.precio  }}" readonly>
-          </td>
-          <td><button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus"></i></button></td>
-        </form>
-      </tr>
-      {% endfor %}
-    </table>
-  
-    <div class="pagination">
-      <span class="step-links">
-        {% if page_obj.has_previous %}
-        <a href="?q={{ request.GET.q }}&page=1">&laquo; primera</a>
-        <a href="?q={{ request.GET.q }}&page={{ page_obj.previous_page_number }}">anterior</a>
-        {% endif %}
-  
-        <span class="current">
-          Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}.
-        </span>
-  
-        {% if page_obj.has_next %}
-        <a href="?q={{ request.GET.q }}&page={{ page_obj.next_page_number }}">siguiente</a>
-        <a href="?q={{ request.GET.q }}&page={{ page_obj.paginator.num_pages }}">última &raquo;</a>
-        {% endif %}
-      </span>
-    </div>
 </div>
-
-<hr>
-
-<h2>DETALLE DE MOVIMIENTO</h2>
-
-<table class="table mb-4">
-    <thead>
-        <tr>
-            <th>#</th>
-            <th>Producto</th>
-            <th>Cantidad</th>
-            <th>Costo</th>
-            <th>Subtotal</th>
-            <th>Eliminar</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for item in detalles %}
-        <tr>
-            <td>{{ forloop.counter }}</td>
-            <td>{{ item.product }}</td>
-            <td>{{ item.quantity }}</td>
-            <td>{{ item.cost }}</td>
-            <td>{{ item.subtotal }}</td>
-            <td><a href="{% url 'eliminar_producto_de_movimiento' item.id %}" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></a></td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
-</form>
-
-<hr>
-
-<div class="no-mostrar text-center mb-5 pb-5">
-    <h3>ESTADO DE MOVIMIENTO</h3>
-    <form method="POST" action="" class="d-inline">
-      {% csrf_token %}
-      <div class="form-check mt-4">
-        <input class="form-check-input" type="checkbox" value="EJECUTADO" id="estado" name="estado"
-          {% if proforma.estado == 'EJECUTADO' %} checked {% endif %}>
-        <label class="form-check-label" for="estado">
-          EJECUTADO
-        </label>
-      </div>
-      <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-save"></i> Guardar</button>
-    </form>
-    
-    <!-- Botones fuera del formulario -->
-    <button onclick="window.print()" class="btn btn-info btn-sm"><i class="bi bi-printer"></i> Imprimir</button>
-    <a href="{% url 'movement_list' %}" class="btn btn-danger btn-sm">Volver a Movimientos</a>
-  </div>
-    
-<br>
-<br>
-{% endblock %}
-
-{% block scripts %}
-<script src="{% static 'inv/js/script.js' %}"></script>
-
-<!-- JavaScript para enfocar el campo de búsqueda -->
-<script type="text/javascript">
-  document.addEventListener("DOMContentLoaded", function () {
-    document.getElementById("search-field").focus();
-  });
-</script>
 {% endblock %}

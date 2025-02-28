@@ -1,6 +1,50 @@
 
 from django import forms
-from .models import Producto, Cliente, Proforma, Supplier, Brand
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+from .models import Producto, Cliente, Proforma, Supplier, Brand, User
+
+
+# CREAR UN FORMULARIO PARA USUARIO
+class UserCreationForm(UserCreationForm):
+    def __init__(self, *args, **kwargs):
+        super(UserCreationForm, self).__init__(*args, **kwargs)
+    
+    class Meta:
+        model = User
+        fields = ['email', 'name', 'is_staff', 'is_superuser']
+        labels = {
+            'email': 'Correo',
+            'name': 'Nombre',
+            'is_staff': 'Staff',
+            'is_superuser': 'Superusuario',
+        }
+        widgets = {
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_superuser': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+# CREAR UN FORMULARIO PARA MODIFICAR USUARIO
+class UserChangeForm(UserChangeForm):
+    def __init__(self, *args, **kwargs):
+        super(UserChangeForm, self).__init__(*args, **kwargs)
+    
+    class Meta:
+        model = User
+        fields = ['email', 'name', 'is_staff', 'is_superuser']
+        labels = {
+            'email': 'Correo',
+            'name': 'Nombre',
+            'is_staff': 'Staff',
+            'is_superuser': 'Superusuario',
+        }
+        widgets = {
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_superuser': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
 
 # CREAR UN FORMULARIO PARA PRODUCTO
 class ProductoForm(forms.ModelForm):

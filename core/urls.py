@@ -1,17 +1,17 @@
 # core/urls.py
 
 from django.urls import path
-from .views import home, ProformaListView, proforma_add_client , proforma_new, proforma_edit,\
-    agregar_producto_a_detalle, producto_new, eliminar_producto_a_detalle, \
-        cliente_new, cliente_edit, cliente_delete, ClientListView, crear_clientes,\
-            product_detail, product_edit, ProductListView, generate_proforma_pdf, \
-                reportes, \
-                    SupplierListView, supplier_create, supplier_update,\
-                        BrandListView, brand_create, brand_update, brand_status, \
-                            cambiar_estado_proforma
+from django.contrib.auth import views as auth_views
+
+from core.views import *
 
 urlpatterns = [
-    path('', home, name='home'),
+    
+    path('', Home2.as_view(), name='home2'),
+    path('login/', auth_views.LoginView.as_view(template_name='core/login.html'), name='login'),
+    path('logout/', auth_views.LogoutView.as_view(template_name='core/login.html'), name='logout'),
+    
+    path('home', home, name='home'),
     #productos
     path('producto/<int:id>/', product_detail, name='product_detail'),
     path('producto/new/', producto_new, name='producto_new'),

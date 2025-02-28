@@ -1,8 +1,9 @@
+from django.shortcuts import render
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.contrib import messages  # Importa el framework de mensajes
 from django.core.paginator import Paginator
-from django.views.generic import ListView, UpdateView
+from django.views.generic import ListView, UpdateView, TemplateView
 from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand
 from .forms import ProductoForm, ClienteForm, ProformaAddClientForm, SupplierForm, BrandForm
 #reporte pdf
@@ -13,7 +14,15 @@ from nlt import numlet as nl
 
 from faker import Faker
 
+
+from django.contrib.auth.mixins import LoginRequiredMixin
 # Create your views here.
+
+
+class Home2(LoginRequiredMixin, TemplateView):
+    template_name = 'core/home2.html'
+    login_url = 'login'
+    
 
 def home(request):
     quanty_products = Producto.objects.count()
