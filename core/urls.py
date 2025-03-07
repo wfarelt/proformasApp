@@ -1,17 +1,17 @@
 # core/urls.py
 
 from django.urls import path
-from django.contrib.auth import views as auth_views
+from django.contrib.auth.views import LoginView, LogoutView
 
 from core.views import *
 
 urlpatterns = [
     
-    path('', Home2.as_view(), name='home2'),
-    path('login/', auth_views.LoginView.as_view(template_name='core/login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(template_name='core/login.html'), name='logout'),
+    path('login/', LoginView.as_view(template_name='core/registration/login.html'), name='login'),
+    path('logout/', LogoutView.as_view(), name='logout'),
+    #path('', Home2.as_view(), name='home2'),
     
-    path('home', home, name='home'),
+    path('', home, name='home'),
     #productos
     path('producto/<int:id>/', product_detail, name='product_detail'),
     path('producto/new/', producto_new, name='producto_new'),
