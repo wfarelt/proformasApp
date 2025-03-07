@@ -14,16 +14,11 @@ from nlt import numlet as nl
 
 from faker import Faker
 
-
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
 # Create your views here.
 
-
-class Home2(LoginRequiredMixin, TemplateView):
-    template_name = 'core/home2.html'
-    login_url = 'login'
-    
-
+@login_required(login_url='login')
 def home(request):
     quanty_products = Producto.objects.count()
     quanty_clients = Cliente.objects.count()

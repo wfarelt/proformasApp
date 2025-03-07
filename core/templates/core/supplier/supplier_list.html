@@ -11,17 +11,17 @@
 
 {% block rows %}                       
     <td>{{ obj.name }}</td>
-    <td>{{ obj.contact }}</td>
+    <td>{{ obj.contact_person }}</td>
     <td>{{ obj.phone }}</td>
     <td>{{ obj.email }}</td>
     <td>{{ obj.address }}</td>
 {% endblock rows %}
 
 {% block actions %}
-    <a href="{% url 'supplier_update' obj.id %}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i></a>
+    <a href="{% url 'supplier_update' obj.id %}" class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></a>
 {% endblock actions %}
 
 {% block create %}
-    <a href="{% url 'supplier_create' %}" class="btn btn-success btn-sm">Proveedor <i class="bi bi-plus"></i></a>
+    <a href="{% url 'supplier_create' %}" class="btn btn-success btn-sm">Proveedor <i class="fa fa-plus"></i></a>
 {% endblock create %}
  

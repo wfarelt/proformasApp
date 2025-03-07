@@ -36,7 +36,7 @@
                     {% endif %}
                     <td>
                         {% if proforma.estado == 'PENDIENTE' %}
-                            <a href="{% url 'proforma_edit' proforma.id %}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i></a>
+                            <a href="{% url 'proforma_edit' proforma.id %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i></a>
                         {% endif %} 
                     </td>
                 </tr>
@@ -67,7 +67,7 @@
     </div>
     <br>
     
-    <a href="{% url 'proforma_new' %}" class="btn btn-success btn-sm">Proforma <i class="bi bi-plus"></i></a>
+    <a href="{% url 'proforma_new' %}" class="btn btn-success btn-sm">Proforma <i class="fas fa-plus"></i></a>
 {% endblock %}
 
 {% block scripts %}

@@ -26,12 +26,12 @@
 {% endblock rows %}
 
 {% block actions %}
-<a href="{% url 'product_detail' obj.id %}" class="btn btn-info btn-sm"><i class="bi bi-eye"></i></a>
-<a href="{% url 'product_edit' obj.id %}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i></a>
+<a href="{% url 'product_detail' obj.id %}" class="btn btn-info btn-sm"><i class="fa fa-eye"></i></a>
+<a href="{% url 'product_edit' obj.id %}" class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></a>
 {% endblock actions %}
 
 {% block create %}
-<a href="{% url 'producto_new' %}" class="btn btn-success btn-sm">Producto <i class="bi bi-plus-circle"></i></a>
+<a href="{% url 'producto_new' %}" class="btn btn-success btn-sm">Producto <i class="fa fa-plus"></i></a>
 {% endblock create %}
 
 

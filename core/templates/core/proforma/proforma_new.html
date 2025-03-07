@@ -46,7 +46,7 @@
   <br>
   Cliente: {{proforma.cliente}}
   <a href="{% url 'proforma_add_client' proforma.id %}" class="btn btn-warning btn-sm no-mostrar"><i
-      class="bi bi-pencil-square"></i></a>
+      class="fas fa-user-plus"></i></a>
   <br>
   <hr class="no-mostrar">
 </div>
@@ -58,7 +58,7 @@
     <button type="submit">Buscar</button>
   </form>
   <br>
-  <table class="table table-sm">
+  <table class="table table-bordered table-sm">
     <tr>
       <th>Codigo</th>
       <th>Descripcion</th>
@@ -85,12 +85,12 @@
         {% endif %}
         
         <td>{{ producto.stock }}</td>
-        <td><input type="number" id="precio{{ producto.id}}" name="precio" value="{{ producto.precio  }}" step="0.01">
+        <td><input type="number" id="precio{{ producto.id}}" name="precio" value="{{producto.precio}}" step="0.01">
         </td>
         <td><input type="number" id="cantidad{{ producto.id}}" name="cantidad" placeholder="0"></td>
         <td><input type="number" id="subtotal{{ producto.id}}" name="subtotal" value="{{ producto.precio  }}" readonly>
         </td>
-        <td><button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus"></i></button></td>
+        <td><button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i></button></td>
       </form>
     </tr>
     {% endfor %}
@@ -155,7 +155,7 @@
         <td style="text-align: right;">{{ detalle.subtotal }}</td>
         <td style="text-align: center;">{{ detalle.producto.location }}</td>
         <td><a href="{% url 'eliminar_producto_a_detalle' detalle.id %}" class="btn btn-danger btn-sm no-mostrar"><i
-              class="bi bi-trash"></i></a></td>
+              class="fas fa-trash-alt"></i></a></td>
       </tr>
       {% empty %}
       <tr>
@@ -191,7 +191,7 @@
   </form>
   
   <!-- Botones fuera del formulario -->
-  <button onclick="window.print()" class="btn btn-info btn-sm"><i class="bi bi-printer"></i> Imprimir</button>
+  <button onclick="window.print()" class="btn btn-info btn-sm"><i class="fas fa-print"></i> Imprimir</button>
   <a href="{% url 'proforma_list' %}" class="btn btn-danger btn-sm">Volver a proformas</a>
 </div>
 {% endblock %}

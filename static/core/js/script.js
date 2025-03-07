@@ -33,4 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
             actualizarSubtotal({ target: input });
         }
     });
+
 });
+
+

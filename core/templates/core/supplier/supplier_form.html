@@ -8,7 +8,7 @@
     <form method="post">
         {% csrf_token %}
         {{ form.as_p }}        
-        <button type="submit" class="btn btn-success btn-sm">Guardar <i class="bi bi-save"></i></button>
+        <button type="submit" class="btn btn-success btn-sm">Guardar <i class="fa fa-save"></i></button>
         <a href="{% url 'supplier_list' %}"><--Volver a proveedores</a>    
     </form>
 </div>

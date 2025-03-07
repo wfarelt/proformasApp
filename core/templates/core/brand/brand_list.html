@@ -16,12 +16,12 @@
 {% endblock rows %}
 
 {% block actions %}
-<a href="{% url 'brand_update' obj.id %}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i></a>
-<a href="{% url 'brand_status' obj.id %}" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></a>
+<a href="{% url 'brand_update' obj.id %}" class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></a>
+<a href="{% url 'brand_status' obj.id %}" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></a>
 {% endblock actions %}
 
 {% block create %}
-<a href="{% url 'brand_create' %}" class="btn btn-success btn-sm">Marca <i class="bi bi-plus"></i></a>
+<a href="{% url 'brand_create' %}" class="btn btn-success btn-sm">Marca <i class="fa fa-plus"></i></a>
 {% endblock create %}
 
                 
