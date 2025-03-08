@@ -6,13 +6,25 @@
 
 {% block content %}
 
-<div class="col-md-3">
-    <h2>{{ producto.nombre }}</h2>
-    <p>{{ producto.descripcion }}</p>
-    <p>Precio: ${{ producto.precio }}</p>
-    <p>Stock: {{ producto.stock }}</p>
-    <p>Ubicación: {{ producto.location }}</p>
-    <a href="{% url 'product_list' %}"><--Volver</a>
+<div class="row">
+    <div class="col-md-6 offset-md-3 mt-3">
+        <div class="card card-primary">
+            <div class="card-header">
+              <h3 class="card-title">
+                {{ producto.nombre }}
+              </h3>
+            </div>
+            <div class="card-body">
+                <p>{{ producto.descripcion }}</p>
+                <p>Precio: ${{ producto.precio }}</p>
+                <p>Stock: {{ producto.stock }}</p>
+                <p>Ubicación: {{ producto.location }}</p>
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'product_list' %}"><--Volver</a>
+            </div>
+        </div>
+    </div>
 </div>
     
 {% endblock %}

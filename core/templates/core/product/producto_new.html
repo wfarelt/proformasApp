@@ -3,13 +3,24 @@
 {% block title %}{{title}}{% endblock %}
 
 {% block content %}
-    <div class="col-md-4">
-        <h1>{{ form.instance.id|yesno:"Editar Producto,Nuevo Producto" }}</h1>
-        <form method="post">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="btn btn-success btn-sm">Guardar <i class="fa fa-save"></i></button>
-            <a href="{% url 'product_list' %}"><--Volver</a>
-        </form>
+    <div class="row">
+        <div class="col-md-6 offset-md-3 mt-3">
+            <div class="card card-primary">
+                <div class="card-header">
+                  <h3 class="card-title">{{ form.instance.id|yesno:"Editar Producto,Nuevo Producto" }}</h3>
+                </div>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="card-body">
+                        {{ form.as_p }}
+                    </div>
+                    <div class="card-footer">
+                        <button type="submit" class="btn btn-success">Guardar <i class="fa fa-save"></i></button>
+                        <a href="{% url 'product_list' %}"><--Volver</a>
+                    </div>
+                </form>
+
+            </div>
+        </div>
     </div>
 {% endblock %}

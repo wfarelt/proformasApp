@@ -50,20 +50,22 @@ class UserChangeForm(UserChangeForm):
 class ProductoForm(forms.ModelForm):
     class Meta:
         model = Producto
-        fields = ['nombre', 'descripcion', 'brand', 'stock', 'precio', 'location']
+        fields = ['nombre', 'descripcion', 'brand', 'stock', 'cost', 'precio', 'location']
         labels = {
-            'nombre': 'Nombre',
+            'nombre': 'Código',
             'descripcion': 'Descripción',
             'brand': 'Marca',
+            'cost': 'Costo',
             'stock': 'Stock',
-            'precio': 'Precio',
+            'precio': 'Precio Venta',
             'location': 'Ubicación',
         }
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
-            'descripcion': forms.Textarea(attrs={'class': 'form-control'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'brand': forms.Select(attrs={'class': 'form-control'}), # 'type': 'text
             'stock': forms.NumberInput(attrs={'class': 'form-control'}), # 'type': 'number
+            'cost': forms.NumberInput(attrs={'class': 'form-control'}), # 'type': 'number
             'precio': forms.NumberInput(attrs={'class': 'form-control'}),            
             'location': forms.TextInput(attrs={'class': 'form-control'}),
         }

@@ -71,6 +71,7 @@ class Producto(models.Model):
     nombre = models.CharField(max_length=100)
     descripcion = models.TextField(blank=True, null=True)
     brand = models.ForeignKey(Brand, on_delete=models.CASCADE, blank=True, null=True)
+    cost = models.DecimalField(default=0, max_digits=10, decimal_places=2, blank=True, null=True)
     precio = models.DecimalField(default=0, max_digits=10, decimal_places=2)
     stock = models.PositiveIntegerField(default=0, blank=True, null=True)
     location = models.CharField(max_length=10, blank=True, null=True)

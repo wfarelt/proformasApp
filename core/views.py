@@ -33,12 +33,14 @@ def home(request):
     return render(request, 'core/home.html', context)
 
 # Nuevo producto
+@login_required(login_url='login')
 def product_detail(request, id):
     producto = Producto.objects.get(id=id)
     title = 'Detalle de producto'
     context = {'producto': producto, 'title': title}
     return render(request, 'core/product/product_detail.html', context)
 
+@login_required(login_url='login')
 def producto_new(request):
     form = ProductoForm()
     if request.method == 'POST':
@@ -50,6 +52,7 @@ def producto_new(request):
     context = {'form': form, 'title': title}
     return render(request, 'core/product/producto_new.html', context)  
 
+@login_required(login_url='login')
 def product_edit(request, id):
     title = 'Editar producto'
     producto = get_object_or_404(Producto, pk=id)
@@ -63,12 +66,13 @@ def product_edit(request, id):
     return render(request, 'core/product/producto_new.html', {'form': form, 'title': title})
 
 # Listar productos
-class ProductListView(ListView):
+class ProductListView(LoginRequiredMixin, ListView):
     model = Producto
     template_name = 'core/product/productos_list.html'  # Nombre de la plantilla
     context_object_name = 'productos'
     context_title = 'Listado de productos'
     paginate_by = 10  # Número de productos por página
+    login_url = 'login'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
