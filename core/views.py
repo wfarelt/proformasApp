@@ -107,11 +107,11 @@ def proforma_new(request):
     query = request.GET.get('q')
     
     # Verificar si la última proforma creada no tiene productos en su detalle
-    last_proforma = Proforma.objects.last()
+    last_proforma = Proforma.objects.filter(usuario=request.user).last()
     if last_proforma and Detalle.productos_list(last_proforma).count() < 1:
         proforma = last_proforma
     else:
-        proforma = Proforma.objects.create()
+        proforma = Proforma.objects.create(usuario=request.user)
         
     detalles = Detalle.productos_list(proforma)
     productos_list = Producto.objects.all()

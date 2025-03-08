@@ -100,6 +100,7 @@ class Proforma(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, blank=True, null=True)
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     estado = models.CharField(max_length=10, choices=ESTADO, default='PENDIENTE')
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="proformas", default=1)
 
     def __str__(self):
         return str(self.id)
