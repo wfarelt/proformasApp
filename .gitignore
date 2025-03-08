@@ -30,7 +30,7 @@ media
 .Python
 build/
 develop-eggs/
-dist/
+#dist/
 downloads/
 eggs/
 .eggs/
@@ -280,3 +280,4 @@ pip-selfcheck.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python,django,venv
 .env
+.kanbn/
