@@ -39,15 +39,24 @@
 
 {% block content %}
 <div id="proforma">
-  <strong>
-    <h2>Proforma: {{proforma.id}}</h2>
-  </strong>
-  Fecha: {{proforma.fecha|date:"d/m/Y"}}
-  <br>
-  Cliente: {{proforma.cliente}}
-  <a href="{% url 'proforma_add_client' proforma.id %}" class="btn btn-warning btn-sm no-mostrar"><i
-      class="fas fa-user-plus"></i></a>
-  <br>
+  <div class="row">
+    <div class="col-md-12">
+      <strong>
+        <h2>Proforma: {{proforma.id}}</h2>
+      </strong>
+    </div>
+    <div class="col-md-4">
+        Cliente: {{proforma.cliente}}
+        <a href="{% url 'proforma_add_client' proforma.id %}" class="btn btn-warning btn-sm no-mostrar"><i
+        class="fas fa-user-plus"></i></a>
+    </div>
+    <div class="col-md-4">
+        Nit: {{proforma.cliente.nit}}
+    </div>
+    <div class="col-md-4 text-right">
+      Fecha: {{proforma.fecha|date:"d/m/Y"}}
+    </div>
+  </div>
   <hr class="no-mostrar">
 </div>
 
@@ -64,7 +73,7 @@
       <th>Descripcion</th>
       <th>Marca</th>
       <th>Stock</th>
-      <th>Precio</th>
+      <th style="width: 10px;">Precio</th>
       <th>Cantidad</th>
       <th>Subtotal</th>
       <th></th>
@@ -84,11 +93,11 @@
           <td>{{ producto.brand.initials }}</td>
         {% endif %}
         
-        <td>{{ producto.stock }}</td>
-        <td><input type="number" id="precio{{ producto.id}}" name="precio" value="{{producto.precio}}" step="0.01">
-        </td>
-        <td><input type="number" id="cantidad{{ producto.id}}" name="cantidad" placeholder="0"></td>
-        <td><input type="number" id="subtotal{{ producto.id}}" name="subtotal" value="{{ producto.precio  }}" readonly>
+        <td style="text-align: center;">{{ producto.stock }}</td>
+        <td><input type="number" id="precio{{ producto.id}}" name="precio" value="{{producto.precio}}" step="0.01" style="width: 80px; text-align: right;">
+        </td> 
+        <td><input type="number" id="cantidad{{ producto.id}}" name="cantidad" placeholder="0" style="width: 80px; text-align: right;"></td>
+        <td><input type="number" id="subtotal{{ producto.id}}" name="subtotal" value="{{ producto.precio  }}" readonly style="width: 80px; text-align: right;">
         </td>
         <td><button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i></button></td>
       </form>

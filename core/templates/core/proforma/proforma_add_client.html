@@ -1,7 +1,7 @@
 {% extends 'core/index.html' %}
 
 {% block content %}
-    <h2>Proforma Add Client</h2>
+    <h2>{{title}}</h2>
     <form method="get">
         <input type="text" name="q" id="search-field" placeholder="Buscar por nombre" value="{{ request.GET.q }}">
         <button type="submit">Buscar</button>
@@ -26,7 +26,7 @@
                 <td>{{ obj.name }}</td>
                 <td>{{ obj.nit }}</td>
                 <td style="text-align: center;">
-                    <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus"></i> Agregar cliente</button>
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-check"></i> Seleccionar</button>
                 </td>
             </form>
             </tr>

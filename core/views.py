@@ -136,6 +136,7 @@ def proforma_new(request):
     
 
 def proforma_add_client(request, id):
+    context_title = 'Seleccionar cliente'
     proforma = Proforma.objects.get(id=id)
     if request.method == 'POST':
         form = ProformaAddClientForm(request.POST, instance=proforma)
@@ -149,23 +150,19 @@ def proforma_add_client(request, id):
             clients_list = clients_list.filter(name__icontains=query)
             paginator = Paginator(clients_list, 5)
             page_number = request.GET.get('page')
-            page_obj = paginator.get_page(page_number)
-            context = {
-                'form': form,
-                'clients_list': page_obj,
-                'proforma': proforma, 
-                'page_obj': page_obj
-            }
+            page_obj = paginator.get_page(page_number) 
         else:
             paginator = Paginator(clients_list, 5)
             page_number = request.GET.get('page')
             page_obj = paginator.get_page(page_number)
-            context = {
-                'form': form,
-                'clients_list': page_obj,
-                'proforma': proforma, 
-                'page_obj': page_obj
-            }
+            
+        context = {
+            'form': form,
+            'title': context_title,
+            'clients_list': page_obj,
+            'proforma': proforma, 
+            'page_obj': page_obj
+        }
             
     return render(request, 'core/proforma/proforma_add_client.html', context)
 
