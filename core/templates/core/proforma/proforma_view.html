@@ -1,0 +1,87 @@
+{% extends 'core/index.html' %}
+
+{% block title %}Proforma{% endblock %}
+{% load static %}
+
+
+{% block style %}
+{% endblock style %}
+
+{% block content %}
+    <div class="row pt-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Datos de la proforma</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="id">Id</label>
+                        <input type="text" name="id" id="id" class="form-control" value="{{ proforma.id }}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="fecha">Fecha</label>
+                        <input type="text" name="fecha" id="fecha" class="form-control" value="{{ proforma.fecha|date:"d/m/Y" }}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="vendedor">Vendedor</label>
+                        <input type="text" name="vendedor" id="vendedor" class="form-control" value="{{ proforma.usuario.name }}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="cliente">Cliente</label>
+                        <input type="text" name="cliente" id="cliente" class="form-control" value="{{ proforma.cliente }}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="total">Total($)</label>
+                        <input type="text" name="total" id="total" class="form-control" value="{{ proforma.total }}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="estado">Estado</label>
+                        <input type="text" name="estado" id="estado" class="form-control" value="{{ proforma.estado }}" readonly>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Detalle de la proforma</h3>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <td>#</td>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                                <th>Precio($)</th>
+                                <th>Subtotal($)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for detalle in detalles %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ detalle.producto }}</td>
+                                    <td>{{ detalle.cantidad }}</td>
+                                    <td>{{ detalle.precio_venta }}</td>
+                                    <td>{{ detalle.subtotal }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4">No se encontraron detalles.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <a href="{% url 'proforma_list' %}" class="btn btn-danger btn-sm mb-3"><span class="fa fa-arrow-left"></span> Volver</a>
+
+{% endblock content %}
+
+{% block script %}
+{% endblock script %}
+

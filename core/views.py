@@ -134,7 +134,6 @@ def proforma_new(request):
 
     return render(request, 'core/proforma/proforma_new.html', context)
     
-
 def proforma_add_client(request, id):
     context_title = 'Seleccionar cliente'
     proforma = Proforma.objects.get(id=id)
@@ -242,6 +241,18 @@ def cambiar_estado_proforma(request, id):
             producto.save()
         proforma.save()
     return redirect('proforma_list')
+
+# Proforma View
+def proforma_view(request, id):
+    proforma = Proforma.objects.get(id=id)
+    detalles = Detalle.productos_list(proforma)
+    literal = numero_a_literal(proforma.total)
+    context = {
+        'proforma': proforma,
+        'detalles': detalles,
+        'literal': literal
+    }
+    return render(request, 'core/proforma/proforma_view.html', context)
     
 class ClientListView(ListView):
     model = Cliente
