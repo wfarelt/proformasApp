@@ -212,6 +212,8 @@ def agregar_producto_a_detalle(request):
         # ACTUALIZAR TOTAL DE PROFORMA        
         proforma.total = float(proforma.total) + float(subtotal)
         proforma.save()
+        producto.latest_price = precio
+        producto.save()
         # REDIRECCIONAR A LA MISMA PAGINA
         return redirect(reverse_lazy('proforma_edit', args=[proforma_id]))
     else:

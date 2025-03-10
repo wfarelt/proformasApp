@@ -73,6 +73,7 @@
       <th>Descripcion</th>
       <th>Marca</th>
       <th>Stock</th>
+      <th>P.Ref.</th>
       <th style="width: 10px;">Precio</th>
       <th>Cantidad</th>
       <th>Subtotal</th>
@@ -94,6 +95,7 @@
         {% endif %}
         
         <td style="text-align: center;">{{ producto.stock }}</td>
+        <td style="text-align: right;">{{ producto.latest_price }}</td>
         <td><input type="number" id="precio{{ producto.id}}" name="precio" value="{{producto.precio}}" step="0.01" style="width: 80px; text-align: right;">
         </td> 
         <td><input type="number" id="cantidad{{ producto.id}}" name="cantidad" placeholder="0" style="width: 80px; text-align: right;"></td>
