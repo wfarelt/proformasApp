@@ -27,6 +27,9 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=255)
+    empresa = models.CharField(max_length=255, blank=True, null=True)  
+    logo = models.ImageField(upload_to='logos/', blank=True, null=True)
+    
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)  # Necesario para Django Admin
     is_superuser = models.BooleanField(default=False)  # Necesario para permisos
@@ -34,7 +37,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = 'email'  # Se usará para el login
-    REQUIRED_FIELDS = ['name']  # Campos obligatorios además de email
+    REQUIRED_FIELDS = ['name', 'empresa']  # Campos obligatorios además de email
 
     def __str__(self):
         return self.email

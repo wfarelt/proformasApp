@@ -10,21 +10,21 @@ from .forms import UserCreationForm, UserChangeForm
 class UserAdmin(UserAdmin):
     finaly = (
         (None, {'fields': ('email', 'password')}),
-        ('Información personal', {'fields': ('name',)}),
+        ('Información personal', {'fields': ('name','empresa', 'logo')}),
         ('Permisos', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'name', 'password1', 'password2', 'is_active', 'is_staff', 'is_superuser')}
+            'fields': ('email', 'name', 'empresa', 'logo', 'password1', 'password2', 'is_active', 'is_staff', 'is_superuser')}
          ),
     )
     form = UserChangeForm
     add_form = UserCreationForm
-    list_display = ('email', 'name', 'is_staff')
+    list_display = ('email', 'name', 'empresa', 'is_staff')
     list_filter = ('is_staff', 'is_superuser', 'is_active')
     fieldsets = finaly
-    search_fields = ('email', 'name')
+    search_fields = ('email', 'name', 'empresa')
     ordering = ('email',)
 
 admin.site.site_header = 'Sistema de Inventario'

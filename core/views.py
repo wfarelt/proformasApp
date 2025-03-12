@@ -473,11 +473,17 @@ def proforma_pdf(request, proforma_id):
     detalles = Detalle.objects.filter(proforma=proforma)
     total_bs = float(proforma.total) * 6.96
     total_literal = numero_a_literal(proforma.total)
+    
+    logo_url = None
+    if proforma.usuario.logo:
+        logo_url = request.build_absolute_uri(proforma.usuario.logo.url)
+        
     context = {
         'proforma': proforma,
         'detalles': detalles,
         'total_bs': total_bs,
-        'total_literal': total_literal
+        'total_literal': total_literal,
+        'logo_url': logo_url
     }
     
     html_string = render_to_string('core/proforma/proforma_pdf.html', context)

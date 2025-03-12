@@ -27,7 +27,23 @@
     </style>
 </head>
 <body>
-    <h2>Proforma #{{ proforma.id }}</h2>
+
+    <table>
+        <tr>
+            <td class="sin-borde">
+                <h2 style="text-align: left;">Proforma #{{ proforma.id }}</h2>
+            </td>
+            <td class="sin-borde td-derecha">
+                {% if logo_url %}
+                    <img src="{{ logo_url }}" alt="Logo" style="width: 150px; height: 100px;">
+                {% else %}
+                    <p>No Logo Available</p>
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+    
+    
 
     <table>
         <tr class="tr-datos">
