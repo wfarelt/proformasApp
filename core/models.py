@@ -47,6 +47,7 @@ class Cliente(models.Model):
     email = models.EmailField(blank=True, null=True, max_length=100)
     phone = models.CharField(blank=True, null=True, max_length=15)
     address = models.CharField(blank=True, null=True, max_length=100)
+    status = models.BooleanField(default=True)
     
     def __str__(self):
         return self.name

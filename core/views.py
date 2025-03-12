@@ -16,6 +16,13 @@ from faker import Faker
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
+
+# PDF
+import weasyprint
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+
+
 # Create your views here.
 
 @login_required(login_url='login')
@@ -97,7 +104,7 @@ class ProformaListView(ListView):
 
     def get_queryset(self):
             query = self.request.GET.get('q')
-            object_list = Proforma.objects.all().order_by('-fecha')
+            object_list = Proforma.objects.filter(usuario=self.request.user).order_by('-fecha')
             if query:
                 object_list = self.model.objects.filter(cliente__name__icontains = query) | object_list.filter(id__icontains=query)
             return object_list
@@ -143,7 +150,8 @@ def proforma_add_client(request, id):
             form.save()
             return redirect('proforma_edit', id)
     else:
-        clients_list = Cliente.objects.all()
+        # Clientes activos
+        clients_list = Cliente.objects.filter(status=True)
         form = ProformaAddClientForm(instance=proforma)
         if query := request.GET.get('q'):
             clients_list = clients_list.filter(name__icontains=query)
@@ -273,6 +281,7 @@ class ClientListView(ListView):
             object_list = object_list.filter(name__icontains=query) | object_list.filter(nit__icontains=query)
         return object_list
 
+@login_required(login_url='login')
 def cliente_new(request):
     form = ClienteForm()
     if request.method == 'POST':
@@ -284,6 +293,7 @@ def cliente_new(request):
     context = {'form': form, 'title': title}
     return render(request, 'core/client/cliente_form.html', context)
 
+@login_required(login_url='login')
 def crear_clientes(request):
     fake = Faker()
     for i in range(10):
@@ -302,6 +312,7 @@ def crear_clientes(request):
         cliente.save()
     return redirect('client_list')
 
+@login_required(login_url='login')
 def cliente_edit(request, id):
     cliente = get_object_or_404(Cliente, pk=id)
     if request.method == 'POST':
@@ -313,10 +324,23 @@ def cliente_edit(request, id):
         form = ClienteForm(instance=cliente)
     return render(request, 'core/client/cliente_form.html', {'form': form})   
 
+@login_required(login_url='login')
 def cliente_delete(request, id):
     cliente = Cliente.objects.get(id=id)
     cliente.delete()
     return redirect('client_list')
+
+@login_required(login_url='login')
+def cliente_status(request, id):
+    cliente = Cliente.objects.get(pk=id)
+    if cliente.status:
+        cliente.status = False
+    else:
+        cliente.status = True
+    cliente.save()
+    return redirect('client_list')
+
+# FUNCIONES
 
 def numero_a_literal(numero):
     entero = int(numero)
@@ -442,4 +466,25 @@ def brand_status(request, pk):
         brand.status = True
     brand.save()
     return redirect('brand_list')
+
+# Reporte PDF de profoma
+def proforma_pdf(request, proforma_id):
+    proforma = Proforma.objects.get(id=proforma_id)
+    detalles = Detalle.objects.filter(proforma=proforma)
+    total_bs = float(proforma.total) * 6.96
+    total_literal = numero_a_literal(proforma.total)
+    context = {
+        'proforma': proforma,
+        'detalles': detalles,
+        'total_bs': total_bs,
+        'total_literal': total_literal
+    }
     
+    html_string = render_to_string('core/proforma/proforma_pdf.html', context)
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'filename="proforma_{proforma_id}.pdf"'
+    
+    pdf = weasyprint.HTML(string=html_string).write_pdf()
+    response.write(pdf)
+    
+    return response

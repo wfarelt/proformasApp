@@ -27,6 +27,7 @@ urlpatterns = [
     path('proforma/add_client/<int:id>/', proforma_add_client, name='proforma_add_client'),
     path('proforma/cambiar_estado_proforma/<int:id>/', cambiar_estado_proforma, name='cambiar_estado_proforma'),
     path('proforma/view/<int:id>/', proforma_view, name='proforma_view'),
+    path('proforma/<int:proforma_id>/pdf/', proforma_pdf, name='proforma_pdf'),
 
     #clientes
     #path('clientes/', clientes_list, name='clientes_list'),
@@ -35,6 +36,8 @@ urlpatterns = [
     path('cliente/edit/<int:id>/', cliente_edit, name='cliente_edit'),
     path('cliente/delete/<int:id>/', cliente_delete, name='cliente_delete'),
     path('cliente/crear_clientes/', crear_clientes, name='crear_clientes'),
+    path('cliente/cambio_estado/<int:id>/', cliente_status, name='cliente_status'),
+    
     #reporte pdf
     path('proforma/pdf/<int:id>', generate_proforma_pdf, name='generate_proforma_pdf'),
     path('reportes/', reportes, name='reportes'),

@@ -41,7 +41,10 @@
                         <td><span class="badge bg-success">{{ proforma.estado }}</span></td>
                         <td>
                             <a href="{% url 'proforma_view' proforma.id %}" class="btn btn-primary btn-sm"><i class="fas fa-eye"></i></a>
-                            <a href="#" class="btn btn-success btn-sm"><i class="fas fa-file-pdf"></i></a>
+                            <a href="{% url 'proforma_pdf' proforma.id %}" target="_blank" rel="noopener noreferrer" class="btn btn-success btn-sm">
+                                <i class="fas fa-file-pdf"></i>
+                            </a>
+                            
                         </td>
                     {% else %}
                         <td><span class="badge bg-danger">{{ proforma.estado }}</span></td>

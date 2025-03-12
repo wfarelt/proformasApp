@@ -6,6 +6,7 @@
 <th>Email</th>
 <th>Teléfono</th>
 <th>Dirección</th>
+<th>Estado</th>
 <th>Acciones</th>
 {% endblock %}
 
@@ -15,11 +16,16 @@
     <td>{{ obj.email }}</td>
     <td>{{ obj.phone }}</td>
     <td>{{ obj.address }}</td>
+    {% if obj.status %}
+    <td><span class="badge badge-success">Activo</span></td>
+    {% else %}
+    <td><span class="badge badge-danger">Inactivo</span></td>
+    {% endif %}
 {% endblock rows %}
 
 {% block actions %}
 <a href="{% url 'cliente_edit' obj.id %}" class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></a>
-<a href="{% url 'cliente_delete' obj.id %}" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></a>
+<a href="{% url 'cliente_status' obj.id %}" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></a>
 {% endblock actions %}
 
 {% block create %}
