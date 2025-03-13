@@ -7,6 +7,25 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseU
 
 # Create your models here.
 
+# EMPRESA
+class Company(models.Model):
+    name = models.CharField(max_length=255, unique=True)  # Nombre de la empresa
+    logo = models.ImageField(upload_to='logos/', null=True, blank=True)  # Logo de la empresa
+    tax_id = models.CharField(max_length=50, unique=True)  # Identificación fiscal (RUC, NIT, etc.)
+    phone = models.CharField(max_length=20, null=True, blank=True)  # Teléfono de contacto
+    email = models.EmailField(unique=True)  # Correo electrónico
+    address = models.TextField(null=True, blank=True)  # Dirección física
+    website = models.URLField(null=True, blank=True)  # Sitio web
+    established_date = models.DateField(null=True, blank=True)  # Fecha de fundación
+    industry = models.CharField(max_length=100, null=True, blank=True)  # Industria o sector
+    is_active = models.BooleanField(default=True)  # Estado activo/inactivo
+    created_at = models.DateTimeField(auto_now_add=True)  # Fecha de creación
+    updated_at = models.DateTimeField(auto_now=True)  # Última actualización
+
+    def __str__(self):
+        return self.name
+
+# USUARIO
 class UserManager(BaseUserManager):
     def create_user(self, email, name, password=None):
         if not email:
@@ -27,8 +46,7 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=255)
-    empresa = models.CharField(max_length=255, blank=True, null=True)  
-    logo = models.ImageField(upload_to='logos/', blank=True, null=True)
+    company = models.ForeignKey(Company, on_delete=models.SET_NULL, null=True, blank=True)
     
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)  # Necesario para Django Admin
@@ -41,7 +59,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
-
 
 # CLIENTE
 class Cliente(models.Model):
@@ -129,7 +146,6 @@ class Detalle(models.Model):
     def productos_list(proforma):
         detalles = Detalle.objects.filter(proforma=proforma)
         return detalles
-
 
 # PROVEEDOR
 class Supplier(models.Model):

@@ -4,7 +4,7 @@ from django.urls import reverse_lazy
 from django.contrib import messages  # Importa el framework de mensajes
 from django.core.paginator import Paginator
 from django.views.generic import ListView, UpdateView, TemplateView
-from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand
+from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand, Company
 from .forms import ProductoForm, ClienteForm, ProformaAddClientForm, SupplierForm, BrandForm
 #reporte pdf
 #from django.http import HttpResponse
@@ -25,6 +25,7 @@ from django.template.loader import render_to_string
 
 # Create your views here.
 
+# HOMBE
 @login_required(login_url='login')
 def home(request):
     quanty_products = Producto.objects.count()
@@ -39,7 +40,7 @@ def home(request):
     }
     return render(request, 'core/home.html', context)
 
-# Nuevo producto
+# PRODUCTO
 @login_required(login_url='login')
 def product_detail(request, id):
     producto = Producto.objects.get(id=id)
@@ -72,7 +73,6 @@ def product_edit(request, id):
         form = ProductoForm(instance=producto)
     return render(request, 'core/product/producto_new.html', {'form': form, 'title': title})
 
-# Listar productos
 class ProductListView(LoginRequiredMixin, ListView):
     model = Producto
     template_name = 'core/product/productos_list.html'  # Nombre de la plantilla
@@ -94,7 +94,7 @@ class ProductListView(LoginRequiredMixin, ListView):
             object_list = object_list.filter(nombre__icontains=query) | object_list.filter(descripcion__icontains=query)
         return object_list
 
-# Listar proformas
+# PROFORMA
 class ProformaListView(ListView):
     model = Proforma
     template_name = 'core/proforma/proformas_list.html'  # Nombre de la plantilla
@@ -109,7 +109,6 @@ class ProformaListView(ListView):
                 object_list = self.model.objects.filter(cliente__name__icontains = query) | object_list.filter(id__icontains=query)
             return object_list
 
-# Crear proforma
 def proforma_new(request):
     query = request.GET.get('q')
     
@@ -173,7 +172,6 @@ def proforma_add_client(request, id):
             
     return render(request, 'core/proforma/proforma_add_client.html', context)
 
-# Editar proforma 
 def proforma_edit(request, id):
     proforma = Proforma.objects.get(id=id)
     detalles = Detalle.productos_list(proforma)
@@ -194,7 +192,6 @@ def proforma_edit(request, id):
         
     return render(request, 'core/proforma/proforma_new.html', context)
 
-# Agregar producto a detalle
 def agregar_producto_a_detalle(request):
     # VALIR DATOS SI ES POST O GET
     if request.method == 'POST':
@@ -226,7 +223,6 @@ def agregar_producto_a_detalle(request):
     else:
         return render(request, 'core/home.html')
 
-# Eliminar detalle
 def eliminar_producto_a_detalle(request, id):
     detalle = Detalle.objects.get(id=id)
     proforma = detalle.proforma
@@ -235,7 +231,6 @@ def eliminar_producto_a_detalle(request, id):
     detalle.delete()
     return redirect(reverse_lazy('proforma_edit', args=[proforma.id]))
 
-# Cambiar estado de proforma
 def cambiar_estado_proforma(request, id):
     proforma = Proforma.objects.get(id=id)
     if request.POST.get('estado') == 'EJECUTADO':
@@ -250,7 +245,6 @@ def cambiar_estado_proforma(request, id):
         proforma.save()
     return redirect('proforma_list')
 
-# Proforma View
 def proforma_view(request, id):
     proforma = Proforma.objects.get(id=id)
     detalles = Detalle.productos_list(proforma)
@@ -261,7 +255,8 @@ def proforma_view(request, id):
         'literal': literal
     }
     return render(request, 'core/proforma/proforma_view.html', context)
-    
+
+# CLIENTE    
 class ClientListView(ListView):
     model = Cliente
     template_name = 'core/client/client_list.html'  # Nombre de la plantilla
@@ -369,7 +364,6 @@ def reportes(request):
 
 
 # PROVEEDOR
-
 class SupplierListView(ListView):
     model = Supplier
     template_name = 'core/supplier/supplier_list.html'
@@ -413,8 +407,7 @@ def supplier_update(request, pk):
         form = SupplierForm(instance=supplier)
     return render(request, 'core/supplier/supplier_form.html', {'form': form})
 
-# Marcas
-
+# MARCA
 class BrandListView(ListView):
     model = Brand
     template_name = 'core/brand/brand_list.html'
@@ -473,22 +466,53 @@ def proforma_pdf(request, proforma_id):
     detalles = Detalle.objects.filter(proforma=proforma)
     total_bs = float(proforma.total) * 6.96
     total_literal = numero_a_literal(proforma.total)
+    company = Company.objects.get(id=proforma.usuario.company.id)
     
     logo_url = None
-    if proforma.usuario.logo:
-        logo_url = request.build_absolute_uri(proforma.usuario.logo.url)
+    if proforma.usuario.company.logo:
+        logo_url = request.build_absolute_uri(proforma.usuario.company.logo.url)
         
     context = {
         'proforma': proforma,
         'detalles': detalles,
         'total_bs': total_bs,
         'total_literal': total_literal,
-        'logo_url': logo_url
+        'logo_url': logo_url,
+        'company': company
     }
     
     html_string = render_to_string('core/proforma/proforma_pdf.html', context)
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'filename="proforma_{proforma_id}.pdf"'
+    
+    pdf = weasyprint.HTML(string=html_string).write_pdf()
+    response.write(pdf)
+    
+    return response
+
+def proforma_almacen(request, proforma_id):
+    proforma = Proforma.objects.get(id=proforma_id)
+    detalles = Detalle.objects.filter(proforma=proforma)
+    total_bs = float(proforma.total) * 6.96
+    total_literal = numero_a_literal(proforma.total)
+    company = Company.objects.get(id=proforma.usuario.company.id)
+    
+    logo_url = None
+    if proforma.usuario.company.logo:
+        logo_url = request.build_absolute_uri(proforma.usuario.company.logo.url)
+        
+    context = {
+        'proforma': proforma,
+        'detalles': detalles,
+        'total_bs': total_bs,
+        'total_literal': total_literal,
+        'logo_url': logo_url,
+        'company': company
+    }
+    
+    html_string = render_to_string('core/proforma/proforma_almacen.html', context)
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'filename="proforma_{proforma_id}_code.pdf"'
     
     pdf = weasyprint.HTML(string=html_string).write_pdf()
     response.write(pdf)

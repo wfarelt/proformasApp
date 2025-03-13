@@ -141,7 +141,7 @@
 </div>
 
 <div class="detalle">
-  <h2>DETALLE DE COMPRA</h2>
+  <h2>DETALLE DE PRODUCTOS</h2>
   <table class="table table-sm">
     <thead>
       <tr>
@@ -191,7 +191,7 @@
   <h3>ESTADO DE LA PROFORMA</h3>
   <form method="POST" action="{% url 'cambiar_estado_proforma' proforma.id %}" class="d-inline">
     {% csrf_token %}
-    <div class="form-check mt-4">
+    <div class="form-check pb-3">
       <input class="form-check-input" type="checkbox" value="EJECUTADO" id="estado" name="estado"
         {% if proforma.estado == 'EJECUTADO' %} checked {% endif %}>
       <label class="form-check-label" for="estado">
@@ -203,7 +203,10 @@
   
   <!-- Botones fuera del formulario -->
   <a href="{% url 'proforma_pdf' proforma.id %}" target="_blank" rel="noopener noreferrer" class="btn btn-info btn-sm">
-    <i class="fas fa-file-pdf"></i> Imprimir
+    <i class="fas fa-file-pdf"></i> Sin/Code
+  </a>
+  <a href="{% url 'proforma_almacen' proforma.id %}" target="_blank" rel="noopener noreferrer" class="btn btn-default btn-sm">
+    <i class="fas fa-file-pdf"></i> Con/Code
   </a>
   <a href="{% url 'proforma_list' %}" class="btn btn-danger btn-sm"><i class="fas fa-times"></i> Cancelar</a>
 </div>
