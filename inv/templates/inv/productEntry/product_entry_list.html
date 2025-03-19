@@ -1,0 +1,29 @@
+{% extends 'core/list.html' %}
+
+{% block columns%}
+<th>Fecha</th>
+<th>Descripción</th>
+<th>Usuario</th>
+<th>Estado</th>
+<th>Acciones</th>
+{% endblock %}
+
+{% block rows %}
+    <td>{{ obj.date }}</td>
+    <td>{{ obj.description }}</td>
+    <td>{{ obj.user.name }}</td>
+    <td>{% if obj.status == 'confirmed' %}
+        <span class="badge badge-success">Confirmado</span>
+        {% else %}
+        <span class="badge badge-warning">Pendiente</span>
+        {% endif %}
+{% endblock rows %}
+
+{% block actions %}
+<a href="{% url 'update_product_entry' obj.id %}" class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></a>
+<a href="#" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></a>
+{% endblock actions %}
+
+{% block create %}
+<a href="{% url 'create_product_entry' %}" class="btn btn-success btn-sm">Ingreso <i class="fa fa-plus"></i></a>
+{% endblock create %}

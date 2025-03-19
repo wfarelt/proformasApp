@@ -21,6 +21,7 @@ from django.contrib.auth.decorators import login_required
 import weasyprint
 from django.http import HttpResponse
 from django.template.loader import render_to_string
+from decimal import Decimal, ROUND_HALF_UP
 
 
 # Create your views here.
@@ -233,6 +234,9 @@ def eliminar_producto_a_detalle(request, id):
 
 def cambiar_estado_proforma(request, id):
     proforma = Proforma.objects.get(id=id)
+    if request.POST.get('discount_percentage'):
+        proforma.discount_percentage = request.POST.get('discount_percentage')
+        proforma.save()
     if request.POST.get('estado') == 'EJECUTADO':
         proforma.estado = 'EJECUTADO'
         for detalle in Detalle.productos_list(proforma):
@@ -248,10 +252,14 @@ def cambiar_estado_proforma(request, id):
 def proforma_view(request, id):
     proforma = Proforma.objects.get(id=id)
     detalles = Detalle.productos_list(proforma)
-    literal = numero_a_literal(proforma.total)
+    total_descuento = proforma.discount_percentage * proforma.total / 100
+    total_neto = proforma.total - total_descuento
+    literal = numero_a_literal(total_neto)
     context = {
         'proforma': proforma,
         'detalles': detalles,
+        'total_descuento': total_descuento,
+        'total_con_descuento': total_neto,
         'literal': literal
     }
     return render(request, 'core/proforma/proforma_view.html', context)
@@ -464,8 +472,21 @@ def brand_status(request, pk):
 def proforma_pdf(request, proforma_id):
     proforma = Proforma.objects.get(id=proforma_id)
     detalles = Detalle.objects.filter(proforma=proforma)
-    total_bs = float(proforma.total) * 6.96
-    total_literal = numero_a_literal(proforma.total)
+    # Convertimos los valores a Decimal para mayor precisión
+    total = Decimal(proforma.total)
+    descuento_porcentaje = Decimal(proforma.discount_percentage) / Decimal(100)
+
+    # Calculamos el descuento con precisión
+    descuento = (total * descuento_porcentaje).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    # Calculamos el total neto
+    total_neto = (total - descuento).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    # Convertimos a bolivianos con precisión
+    total_bs = (total_neto * Decimal('6.96')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    
+    
+    total_literal = numero_a_literal(total_neto)
     company = Company.objects.get(id=proforma.usuario.company.id)
     
     logo_url = None
@@ -475,6 +496,8 @@ def proforma_pdf(request, proforma_id):
     context = {
         'proforma': proforma,
         'detalles': detalles,
+        'descuento': descuento,
+        'total_neto': total_neto,
         'total_bs': total_bs,
         'total_literal': total_literal,
         'logo_url': logo_url,

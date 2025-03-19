@@ -17,7 +17,9 @@
                 <th>Vendedor</th>
                 <th>Cliente</th>
                 <th>Nombre</th>
-                <th>Total($)</th>
+                <th class="text-right">Total($)</th>
+                <th class="text-right">Descuento(%)</th>
+                <th class="text-right">Total Neto($)</th>
                 <th>Estado</th>
                 <th>Opciones</th>
                 <th>Pdf</th>
@@ -31,8 +33,9 @@
                     <td>{{ proforma.usuario.name }}</td>
                     <td>{{ proforma.cliente.id }}</td>
                     <td>{{ proforma.cliente }}</td>
-                    <td>{{ proforma.total }}</td>
-
+                    <td class="text-right">{{ proforma.total }}</td>
+                    <td class="text-right">{{ proforma.discount_percentage }}</td>
+                    <td class="text-right pr-3">{{ proforma.total_neto|floatformat:2 }}</td>
                     
                     {% if proforma.estado == 'PENDIENTE' %}
                         <td><span class="badge bg-warning text-dark">{{ proforma.estado }}</span></td>

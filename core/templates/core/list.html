@@ -10,6 +10,19 @@ Lista de {{title}}
 <form method="get">
     <input type="text" name="q" id="search-field" placeholder="{{placeholder}}" value="{{ request.GET.q }}">
     <button type="submit">Buscar</button>
+    
+    <div id="mensaje">
+        {% if messages %}
+        <div>
+          {% for message in messages %}
+            <div class="alert alert-info alert-sm" role="alert">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
 </form>
 <br>
 <table class="table table-sm">

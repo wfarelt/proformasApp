@@ -93,16 +93,15 @@
     </table>
 
     <table>
-        <tr class="tr-datos">
-            <td class="td-izquierda">
+            <td class="sin-borde td-izquierda">
                 {{ total_literal }}
             </td>
-            <td class="td-derecha">
-                <h3>
-                    <strong>Total: $ </strong>{{ proforma.total }}
-                </h3>
+            <td class="sin-borde td-derecha">
+                <strong>Total: $ </strong>{{ proforma.total }}<br>
+                <strong>Descuento: - $ </strong>{{ descuento|floatformat:2 }}<br>
+                ----- <br> 
+                <strong>Total Neto: $ </strong>{{ proforma.total_neto|floatformat:2 }}     
             </td>
-        </tr>
     </table>
 
     <h3 class="h3-derecha">Bs.- {{ total_bs|floatformat:2 }}</h3>
@@ -118,10 +117,17 @@
     <br>
     <br>
     <br>
+ 
     <!-- Añadir Recibido por: Nombre y Firma -->
-    <table>
-        <td class="sin-borde center">________________________<br>
-            Recibido Por<br><br>Nombre: ________________<br><br>
+    <table style="margin-top: 30px;">        
+        <td style="border: 0;">
+            Entregue Conforme: ________________________<br><br>
+            Nombre: ______________________<br><br>
+            CI    : ________________<br>
+        </td>
+        <td style="border: 0;">
+            Recibido Por: ________________________<br><br>
+            Nombre: ______________________<br><br>
             CI    : ________________<br>
         </td>
     </table>

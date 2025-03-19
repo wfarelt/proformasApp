@@ -121,8 +121,21 @@ class Proforma(models.Model):
     fecha = models.DateTimeField(default=timezone.now)
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, blank=True, null=True)
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    discount_percentage = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0.00,
+        help_text="Descuento en porcentaje (ej. 10.00 para 10%)"
+    )
     estado = models.CharField(max_length=10, choices=ESTADO, default='PENDIENTE')
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="proformas", default=1)
+    
+    def total_neto(self):
+        """Calcula el total después de aplicar el descuento porcentual."""
+        descuento = (self.total * self.discount_percentage) / 100
+        return max(self.total - descuento, 0)  # Asegura que no sea negativo
+    
+    def total_descuento(self):
+        """Calcula el descuento total."""
+        return self.total - self.total_neto()
 
     def __str__(self):
         return str(self.id)
