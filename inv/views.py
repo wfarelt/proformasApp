@@ -11,7 +11,7 @@ from django.contrib import messages
 from django.forms import inlineformset_factory
 from .forms import MovementForm, MovementDetailForm, ProductEntryForm, ProductEntryDetailForm
 
-
+from django.http import JsonResponse
 
 
 class MovementListView(ListView):
@@ -146,3 +146,10 @@ def update_product_entrey(request, pk):
         formset = ProductEntryDetailFormSet(instance=entry)
 
     return render(request, 'inv/productEntry/product_entry_form.html', {'entry_form': entry_form, 'formset': formset})
+
+
+def product_search(request):
+    query = request.GET.get('q', '')
+    products = Producto.objects.filter(nombre__icontains=query)[:10]  # Muestra solo 10 resultados
+    data = [{"id": p.id, "name": p.nombre} for p in products]
+    return JsonResponse(data, safe=False)

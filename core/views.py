@@ -1,3 +1,4 @@
+from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
@@ -22,6 +23,9 @@ import weasyprint
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from decimal import Decimal, ROUND_HALF_UP
+
+from django.http import JsonResponse
+import json
 
 
 # Create your views here.
@@ -122,8 +126,7 @@ def proforma_new(request):
         
     detalles = Detalle.productos_list(proforma)
     productos_list = Producto.objects.all()
-    literal = numero_a_literal(proforma.total)    
-    
+        
     if query:
         productos_list = productos_list.filter(nombre__icontains=query)
     
@@ -135,8 +138,7 @@ def proforma_new(request):
         'proforma': proforma,
         'productos_list': page_obj,
         'detalles': detalles,
-        'page_obj': page_obj,
-        'literal': literal
+        'page_obj': page_obj
     }
 
     return render(request, 'core/proforma/proforma_new.html', context)
@@ -177,19 +179,18 @@ def proforma_edit(request, id):
     proforma = Proforma.objects.get(id=id)
     detalles = Detalle.productos_list(proforma)
     productos_list = Producto.objects.all()
-    literal = numero_a_literal(proforma.total)
-    
+        
     if query := request.GET.get('q'):
         productos_list = productos_list.filter(nombre__icontains=query)
         paginator = Paginator(productos_list, 5)
         page_number = request.GET.get('page')
         page_obj = paginator.get_page(page_number)
-        context = {'proforma': proforma, 'productos_list': page_obj, 'detalles': detalles, 'page_obj': page_obj, 'literal': literal}
+        context = {'proforma': proforma, 'productos_list': page_obj, 'detalles': detalles, 'page_obj': page_obj }
     else:
         paginator = Paginator(productos_list, 5)
         page_number = request.GET.get('page')
         page_obj = paginator.get_page(page_number)
-        context = {'proforma': proforma, 'productos_list': page_obj, 'detalles': detalles, 'page_obj': page_obj, 'literal': literal}
+        context = {'proforma': proforma, 'productos_list': page_obj, 'detalles': detalles, 'page_obj': page_obj }
         
     return render(request, 'core/proforma/proforma_new.html', context)
 
@@ -232,6 +233,33 @@ def eliminar_producto_a_detalle(request, id):
     detalle.delete()
     return redirect(reverse_lazy('proforma_edit', args=[proforma.id]))
 
+@csrf_exempt
+def editar_cantidad_detalle(request, detalle_id):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            nueva_cantidad = int(data.get("cantidad"))
+
+            detalle = Detalle.objects.get(id=detalle_id)
+            proforma = Proforma.objects.get(id=detalle.proforma.id)
+            proforma.total = proforma.total - detalle.subtotal
+            proforma.save()
+            detalle.cantidad = nueva_cantidad
+            detalle.subtotal = detalle.precio_venta * detalle.cantidad
+            detalle.save()
+            proforma.total = proforma.total + detalle.subtotal
+            proforma.save()
+            
+            return JsonResponse({"success": True, "nueva_cantidad": nueva_cantidad})
+        except Detalle.DoesNotExist:
+            return JsonResponse({"success": False, "error": "Detalle no encontrado"}, status=404)
+        except json.JSONDecodeError:
+            return JsonResponse({"success": False, "error": "Error en el formato JSON"}, status=400)
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)}, status=400)
+    
+    return JsonResponse({"success": False, "error": "Método no permitido"}, status=405)
+
 def cambiar_estado_proforma(request, id):
     proforma = Proforma.objects.get(id=id)
     if request.POST.get('discount_percentage'):
@@ -247,7 +275,8 @@ def cambiar_estado_proforma(request, id):
             producto.stock = producto.stock - detalle.cantidad
             producto.save()
         proforma.save()
-    return redirect('proforma_list')
+    # Retornar a la misma vista
+    return redirect(reverse_lazy('proforma_edit', args=[proforma.id]))
 
 def proforma_view(request, id):
     proforma = Proforma.objects.get(id=id)
@@ -472,6 +501,7 @@ def brand_status(request, pk):
 def proforma_pdf(request, proforma_id):
     proforma = Proforma.objects.get(id=proforma_id)
     detalles = Detalle.objects.filter(proforma=proforma)
+    
     # Convertimos los valores a Decimal para mayor precisión
     total = Decimal(proforma.total)
     descuento_porcentaje = Decimal(proforma.discount_percentage) / Decimal(100)
@@ -484,7 +514,6 @@ def proforma_pdf(request, proforma_id):
 
     # Convertimos a bolivianos con precisión
     total_bs = (total_neto * Decimal('6.96')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-    
     
     total_literal = numero_a_literal(total_neto)
     company = Company.objects.get(id=proforma.usuario.company.id)
@@ -516,8 +545,21 @@ def proforma_pdf(request, proforma_id):
 def proforma_almacen(request, proforma_id):
     proforma = Proforma.objects.get(id=proforma_id)
     detalles = Detalle.objects.filter(proforma=proforma)
-    total_bs = float(proforma.total) * 6.96
-    total_literal = numero_a_literal(proforma.total)
+    
+    # Convertimos los valores a Decimal para mayor precisión
+    total = Decimal(proforma.total)
+    descuento_porcentaje = Decimal(proforma.discount_percentage) / Decimal(100)
+
+    # Calculamos el descuento con precisión
+    descuento = (total * descuento_porcentaje).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    # Calculamos el total neto
+    total_neto = (total - descuento).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    # Convertimos a bolivianos con precisión
+    total_bs = (total_neto * Decimal('6.96')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    
+    total_literal = numero_a_literal(total_neto)
     company = Company.objects.get(id=proforma.usuario.company.id)
     
     logo_url = None

@@ -157,7 +157,7 @@
     </thead>
     <tbody>
       {% for detalle in detalles %}
-      <tr>
+      <tr data-detalle-id="{{ detalle.id }}">
         <td>{{ forloop.counter }}</td>
         <td>{{ detalle.producto }}</td>
         <td>{{ detalle.producto.descripcion }}</td>
@@ -165,6 +165,10 @@
         <td style="text-align: right;">{{ detalle.precio_venta }}</td>
         <td style="text-align: right;">{{ detalle.subtotal }}</td>
         <td style="text-align: center;">{{ detalle.producto.location }}</td>
+        <td>
+            <a href="{% url 'editar_cantidad_detalle' detalle.id %}" class="btn btn-warning btn-sm no-mostrar"><i
+            class="fas fa-edit editar-cantidad"></i></a>
+        </td>
         <td><a href="{% url 'eliminar_producto_a_detalle' detalle.id %}" class="btn btn-danger btn-sm no-mostrar"><i
               class="fas fa-trash-alt"></i></a></td>
       </tr>
@@ -181,7 +185,12 @@
   <table class="table table-sm">
     <tr>
       <td>Total: {{literal}}</td>
-      <td>{{ proforma.total }}</td>
+      <td style="text-align: right;">$ {{ proforma.total }}<br>
+        -$ {{ proforma.total_descuento|floatformat:2 }} <br>
+        -------------<br>
+        $ <strong> {{ proforma.total_neto|floatformat:2 }}</strong> 
+      </td>
+      
     </tr>
   </table>
 </div>
@@ -218,7 +227,7 @@
   <a href="{% url 'proforma_almacen' proforma.id %}" target="_blank" rel="noopener noreferrer" class="btn btn-default btn-sm">
     <i class="fas fa-file-pdf"></i> Con/Code
   </a>
-  <a href="{% url 'proforma_list' %}" class="btn btn-danger btn-sm"><i class="fas fa-times"></i> Cancelar</a>
+  <a href="{% url 'proforma_list' %}" class="btn btn-danger btn-sm"><i class="fas fa-times"></i> Cerrar</a>
 </div>
 {% endblock %}
 
@@ -229,6 +238,72 @@
 <script type="text/javascript">
   document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("search-field").focus();
+    
+    document.querySelectorAll(".editar-cantidad").forEach(btn => {
+        btn.addEventListener("click", function (event) {
+            event.preventDefault();  // Evita que se abra el enlace
+            
+            let row = this.closest("tr");  // Encuentra la fila actual
+            let cantidadTd = row.querySelector("td:nth-child(4)");  // Celda de cantidad
+            
+            let cantidadActual = cantidadTd.innerText.trim();  // Obtener el valor actual
+
+            // Crear un input de número
+            let input = document.createElement("input");
+            input.type = "number";
+            input.value = cantidadActual;
+            input.className = "form-control";
+            input.style.width = "80px";
+
+            // Reemplazar el contenido de la celda con el input
+            cantidadTd.innerHTML = "";
+            cantidadTd.appendChild(input);
+
+            // Enfocar el input
+            input.focus();
+
+            // Guardar el nuevo valor al perder el foco o al presionar "Enter"
+            input.addEventListener("blur", function () {
+                actualizarCantidad(row, input.value);
+            });
+
+            input.addEventListener("keypress", function (event) {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    actualizarCantidad(row, input.value);
+                }
+            });
+        });
+    });
+
+    function actualizarCantidad(row, nuevaCantidad) {
+        let detalleId = row.dataset.detalleId;  // ID del detalle (debe estar en el `data-detalle-id`)
+        
+        fetch(`/editar_cantidad_detalle/${detalleId}/`, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": getCSRFToken(),  // Obtener el token CSRF
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ cantidad: nuevaCantidad })
+            
+        })
+        
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                row.querySelector("td:nth-child(4)").innerText = nuevaCantidad;  // Actualiza la cantidad en la celda
+                location.reload();
+            } else {
+                alert("Error al actualizar la cantidad.");
+            }
+        })
+        .catch(error => console.error("Error:", error));
+    }
+
+    function getCSRFToken() {
+        return document.querySelector("[name=csrfmiddlewaretoken]").value;  // Obtener el token CSRF del formulario
+    }
   });
 </script>
 {% endblock %}

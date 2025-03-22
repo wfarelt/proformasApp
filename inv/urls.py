@@ -1,6 +1,6 @@
 from django.urls import path
 from inv.views import MovementListView, create_movement, ProductEntryListView, create_product_entry, \
-    update_product_entrey
+    update_product_entrey, product_search
     
 urlpatterns = [
     # MOVIMIENTOS
@@ -10,4 +10,6 @@ urlpatterns = [
     path('ingresos/', ProductEntryListView.as_view(), name='product_entry'),
     path('ingresos/nuevo/', create_product_entry, name='create_product_entry'),   
     path('ingresos/editar/<int:pk>/', update_product_entrey, name='update_product_entry'),
+    
+    path('buscar-producto/', product_search, name='product_search'),
 ]

@@ -100,7 +100,7 @@
         </td>
         <td class="sin-borde td-derecha">
             <strong>Total: $ </strong>{{ proforma.total }}<br>
-            <strong>Descuento: - $ </strong>{{ descuento|floatformat:2 }}<br>
+            <strong>Descuento: - $ </strong>{{ proforma.total_descuento|floatformat:2  }}<br>
             ----- <br> 
             <strong>Total Neto: $ </strong>{{ proforma.total_neto|floatformat:2 }}     
         </td>

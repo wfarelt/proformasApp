@@ -24,6 +24,8 @@ urlpatterns = [
     path('proforma/edit/<int:id>/', proforma_edit, name='proforma_edit'),
     path('proforma/agregar_producto_a_detalle/', agregar_producto_a_detalle, name='agregar_producto_a_detalle'),
     path('proforma/eliminar_producto_a_detalle/<int:id>/', eliminar_producto_a_detalle, name='eliminar_producto_a_detalle'),
+    path("editar_cantidad_detalle/<int:detalle_id>/", editar_cantidad_detalle, name="editar_cantidad_detalle"),
+    
     path('proforma/add_client/<int:id>/', proforma_add_client, name='proforma_add_client'),
     path('proforma/cambiar_estado_proforma/<int:id>/', cambiar_estado_proforma, name='cambiar_estado_proforma'),
     path('proforma/view/<int:id>/', proforma_view, name='proforma_view'),
