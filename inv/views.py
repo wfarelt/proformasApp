@@ -1,10 +1,13 @@
+from django.shortcuts import render
+from datetime import timedelta
+from django.utils.timezone import now
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView, DeleteView
 from django.urls import reverse_lazy
 from django.views.generic import View
 #from .forms import MovementDetailFormSet, MovementForm
 from .models import Movement, MovementDetail, ProductEntry, ProductEntryDetail, Producto
-from core.models import Producto
+from core.models import Producto, productos_mas_vendidos
 from django.core.paginator import Paginator
 from django.contrib import messages
 
@@ -102,7 +105,6 @@ def create_product_entry(request):
 
     return render(request, 'inv/productEntry/product_entry_form.html', {'entry_form': entry_form, 'formset': formset})
 
-
 def update_product_entrey(request, pk):
     
     entry = get_object_or_404(ProductEntry, pk=pk)
@@ -147,9 +149,23 @@ def update_product_entrey(request, pk):
 
     return render(request, 'inv/productEntry/product_entry_form.html', {'entry_form': entry_form, 'formset': formset})
 
-
 def product_search(request):
     query = request.GET.get('q', '')
     products = Producto.objects.filter(nombre__icontains=query)[:10]  # Muestra solo 10 resultados
     data = [{"id": p.id, "name": p.nombre} for p in products]
     return JsonResponse(data, safe=False)
+
+# REPORTES
+
+def reporte_productos_mas_vendidos(request):
+    dias = request.GET.get("dias", 15)  # Obtener el valor del formulario (15 por defecto)
+    
+    try:
+        dias = int(dias)  # Convertir a entero
+    except ValueError:
+        dias = 15  # Si hay error, usar 15 días por defecto
+    
+    productos = productos_mas_vendidos(dias)
+    
+    return render(request, "inv/reports/productos_mas_vendidos.html", {"productos": productos, "dias": dias})
+

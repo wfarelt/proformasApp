@@ -1,0 +1,68 @@
+{% extends 'core/index.html' %}
+
+{% block title %}{{title}}{% endblock %}
+
+{% load static %}
+
+{% block style %}
+{% endblock %}
+
+{% block content %}
+<div class="card mt-3">
+    <div class="card-header">
+      <h3 class="card-title">Productos Más Vendidos</h3><br>
+      <!-- Formulario para elegir la cantidad de días -->
+        <form method="GET">
+            <div class="form-input">
+                <label for="dias">Mostrar últimos:</label>
+                <select class="form-control" name="dias" id="dias" onchange="this.form.submit()">
+                    <option value="7" {% if dias == 7 %}selected{% endif %}>7 días</option>
+                    <option value="15" {% if dias == 15 %}selected{% endif %}>15 días</option>
+                    <option value="30" {% if dias == 30 %}selected{% endif %}>30 días</option>
+                    <option value="60" {% if dias == 60 %}selected{% endif %}>60 días</option>
+                </select>
+            </div>
+        </form>
+    </div>
+    <!-- /.card-header -->
+    <div class="card-body">
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th style="width: 10px">#</th>
+            <th>Código</th>
+            <th>Producto</th>
+            <th style="width: 40px">Cantidad</th>
+          </tr>
+        </thead>
+        <tbody>
+            {% for producto in productos %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ producto.producto__nombre }}</td>
+                <td>
+                    {{ producto.producto__descripcion }}
+                </td>
+                <td><span class="badge bg-danger">{{ producto.total_vendido }}</span></td>
+              </tr>
+            {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <!-- /.card-body -->
+    <div class="card-footer clearfix">
+      <ul class="pagination pagination-sm m-0 float-right">
+        <li class="page-item"><a class="page-link" href="#">«</a></li>
+        <li class="page-item"><a class="page-link" href="#">1</a></li>
+        <li class="page-item"><a class="page-link" href="#">2</a></li>
+        <li class="page-item"><a class="page-link" href="#">3</a></li>
+        <li class="page-item"><a class="page-link" href="#">»</a></li>
+      </ul>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}
+
+

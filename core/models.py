@@ -1,5 +1,8 @@
 from django.db import models
+from django.db.models import Sum
 from django.utils import timezone
+from django.utils.timezone import now
+from datetime import timedelta
 
 from urllib.parse import quote
 from django.utils.translation import gettext_lazy as _
@@ -176,3 +179,15 @@ class Supplier(models.Model):
     def __str__(self):
         return self.name
 
+# REPORTES
+
+def productos_mas_vendidos(dias=15):
+    fecha_limite = now() - timedelta(days=dias)  # Calcular la fecha desde donde filtrar
+    productos = (
+        Detalle.objects
+        .filter(proforma__estado="EJECUTADO", proforma__fecha__gte=fecha_limite)  # Filtrar por fecha
+        .values("producto__nombre", "producto__descripcion")
+        .annotate(total_vendido=Sum("cantidad"))
+        .order_by("-total_vendido")
+    )
+    return productos

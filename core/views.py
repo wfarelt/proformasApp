@@ -275,8 +275,10 @@ def cambiar_estado_proforma(request, id):
             producto.stock = producto.stock - detalle.cantidad
             producto.save()
         proforma.save()
+        return redirect('proforma_list')
     # Retornar a la misma vista
-    return redirect(reverse_lazy('proforma_edit', args=[proforma.id]))
+    else:
+        return redirect(reverse_lazy('proforma_edit', args=[proforma.id]))
 
 def proforma_view(request, id):
     proforma = Proforma.objects.get(id=id)
