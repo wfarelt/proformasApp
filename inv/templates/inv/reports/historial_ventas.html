@@ -1,0 +1,117 @@
+{% extends 'core/index.html' %}
+
+{% block title %}{{title}}{% endblock %}
+
+{% load static %}
+
+{% block style %}
+
+<link rel="stylesheet" href="{% static 'plugins/select2/css/select2.min.css' %}">
+<link rel="stylesheet" href="{% static 'plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css' %}">
+
+{% endblock %}
+
+{% block content %}
+<div class="card mt-3">
+    <div class="card-header">
+        <h2>Historial de Ventas</h2>
+
+        <!-- Formulario de selección -->
+        <form method="GET" id="filtro-form">
+            <select name="producto_id" id="producto_id" class="form-control select2-hidden-accessible" style="width: 100%" tabindex="-1" aria-hidden="true" >
+                <option value="">Seleccione un producto</option>
+            </select>
+            <div class="form-group mt-2">
+                <label for="dias">Últimos días:</label>
+                <input type="number" name="dias" id="dias" value="{{ dias }}" min="1" max="365" class="form-control">
+                <button type="submit" class="btn btn-dark btn-sm mt-2">
+                    <span class="fas fa-search"></span> Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="card-body">
+        <!-- Mostrar datos si hay ventas -->
+        {% if ventas %}
+        <h3>Historial de Ventas para {{ producto.nombre }}</h3>
+        <table class="table table-bordered table-sm">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Fecha</th>
+                    <th>Proforma</th>
+                    <th>Cantidad</th>
+                    <th>Precio Unitario</th>
+                    <th>Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for venta in ventas %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ venta.proforma__fecha|date:"d/m/Y" }}</td>
+                    <td>{{ venta.proforma__id }}</td>
+                    <td>{{ venta.cantidad }}</td>
+                    <td>{{ venta.precio_venta }}</td>
+                    <td>{{ venta.subtotal }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No hay ventas registradas para este producto en el rango seleccionado.</p>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+<script src="{% static 'plugins/select2/js/select2.min.js' %}"></script>
+
+<script>
+    $(document).ready(function() {
+        $('#producto_id').select2({
+            placeholder: "Seleccione un producto",
+            allowClear: true,
+            language: "es",  // 🔹 Usa el idioma español
+            minimumInputLength: 1,
+            width: '100%',
+            theme: 'bootstrap4',
+            ajax: {
+                url: '/inv/api/productos/',  // URL de tu API en Django
+                dataType: 'json',
+                delay: 250,  // Retraso para evitar demasiadas peticiones al servidor
+                data: function (params) {
+                    return {
+                        q: params.term,  // El usuario escribe en el input
+                        page: params.page || 1  // Soporte para paginación
+                    };
+                },
+                processResults: function (data, params) {
+                    params.page = params.page || 1;
+                    return {
+                        results: data.results.map(item => ({
+                            id: item.id,
+                            text: item.nombre
+                        })),
+                        pagination: {
+                            more: data.has_next // Indica si hay más páginas
+                        }
+                    };
+                },
+                cache: true
+            },
+            minimumInputLength: 1,  // Buscar después de 1 carácter
+            width: '100%'
+        });
+
+        $(document).on('select2:open', () => {
+            document.querySelector('.select2-container--open .select2-search__field').focus();
+        });
+    });
+</script>
+
+
+{% endblock %}

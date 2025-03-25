@@ -7,7 +7,7 @@ from django.urls import reverse_lazy
 from django.views.generic import View
 #from .forms import MovementDetailFormSet, MovementForm
 from .models import Movement, MovementDetail, ProductEntry, ProductEntryDetail, Producto
-from core.models import Producto, productos_mas_vendidos
+from core.models import Producto, Detalle, productos_mas_vendidos
 from django.core.paginator import Paginator
 from django.contrib import messages
 
@@ -169,3 +169,44 @@ def reporte_productos_mas_vendidos(request):
     
     return render(request, "inv/reports/productos_mas_vendidos.html", {"productos": productos, "dias": dias})
 
+def historial_ventas_producto(request):
+    producto_id = request.GET.get("producto_id")
+    dias = int(request.GET.get("dias", 30))  # Rango de días (por defecto, 30 días)
+
+    productos = Producto.objects.all()  # Para llenar el select de productos
+    ventas = []
+
+    if producto_id:
+        fecha_limite = now() - timedelta(days=dias)
+        ventas = (
+            Detalle.objects
+            .filter(producto_id=producto_id, proforma__estado="EJECUTADO", proforma__fecha__gte=fecha_limite)
+            .values("proforma__fecha", "proforma__id","cantidad", "precio_venta", "subtotal")
+            .order_by("-proforma__fecha")
+        )
+        producto = Producto.objects.get(id=producto_id)
+    else:
+        producto = None
+
+    return render(request, "inv/reports/historial_ventas.html", {
+        "productos": productos,
+        "ventas": ventas,
+        "producto": producto,
+        "dias": dias
+    })
+    
+
+def buscar_productos(request):
+    query = request.GET.get('q', '')
+    page = int(request.GET.get('page', 1))
+
+    productos = Producto.objects.filter(nombre__icontains=query).order_by('nombre')
+
+    paginator = Paginator(productos, 10)  # 10 productos por página
+    productos_pagina = paginator.get_page(page)
+
+    data = {
+        "results": [{"id": p.id, "nombre": p.nombre} for p in productos_pagina],
+        "has_next": productos_pagina.has_next()
+    }
+    return JsonResponse(data)

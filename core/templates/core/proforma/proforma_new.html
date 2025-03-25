@@ -195,11 +195,17 @@
   </table>
 </div>
 <br>
+<form method="POST" action="{% url 'cambiar_estado_proforma' proforma.id %}" class="d-inline">
+  {% csrf_token %}
 
-<div class="no-mostrar text-center mb-5 pb-5">
+<div class="form-group">
+    <label for="observacion">Observaciones:</label>
+    <input type="text" name="observacion" id="observacion" class="form-control" value="{{proforma.observacion}}">
+</div>
+
+<div class="text-center mb-5 pb-5">
   <h3>ESTADO DE LA PROFORMA</h3>
-  <form method="POST" action="{% url 'cambiar_estado_proforma' proforma.id %}" class="d-inline">
-    {% csrf_token %}
+  
     <!-- Campo de descuento -->
     <div class="row mb-3">
       <div class="col-md-2 offset-md-5">
@@ -221,10 +227,12 @@
   </form>
   
   <!-- Botones fuera del formulario -->
-  <a href="{% url 'proforma_pdf' proforma.id %}" target="_blank" rel="noopener noreferrer" class="btn btn-info btn-sm">
+  <a href="{% url 'proforma_pdf' proforma.id %}" target="_blank" rel="noopener noreferrer" 
+    class="btn btn-info btn-sm" data-bs-toggle="tooltip" title="Sin código">
     <i class="fas fa-file-pdf"></i> Sin/Code
   </a>
-  <a href="{% url 'proforma_almacen' proforma.id %}" target="_blank" rel="noopener noreferrer" class="btn btn-default btn-sm">
+  <a href="{% url 'proforma_almacen' proforma.id %}" target="_blank" rel="noopener noreferrer" 
+    class="btn btn-default btn-sm" data-bs-toggle="tooltip" title="Con código">
     <i class="fas fa-file-pdf"></i> Con/Code
   </a>
   <a href="{% url 'proforma_list' %}" class="btn btn-danger btn-sm"><i class="fas fa-times"></i> Cerrar</a>

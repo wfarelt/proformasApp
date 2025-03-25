@@ -265,6 +265,9 @@ def cambiar_estado_proforma(request, id):
     if request.POST.get('discount_percentage'):
         proforma.discount_percentage = request.POST.get('discount_percentage')
         proforma.save()
+    if request.POST.get('observacion'):
+        proforma.observacion = request.POST.get('observacion')
+        proforma.save()
     if request.POST.get('estado') == 'EJECUTADO':
         proforma.estado = 'EJECUTADO'
         for detalle in Detalle.productos_list(proforma):

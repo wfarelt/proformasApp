@@ -129,6 +129,7 @@ class Proforma(models.Model):
         help_text="Descuento en porcentaje (ej. 10.00 para 10%)"
     )
     estado = models.CharField(max_length=10, choices=ESTADO, default='PENDIENTE')
+    observacion = models.TextField(max_length=200, blank=True, null=True, help_text="Observaciones adicionales sobre la proforma")
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="proformas", default=1)
     
     def total_neto(self):
