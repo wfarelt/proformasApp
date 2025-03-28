@@ -40,6 +40,7 @@
                     <th>#</th>
                     <th>Fecha</th>
                     <th>Proforma</th>
+                    <th>Cliente</th>
                     <th>Cantidad</th>
                     <th>Precio Unitario</th>
                     <th>Subtotal</th>
@@ -50,7 +51,12 @@
                 <tr>
                     <td>{{ forloop.counter }}</td>
                     <td>{{ venta.proforma__fecha|date:"d/m/Y" }}</td>
-                    <td>{{ venta.proforma__id }}</td>
+                    <td>
+                        <a href="{% url 'proforma_view' venta.proforma__id %}" target="_blank">
+                            {{ venta.proforma__id }}
+                        </a>
+                    </td>
+                    <td>{{ venta.proforma__cliente__name }}</td>
                     <td>{{ venta.cantidad }}</td>
                     <td>{{ venta.precio_venta }}</td>
                     <td>{{ venta.subtotal }}</td>

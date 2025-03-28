@@ -15,5 +15,6 @@ urlpatterns = [
    # REPORTES
     path("reporte/productos-mas-vendidos/", reporte_productos_mas_vendidos, name="reporte_productos_mas_vendidos"),
     path("reporte/historial-ventas/", historial_ventas_producto, name="historial_ventas"),
-    path('api/productos/', buscar_productos, name='buscar_productos'),
+    path("api/productos/", buscar_productos, name="buscar_productos"),
+    path("reporte/reporte-inventario/", reporte_inventario, name="reporte_inventario"),
 ]

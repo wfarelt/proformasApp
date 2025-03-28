@@ -1,0 +1,48 @@
+{% extends 'core/index.html' %}
+
+{% block title %}{{title}}{% endblock %}
+
+{% load static %}
+
+{% block style %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center">Reporte de Inventario</h2>
+    
+    <table class="table table-bordered table-striped">
+        <thead class="thead-dark">
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Descripcion</th>
+                <th>Marca</th>
+                <th>Stock</th>
+                <th>Costo $</th>
+                <th>Ubicación</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for producto in productos %}
+            <tr>
+                <td>{{ producto.id }}</td>
+                <td>{{ producto.nombre }}</td>
+                <td>{{ producto.descripcion }}</td>
+                <td class="text-center">{{ producto.brand.nombre|default:"N/A" }}</td>
+                <td class="text-right">{{ producto.stock }}</td>
+                <td class="text-right">${{ producto.cost|floatformat:2 }}</td>
+                <td>{{ producto.location|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center">No hay productos con stock disponible.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

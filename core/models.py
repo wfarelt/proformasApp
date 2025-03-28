@@ -144,6 +144,9 @@ class Proforma(models.Model):
     def __str__(self):
         return str(self.id)
     
+    def proforma__cliente__name(self):
+        return self.cliente.name if self.cliente else "Sin Cliente"
+    
     class Meta:
         verbose_name = "Proforma"
         verbose_name_plural = "Proformas" 
@@ -181,7 +184,6 @@ class Supplier(models.Model):
         return self.name
 
 # REPORTES
-
 def productos_mas_vendidos(dias=15):
     fecha_limite = now() - timedelta(days=dias)  # Calcular la fecha desde donde filtrar
     productos = (

@@ -181,7 +181,7 @@ def historial_ventas_producto(request):
         ventas = (
             Detalle.objects
             .filter(producto_id=producto_id, proforma__estado="EJECUTADO", proforma__fecha__gte=fecha_limite)
-            .values("proforma__fecha", "proforma__id","cantidad", "precio_venta", "subtotal")
+            .values("proforma__fecha", "proforma__id", "proforma__cliente__name", "cantidad", "precio_venta", "subtotal")
             .order_by("-proforma__fecha")
         )
         producto = Producto.objects.get(id=producto_id)
@@ -195,7 +195,6 @@ def historial_ventas_producto(request):
         "dias": dias
     })
     
-
 def buscar_productos(request):
     query = request.GET.get('q', '')
     page = int(request.GET.get('page', 1))
@@ -210,3 +209,9 @@ def buscar_productos(request):
         "has_next": productos_pagina.has_next()
     }
     return JsonResponse(data)
+
+def reporte_inventario(request):
+    productos = Producto.objects.filter(stock__gt=0).order_by('location')  # Solo productos con stock > 0
+    return render(request, "inv/reports/reporte_inventario.html", {
+        "productos": productos
+    })
