@@ -269,15 +269,19 @@ def cambiar_estado_proforma(request, id):
         proforma.observacion = request.POST.get('observacion')
         proforma.save()
     if request.POST.get('estado') == 'EJECUTADO':
-        proforma.estado = 'EJECUTADO'
-        for detalle in Detalle.productos_list(proforma):
-            producto = Producto.objects.get(id=detalle.producto.id)
-            if producto.stock < detalle.cantidad:
-                messages.error(request, f'No hay suficiente stock para el producto "{producto.nombre}".')
-                return redirect('proforma_edit', id)
-            producto.stock = producto.stock - detalle.cantidad
-            producto.save()
-        proforma.save()
+        if proforma.cliente:    
+            proforma.estado = 'EJECUTADO'
+            for detalle in Detalle.productos_list(proforma):
+                producto = Producto.objects.get(id=detalle.producto.id)
+                if producto.stock < detalle.cantidad:
+                    messages.error(request, f'No hay suficiente stock para el producto "{producto.nombre}".')
+                    return redirect('proforma_edit', id)
+                producto.stock = producto.stock - detalle.cantidad
+                producto.save()
+            proforma.save()
+        else:
+            messages.error(request, 'Esta proforma no tiene asignado un cliente')
+            return redirect('proforma_edit', id)
         return redirect('proforma_list')
     # Retornar a la misma vista
     else:
