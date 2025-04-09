@@ -1,0 +1,68 @@
+{% extends 'core/index.html' %}
+
+{% block title %}{{title}}{% endblock %}
+
+{% block content %}
+
+<div id="mensaje">
+    {% if messages %}
+    <div>
+      {% for message in messages %}
+        <div class="alert alert-danger alert-sm" role="alert">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+{% if form.instance.pk %}
+    
+<h1>Editar Ingreso</h1>
+<form method="post" action="{% url 'entry_update' form.instance.pk %}">
+{% else %}
+<h1>Nuevo Ingres</h1>
+<form method="post" action="{% url 'entry_create' %}">
+{% endif %}
+
+    {% csrf_token %}
+    {{ form.as_p }}
+    <h2>Detalles</h2>
+    {{ formset.management_form }}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Costo Unitario</th>
+                <th>Eliminar</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for form in formset %}
+                <tr>
+                    {% for field in form.visible_fields %}
+                        <td>
+                            {{ field.errors }}
+                            {{ field }}
+                        </td>
+                    {% endfor %}
+                    <td>
+                        {{ form.entry }}  <!-- Esto debería ser renderizado correctamente -->
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <button type="submit" class="btn btn-success mb-3">
+        {% if form.instance.pk %}
+            <i class="fa fa-edit"></i> Actualizar
+        {% else %}
+            <i class="fa fa-spinner"></i> Crear
+        {% endif %}
+    </button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

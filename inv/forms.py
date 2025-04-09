@@ -1,5 +1,6 @@
 from django import forms
 from .models import Movement, MovementDetail, ProductEntry, ProductEntryDetail
+from django.forms import inlineformset_factory
 
 class MovementForm(forms.ModelForm):
     class Meta:
@@ -34,15 +35,21 @@ class ProductEntryForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'status': forms.Select(attrs={'class': 'form-control'}),
         }
-    
+
 class ProductEntryDetailForm(forms.ModelForm):
     class Meta:
         model = ProductEntryDetail
         fields = ['product', 'quantity', 'unit_cost']
-    
+        
+        # Poner los widgets en una fila para tabla
         widgets = {
-            'product': forms.Select(attrs={'class': 'form-control'}),
-            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'step': '1'}),
+            'product': forms.TextInput(attrs={'class': 'form-control'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
             'unit_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
         }
-    
+
+ProductEntryDetailFormSet = inlineformset_factory(
+    ProductEntry, ProductEntryDetail,
+    form=ProductEntryDetailForm,
+    extra=1,
+)

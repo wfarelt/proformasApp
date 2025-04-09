@@ -6,10 +6,12 @@ urlpatterns = [
     path('movements/', MovementListView.as_view(), name='movement_list'),
     path('movements/new/', create_movement, name='create_movement'),
     # INGRESOS
-    path('ingresos/', ProductEntryListView.as_view(), name='product_entry'),
-    path('ingresos/nuevo/', create_product_entry, name='create_product_entry'),   
-    path('ingresos/editar/<int:pk>/', update_product_entrey, name='update_product_entry'),
-    
+    path('entries/', entry_list, name='entry_list'),
+    path('entries/create/', entry_create, name='entry_create'),
+    path('entries/<int:pk>/edit/', entry_update, name='entry_update'),
+    path('entries/<int:pk>/delete/', entry_delete, name='entry_delete'),
+
+       
     path('buscar-producto/', product_search, name='product_search'),
     
    # REPORTES

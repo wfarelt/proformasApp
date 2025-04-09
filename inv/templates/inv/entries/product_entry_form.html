@@ -1,0 +1,21 @@
+{% extends 'core/index.html' %}
+
+{% block title %}{{title}}{% endblock %}
+
+{% block content %}
+<h2>Registrar Ingreso de Productos</h2>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}   
+    <button type="submit" class="btn btn-success btn-sm"><i class="fa fa-save"></i> Guardar</button>
+    <a href="{% url 'product_entry' %}" class="btn btn-danger btn-sm"><span class="fa fa-times"></span> Cancelar</a>
+
+    <a href="{% url 'create_product_entry_detail' form.instance.id %}" class="btn btn-dark btn-sm"><i class="fa fa-plus"></i> Agregar Producto</a>
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}
+

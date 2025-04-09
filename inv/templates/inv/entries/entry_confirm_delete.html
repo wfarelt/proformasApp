@@ -1,0 +1,18 @@
+{% extends 'core/index.html' %}
+
+{% block title %}{{title}}{% endblock %}
+
+{% block content %}
+<h1>Eliminar Ingreso</h1>
+<p>¿Estás seguro que deseas eliminar el ingreso #{{ entry.id }}?</p>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit">Sí, eliminar</button>
+    <a href="{% url 'entry_list' %}">Cancelar</a>
+</form>
+
+
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}
