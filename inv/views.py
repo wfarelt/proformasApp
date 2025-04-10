@@ -1,52 +1,15 @@
-from django.shortcuts import render
-from datetime import timedelta
-from django.utils.timezone import now
 from django.shortcuts import render, redirect, get_object_or_404
-from django.views.generic import ListView, DeleteView
-from django.urls import reverse_lazy
-from django.views.generic import View
-#from .forms import MovementDetailFormSet, MovementForm
-from .models import Movement, MovementDetail, ProductEntry, ProductEntryDetail, Producto
-from core.models import Producto, Detalle, productos_mas_vendidos
 from django.core.paginator import Paginator
 from django.contrib import messages
-
-from django.forms import inlineformset_factory
-from .forms import MovementForm, MovementDetailForm, ProductEntryForm, ProductEntryDetailForm, ProductEntryDetailFormSet
-
+from django.utils.timezone import now
 from django.http import JsonResponse
-
 from django.contrib.auth.decorators import login_required
 from django.forms import modelformset_factory
+from datetime import timedelta
 
-
-class MovementListView(ListView):
-    model = Movement
-    template_name = 'inv/movement_list.html'
-    context_object_name = 'movements'
-    
-    # Ordenar por id de movimiento
-    def get_queryset(self):
-        return Movement.objects.all().order_by('-id')
-   
-def create_movement(request):
-    MovementDetailFormSet = inlineformset_factory(Movement, MovementDetail, form=MovementDetailForm, extra=2, can_delete=True)
-    
-    if request.method == "POST":
-        form = MovementForm(request.POST)
-        formset = MovementDetailFormSet(request.POST)
-        
-        if form.is_valid() and formset.is_valid():
-            movement = form.save()
-            formset.instance = movement
-            formset.save()
-            return redirect('movement_list')
-    
-    else:
-        form = MovementForm()
-        formset = MovementDetailFormSet()
-
-    return render(request, 'inv/movement_form.html', {'form': form, 'formset': formset})
+from core.models import Producto, Detalle, productos_mas_vendidos
+from .models import ProductEntry, Producto
+from .forms import ProductEntryForm, ProductEntryDetailFormSet
 
 # INGRESOS
 
@@ -60,27 +23,31 @@ def entry_create(request):
     if request.method == 'POST':
         form = ProductEntryForm(request.POST)
         formset = ProductEntryDetailFormSet(request.POST)
+        
         if form.is_valid() and formset.is_valid():
             entry = form.save(commit=False)
-            entry.user = request.user
+            entry.user = request.user  # Asignar el usuario actual al ingreso
             entry.save()
-            formset.instance = entry
+            formset.instance = entry  # Asignar la instancia del ingreso al formset
             formset.save()
-            print(entry.status)
+            
             if entry.status == 'confirmed':
                 # Actualizar el stock de los productos ingresados
                 for detail in formset:
-                    product = detail.cleaned_data['product']
-                    quantity = detail.cleaned_data['quantity']
-                    product.stock += quantity
-                    product.save()
+                    if detail.cleaned_data and detail.cleaned_data.get('DELETE'):
+                        # Actualizar el stock del producto
+                        product = detail.cleaned_data['product']
+                        quantity = detail.cleaned_data['quantity']
+                        product.stock += quantity
+                        product.save()
                 # Mensaje de éxito
                 messages.success(request, 'Ingreso registrado correctamente.')
-            return redirect('entry_list')
+            
+            # Retornar a entry_update
+            return redirect('entry_update', pk=entry.pk)
         else:
             # Mensaje de error
-            messages.error(request, 'Error al registrar el ingreso. Por favor, revise los datos.')
-            print(form.errors)
+            messages.error(request, 'Error al registrar el ingreso. Por favor, revise los datos.')         
     else:
         form = ProductEntryForm()
         formset = ProductEntryDetailFormSet()
@@ -91,12 +58,9 @@ def entry_create(request):
 def entry_update(request, pk):
     entry = get_object_or_404(ProductEntry, pk=pk)
     if request.method == 'POST':
-        print(request.POST)
         form = ProductEntryForm(request.POST, instance=entry)
         formset = ProductEntryDetailFormSet(request.POST, instance=entry)
-        
-        print(form.user)    
-        
+               
         if form.is_valid() and formset.is_valid():
             form.save()
             formset.save()
@@ -105,10 +69,11 @@ def entry_update(request, pk):
             if entry.status == 'confirmed':
                 # Actualizar el stock de los productos ingresados
                 for detail in formset:
-                    product = detail.cleaned_data['product']
-                    quantity = detail.cleaned_data['quantity']
-                    product.stock += quantity
-                    product.save()
+                    if detail.cleaned_data and detail.cleaned_data.get('DELETE'):
+                        product = detail.cleaned_data['product']
+                        quantity = detail.cleaned_data['quantity']
+                        product.stock += quantity
+                        product.save()
                 messages.success(request, 'Ingreso actualizado correctamente.')
                 return redirect('entry_list')
             else:
@@ -116,7 +81,6 @@ def entry_update(request, pk):
                 return redirect('entry_update', pk=pk)
         else:
             messages.error(request, 'Error al actualizar el ingreso. Por favor, revise los datos.')
-            print(formset.errors)
     else:
         form = ProductEntryForm(instance=entry)
         formset = ProductEntryDetailFormSet(instance=entry)
@@ -130,16 +94,7 @@ def entry_delete(request, pk):
         entry.delete()
         return redirect('entry_list')
     return render(request, 'inv/entries/entry_confirm_delete.html', {'entry': entry})
-    
-    
         
-
-        
-        
-        
-    
-    
-    
 def product_search(request):
     query = request.GET.get('q', '')
     products = Producto.objects.filter(nombre__icontains=query)[:10]  # Muestra solo 10 resultados

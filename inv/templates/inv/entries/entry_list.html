@@ -14,7 +14,7 @@
             <tr>
                 <td>{{ entry.id }}</td>
                 <td>{{ entry.date|date:"d/m/Y" }}</td>
-                <td>{{ entry.user }}</td>
+                <td>{{ entry.user.name }}</td>
                 <td> {% if entry.status == "confirmed" %} <span class="badge badge-success">Confirmado</span> 
                     {% elif entry.status == "pending" %} <span class="badge badge-warning">Pendiente</span> 
                     {% elif entry.status == "canceled" %} <span class="badge badge-danger">Cancelado</span> 

@@ -2,9 +2,7 @@ from django.urls import path
 from inv.views import *
     
 urlpatterns = [
-    # MOVIMIENTOS
-    path('movements/', MovementListView.as_view(), name='movement_list'),
-    path('movements/new/', create_movement, name='create_movement'),
+    
     # INGRESOS
     path('entries/', entry_list, name='entry_list'),
     path('entries/create/', entry_create, name='entry_create'),
@@ -20,3 +18,4 @@ urlpatterns = [
     path("api/productos/", buscar_productos, name="buscar_productos"),
     path("reporte/reporte-inventario/", reporte_inventario, name="reporte_inventario"),
 ]
+
