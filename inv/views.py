@@ -8,8 +8,10 @@ from django.forms import modelformset_factory
 from datetime import timedelta
 
 from core.models import Producto, Detalle, productos_mas_vendidos
-from .models import ProductEntry, Producto
-from .forms import ProductEntryForm, ProductEntryDetailFormSet
+from .models import ProductEntry, Producto, Purchase, PurchaseDetail
+from .forms import ProductEntryForm, ProductEntryDetailFormSet, PurchaseForm, PurchaseDetailFormSet
+
+from django.db import transaction
 
 # INGRESOS
 
@@ -161,3 +163,98 @@ def reporte_inventario(request):
     return render(request, "inv/reports/reporte_inventario.html", {
         "productos": productos
     })
+
+# COMPRAS
+
+@login_required
+def purchase_list(request):
+    purchases = Purchase.objects.all().order_by('-date')
+    context = {
+        'purchases': purchases,
+        'title': 'Lista de Compras',
+        'subtitle': 'Lista de compras registradas',
+        'icon': 'fa-shopping-cart',
+    }   
+    return render(request, 'inv/purchase/purchase_list.html', context)
+
+def create_purchase(request):
+    if request.method == 'POST':
+        form = PurchaseForm(request.POST)
+        formset = PurchaseDetailFormSet(request.POST)
+        if form.is_valid() and formset.is_valid():
+            # Agregar usuario y fecha al formulario de compra
+            purchase = form.save(commit=False)
+            purchase.user = request.user
+            purchase.date = now()
+            purchase.save()
+            # Guardar los detalles de la compra
+            with transaction.atomic():
+                purchase = form.save()
+                formset.instance = purchase
+                formset.save()
+                messages.success(request, "Compra registrada correctamente.")
+                return redirect('purchase_list')  # Cambia por tu URL real
+    else:
+        form = PurchaseForm()
+        formset = PurchaseDetailFormSet()
+
+    return render(request, 'inv/purchase/create_purchase.html', {
+        'form': form,
+        'formset': formset,
+        'purchase': purchase,
+    })
+
+def update_purchase(request, pk):
+    purchase = get_object_or_404(Purchase, pk=pk)
+    if request.method == 'POST':
+        form = PurchaseForm(request.POST, instance=purchase)
+        formset = PurchaseDetailFormSet(request.POST, instance=purchase)
+
+        if form.is_valid() and formset.is_valid():
+            with transaction.atomic():
+                purchase = form.save(commit=False)
+                purchase.user = request.user
+                purchase.date = now()
+
+                # Calcular total antes de guardar detalles
+                details = formset.save(commit=False)
+                total = 0
+                for detail in details:
+                    detail.purchase = purchase
+                    detail.save()
+                    total += detail.subtotal()
+                
+                purchase.total_amount = total
+                purchase.save()
+
+                formset.save_m2m()  # Solo si tienes campos many-to-many
+                messages.success(request, "Compra actualizada correctamente.")
+                return redirect('purchase_list')
+        else:
+            messages.error(request, "Error al actualizar la compra. Por favor, revise los datos.")
+    else:
+        form = PurchaseForm(instance=purchase)
+        formset = PurchaseDetailFormSet(instance=purchase)
+
+    details_with_subtotals = [
+    {'form': form, 'subtotal': form.instance.subtotal() if form.instance.pk else 0}
+    for form in formset
+    ]
+    
+    return render(request, 'inv/purchase/create_purchase.html', {
+        'form': form,
+        'formset': formset,
+        'purchase': purchase,
+        'details': details_with_subtotals,
+    })
+
+def delete_purchase(request, pk):
+    purchase = get_object_or_404(Purchase, pk=pk)
+    if request.method == 'POST':
+        purchase.delete()
+        messages.success(request, "Compra eliminada correctamente.")
+        return redirect('purchase_list')  # Cambia por tu URL real
+    return render(request, 'inv/purchase/delete_purchase.html', {
+        'purchase': purchase,
+    })
+    

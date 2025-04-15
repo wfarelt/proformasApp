@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ProductEntry, ProductEntryDetail
+from .models import ProductEntry, ProductEntryDetail, Purchase, PurchaseDetail
 
 # Register your models here.
 
@@ -14,3 +14,14 @@ class ProductEntryDetailAdmin(admin.ModelAdmin):
     search_fields = ('product__name',)
 
 admin.site.register(ProductEntryDetail, ProductEntryDetailAdmin)
+
+# COMPRAS
+
+class PurchaseAdmin(admin.ModelAdmin):
+    list_display = ('id', 'supplier', 'date', 'total_amount', 'invoice_number', 'status')
+    list_filter = ('supplier', 'date', 'status')
+    search_fields = ('supplier__name', 'invoice_number')
+    
+admin.site.register(Purchase, PurchaseAdmin)
+
+admin.site.register(PurchaseDetail)
