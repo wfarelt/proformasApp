@@ -19,16 +19,6 @@
     <form method="post" action="{% url 'create_purchase' %}">
 {% endif %}
 
-    {% if messages %}
-        <div id="mensaje">
-            {% for message in messages %}
-                <div class="alert alert-danger alert-sm" role="alert">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-
     {% csrf_token %}
     {{ form.as_p }}
 
@@ -39,9 +29,9 @@
             <tr>
                 <th>Producto</th>
                 <th>Cantidad</th>
-                <th>Precio Unitario</th>
-                <th>Subtotal</th>
-                <th>Acciones</th>
+                <th class="text-right">Precio Unitario</th>
+                <th class="text-right">Subtotal</th>
+                <th class="text-center">Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -51,7 +41,21 @@
                 <td>{{ form.product }}</td>
                 <td>{{ form.quantity }}</td>
                 <td>{{ form.unit_price }}</td>
-                <td class="subtotal text-right">0.00</td>
+                {% if form.instance.pk %}
+                    <td class="subtotal text-right">{{ form.instance.subtotal|floatformat:2 }}</td>
+                    <td>
+                        <button type="button" class="btn btn-danger btn-sm remove-product" data-id="{{ form.instance.pk }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>        
+                {% else %}
+                    <td class="subtotal text-right">0.00</td>
+                    <td>
+                        <button type="button" class="btn btn-danger btn-sm remove-product">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                {% endif %}
             </tr>
             {% empty %}
             <tr><td colspan="4">No hay productos en el detalle.</td></tr>
@@ -59,20 +63,25 @@
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="3"><button type="button" class="btn btn-success" id="add-product">Agregar Producto</button></td>
+                <td colspan="3">
+                    <strong>Total:</strong>
+                </td>
+                <td class="text-right total">{{ purchase.total_amount|floatformat:2 }}</td>
             </tr>
         </tfoot>
     </table>
 
-    <button type="submit" class="btn btn-primary">Guardar Compra</button>
-    <a href="{% url 'purchase_list' %}" class="btn btn-secondary">Cancelar</a>
+    <div class="text-center mb-3">
+        <button type="submit" class="btn btn-primary">Guardar Compra</button>
+        <a href="{% url 'purchase_list' %}" class="btn btn-secondary">Volver</a>
+    </div>
 </form>
 
 {% endblock %}
 
 {% block scripts %}
 <script src="{% static 'plugins/select2/js/select2.min.js' %}"></script>
-<script src="{% static 'inv/js/purchase.js' %}"></script>
+
 <script>
     $(document).ready(function() {
         $('.select2').select2({

@@ -193,7 +193,7 @@ def create_purchase(request):
                 formset.instance = purchase
                 formset.save()
                 messages.success(request, "Compra registrada correctamente.")
-                return redirect('purchase_list')  # Cambia por tu URL real
+                return redirect('update_purchase', pk=purchase.pk)
     else:
         form = PurchaseForm()
         formset = PurchaseDetailFormSet()
@@ -201,7 +201,6 @@ def create_purchase(request):
     return render(request, 'inv/purchase/create_purchase.html', {
         'form': form,
         'formset': formset,
-        'purchase': purchase,
     })
 
 def update_purchase(request, pk):
@@ -217,19 +216,20 @@ def update_purchase(request, pk):
                 purchase.date = now()
 
                 # Calcular total antes de guardar detalles
-                details = formset.save(commit=False)
                 total = 0
-                for detail in details:
-                    detail.purchase = purchase
-                    detail.save()
-                    total += detail.subtotal()
+                for form in formset.forms:
+                    if form.cleaned_data and not form.cleaned_data.get('DELETE', False):
+                        detail = form.save(commit=False)
+                        detail.purchase = purchase
+                        detail.save()
+                        total += detail.quantity * detail.unit_price  # Calcular subtotal
                 
                 purchase.total_amount = total
                 purchase.save()
 
-                formset.save_m2m()  # Solo si tienes campos many-to-many
+                #formset.save_m2m()  # Solo si tienes campos many-to-many
                 messages.success(request, "Compra actualizada correctamente.")
-                return redirect('purchase_list')
+                return redirect('update_purchase', pk=purchase.pk)
         else:
             messages.error(request, "Error al actualizar la compra. Por favor, revise los datos.")
     else:
