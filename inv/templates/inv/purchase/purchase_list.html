@@ -30,16 +30,16 @@
                         <span class="badge badge-success">Confirmado</span> 
                     {% elif purchase.status == "pending" %} 
                         <span class="badge badge-warning">Pendiente</span> 
-                    {% elif purchase.status == "canceled" %} 
+                    {% elif purchase.status == "cancelled" %} 
                         <span class="badge badge-danger">Cancelado</span> 
                     {% endif %}
                 </td>
                 <td class="text-center">
-                    <a href="" class="btn btn-info btn-sm"><i class="fa fa-eye"></i></a>
+                    <a href="{% url 'purchase_detail' purchase.id %}" class="btn btn-info btn-sm"><i class="fa fa-eye"></i></a>
                     {% if purchase.status == "pending" %}
                         <a href="{% url 'update_purchase' purchase.id %}" class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></a>
                     {% endif %}
-                    <a href="{% url 'delete_purchase' purchase.id %}" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></a>
+                    <a href="{% url 'cancelled_purchase' purchase.id %}" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></a>
                 </td>
             </tr>
         {% empty %}

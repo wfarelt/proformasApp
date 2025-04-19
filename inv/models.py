@@ -52,6 +52,12 @@ class Purchase(models.Model):
     def __str__(self):
         return f"Purchase #{self.id} - {self.supplier.name}"
     
+    class Meta:
+        verbose_name = 'Purchase'
+        verbose_name_plural = 'Purchases'
+        # Ordenar por estado
+        ordering = ['status', 'date'] 
+           
 class PurchaseDetail(models.Model):
     purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, related_name='details')
     product = models.ForeignKey(Producto, on_delete=models.CASCADE)

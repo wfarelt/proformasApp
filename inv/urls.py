@@ -20,7 +20,7 @@ urlpatterns = [
     path('compras/', purchase_list, name='purchase_list'),
     path('compras/nueva/', create_purchase, name='create_purchase'),
     path('compras/<int:pk>/editar/', update_purchase, name='update_purchase'),
-    path('compras/<int:pk>/eliminar/', delete_purchase, name='delete_purchase'),
-    
+    path('compras/<int:pk>/detalle/', purchase_detail, name='purchase_detail'),    
+    path('compras/<int:pk>/anular/', cancelled_purchase, name='cancelled_purchase')
 ]
 

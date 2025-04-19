@@ -168,7 +168,7 @@ def reporte_inventario(request):
 
 @login_required
 def purchase_list(request):
-    purchases = Purchase.objects.all().order_by('-date')
+    purchases = Purchase.objects.all().order_by('-status','-id', '-date')
     context = {
         'purchases': purchases,
         'title': 'Lista de Compras',
@@ -178,22 +178,44 @@ def purchase_list(request):
     return render(request, 'inv/purchase/purchase_list.html', context)
 
 def create_purchase(request):
+        
     if request.method == 'POST':
         form = PurchaseForm(request.POST)
         formset = PurchaseDetailFormSet(request.POST)
+
         if form.is_valid() and formset.is_valid():
-            # Agregar usuario y fecha al formulario de compra
-            purchase = form.save(commit=False)
-            purchase.user = request.user
-            purchase.date = now()
-            purchase.save()
-            # Guardar los detalles de la compra
             with transaction.atomic():
-                purchase = form.save()
+                # Crear la compra sin guardar aún
+                purchase = form.save(commit=False)
+                purchase.user = request.user
+                purchase.date = now()
+                purchase.save()
+
+                # Guardar detalles de la compra
                 formset.instance = purchase
                 formset.save()
+
+                # Calcular el total de la compra
+                total = 0
+                for f in formset.forms:
+                    if f.cleaned_data and not f.cleaned_data.get('DELETE', False):
+                        qty = f.cleaned_data.get('quantity', 0)
+                        price = f.cleaned_data.get('unit_price', 0)
+                        total += qty * price
+                
+                purchase.total_amount = total
+                purchase.save()
+
                 messages.success(request, "Compra registrada correctamente.")
-                return redirect('update_purchase', pk=purchase.pk)
+
+                # Redireccionar si está confirmada
+                if purchase.status == 'confirmed':
+                    messages.success(request, "Compra confirmada correctamente.")
+                    return redirect('purchase_list')
+                else:
+                    return redirect('update_purchase', pk=purchase.pk)
+        else:
+            messages.error(request, "Error al registrar la compra.")
     else:
         form = PurchaseForm()
         formset = PurchaseDetailFormSet()
@@ -205,6 +227,11 @@ def create_purchase(request):
 
 def update_purchase(request, pk):
     purchase = get_object_or_404(Purchase, pk=pk)
+    
+    if purchase.status == 'confirmed':
+        messages.warning(request, "Esta compra ya está confirmada y no se puede modificar.")
+        return redirect('purchase_list') 
+    
     if request.method == 'POST':
         form = PurchaseForm(request.POST, instance=purchase)
         formset = PurchaseDetailFormSet(request.POST, instance=purchase)
@@ -215,21 +242,29 @@ def update_purchase(request, pk):
                 purchase.user = request.user
                 purchase.date = now()
 
-                # Calcular total antes de guardar detalles
+                purchase.save()  # Guardar primero para poder asignarlo a los detalles
+
                 total = 0
                 for form in formset.forms:
                     if form.cleaned_data and not form.cleaned_data.get('DELETE', False):
                         detail = form.save(commit=False)
                         detail.purchase = purchase
                         detail.save()
-                        total += detail.quantity * detail.unit_price  # Calcular subtotal
-                
+                        total += detail.quantity * detail.unit_price
+
+                formset.save()  # 🔥 Aquí se eliminan los marcados con DELETE
+
                 purchase.total_amount = total
                 purchase.save()
-
-                #formset.save_m2m()  # Solo si tienes campos many-to-many
-                messages.success(request, "Compra actualizada correctamente.")
-                return redirect('update_purchase', pk=purchase.pk)
+                
+                if purchase.status == 'confirmed':
+                    # Redirigir a la lista de compras
+                    messages.success(request, "Compra confirmada y actualizada correctamente.")
+                    return redirect('purchase_list')  
+                else:   
+                    # Si no está confirmado, redirigir a la misma página de actualización
+                    messages.success(request, "Compra actualizada correctamente.")
+                    return redirect('update_purchase', pk=purchase.pk)
         else:
             messages.error(request, "Error al actualizar la compra. Por favor, revise los datos.")
     else:
@@ -237,10 +272,10 @@ def update_purchase(request, pk):
         formset = PurchaseDetailFormSet(instance=purchase)
 
     details_with_subtotals = [
-    {'form': form, 'subtotal': form.instance.subtotal() if form.instance.pk else 0}
-    for form in formset
+        {'form': form, 'subtotal': form.instance.subtotal() if form.instance.pk else 0}
+        for form in formset
     ]
-    
+
     return render(request, 'inv/purchase/create_purchase.html', {
         'form': form,
         'formset': formset,
@@ -248,13 +283,40 @@ def update_purchase(request, pk):
         'details': details_with_subtotals,
     })
 
-def delete_purchase(request, pk):
+# No se puede eliminar una compra, solo se puede anular
+@login_required
+def cancelled_purchase(request, pk):
     purchase = get_object_or_404(Purchase, pk=pk)
     if request.method == 'POST':
-        purchase.delete()
-        messages.success(request, "Compra eliminada correctamente.")
-        return redirect('purchase_list')  # Cambia por tu URL real
-    return render(request, 'inv/purchase/delete_purchase.html', {
+        purchase.status = 'cancelled'
+        purchase.save()
+        messages.success(request, "Compra anulada correctamente.")
+        return redirect('purchase_list')
+    return render(request, 'inv/purchase/cancelled_purchase.html', {
         'purchase': purchase,
     })
+
+def delete_purchase_detail(request, pk):
+    purchase_detail = get_object_or_404(PurchaseDetail, pk=pk)
+    if request.method == 'POST':
+        purchase_detail.delete()
+        messages.success(request, "Detalle de compra eliminado correctamente.")
+        return redirect('update_purchase', pk=purchase_detail.purchase.pk)  # Cambia por tu URL real
+    return render(request, 'inv/purchase/delete_purchase_detail.html', {
+        'purchase_detail': purchase_detail,
+    })
+
+# View purchase
+def purchase_detail(request, pk):
+    purchase = get_object_or_404(Purchase, pk=pk)
+    details = PurchaseDetail.objects.filter(purchase=purchase)
+    context = {
+        'purchase': purchase,
+        'details': details,
+        'title': 'Compra',
+        'subtitle': 'Detalles de la compra',
+        'icon': 'fa-shopping-cart',
+    }
+    
+    return render(request, 'inv/purchase/purchase.html', context)
     

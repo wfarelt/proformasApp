@@ -31,7 +31,7 @@
                 <th>Cantidad</th>
                 <th class="text-right">Precio Unitario</th>
                 <th class="text-right">Subtotal</th>
-                <th class="text-center">Acciones</th>
+                <th class="text-center"><i class="fas fa-trash"></i></th>
             </tr>
         </thead>
         <tbody>
@@ -41,21 +41,16 @@
                 <td>{{ form.product }}</td>
                 <td>{{ form.quantity }}</td>
                 <td>{{ form.unit_price }}</td>
-                {% if form.instance.pk %}
-                    <td class="subtotal text-right">{{ form.instance.subtotal|floatformat:2 }}</td>
-                    <td>
-                        <button type="button" class="btn btn-danger btn-sm remove-product" data-id="{{ form.instance.pk }}">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>        
-                {% else %}
-                    <td class="subtotal text-right">0.00</td>
-                    <td>
-                        <button type="button" class="btn btn-danger btn-sm remove-product">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                {% endif %}
+                <td class="subtotal text-right">
+                    {% if form.instance.pk %}
+                        {{ form.instance.subtotal|floatformat:2 }}
+                    {% else %}
+                        0.00
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    {{ form.DELETE }} 
+                </td>
             </tr>
             {% empty %}
             <tr><td colspan="4">No hay productos en el detalle.</td></tr>
@@ -72,8 +67,8 @@
     </table>
 
     <div class="text-center mb-3">
-        <button type="submit" class="btn btn-primary">Guardar Compra</button>
-        <a href="{% url 'purchase_list' %}" class="btn btn-secondary">Volver</a>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+        <a href="{% url 'purchase_list' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Regresar</a>
     </div>
 </form>
 
