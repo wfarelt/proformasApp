@@ -4,11 +4,11 @@ from inv.views import *
 urlpatterns = [
     
     # INGRESOS
-    path('entries/', entry_list, name='entry_list'),
-    path('entries/create/', entry_create, name='entry_create'),
-    path('entries/<int:pk>/edit/', entry_update, name='entry_update'),
-    path('entries/<int:pk>/delete/', entry_delete, name='entry_delete'),
-    path('buscar-producto/', product_search, name='product_search'),
+   # path('entries/', entry_list, name='entry_list'),
+   # path('entries/create/', entry_create, name='entry_create'),
+   # path('entries/<int:pk>/edit/', entry_update, name='entry_update'),
+   # path('entries/<int:pk>/delete/', entry_delete, name='entry_delete'),
+   # path('buscar-producto/', product_search, name='product_search'),
     
    # REPORTES
     path("reporte/productos-mas-vendidos/", reporte_productos_mas_vendidos, name="reporte_productos_mas_vendidos"),
