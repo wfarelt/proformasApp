@@ -1,5 +1,7 @@
 
 from django import forms
+from django.contrib.auth.forms import PasswordChangeForm
+from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import Producto, Cliente, Proforma, Supplier, Brand, User
 
@@ -45,6 +47,33 @@ class UserChangeForm(UserChangeForm):
             'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_superuser': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+# PASSWORD CHANGE FORM
+class CustomPasswordChangeForm(PasswordChangeForm):
+    old_password = forms.CharField(
+        label=_("Contraseña actual"),
+        strip=False,
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ingrese su contraseña actual'
+        }),
+    )
+    new_password1 = forms.CharField(
+        label=_("Nueva contraseña"),
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ingrese la nueva contraseña'
+        }),
+        strip=False,
+    )
+    new_password2 = forms.CharField(
+        label=_("Confirme la nueva contraseña"),
+        strip=False,
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Confirme la nueva contraseña'
+        }),
+    )
 
 # CREAR UN FORMULARIO PARA PRODUCTO
 class ProductoForm(forms.ModelForm):

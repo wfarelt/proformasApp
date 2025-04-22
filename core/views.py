@@ -6,7 +6,11 @@ from django.contrib import messages  # Importa el framework de mensajes
 from django.core.paginator import Paginator
 from django.views.generic import ListView, UpdateView, TemplateView
 from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand, Company
-from .forms import ProductoForm, ClienteForm, ProformaAddClientForm, SupplierForm, BrandForm
+from .forms import ProductoForm, ClienteForm, ProformaAddClientForm, SupplierForm, BrandForm, CustomPasswordChangeForm
+
+
+from inv.models import Movement, MovementItem  # Asegúrate de importar tus modelos correctamente
+from django.db import transaction
 #reporte pdf
 #from django.http import HttpResponse
 #from django.template.loader import get_template
@@ -17,6 +21,11 @@ from faker import Faker
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import PasswordChangeView
+from django.contrib.auth.forms import PasswordChangeForm
+
+
+from django.contrib.contenttypes.models import ContentType
 
 # PDF
 import weasyprint
@@ -27,10 +36,9 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.http import JsonResponse
 import json
 
-
 # Create your views here.
 
-# HOMBE
+# HOME
 @login_required(login_url='login')
 def home(request):
     quanty_products = Producto.objects.count()
@@ -44,6 +52,15 @@ def home(request):
         'quanty_proformas':quanty_proformas
     }
     return render(request, 'core/home.html', context)
+
+class CustomPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
+    form_class = CustomPasswordChangeForm
+    template_name = 'core/registration/change_password.html'
+    success_url = reverse_lazy('password_change_done')
+
+    def form_valid(self, form):
+        messages.success(self.request, "Your password has been changed successfully.")
+        return super().form_valid(form)
 
 # PRODUCTO
 @login_required(login_url='login')
@@ -260,6 +277,7 @@ def editar_cantidad_detalle(request, detalle_id):
     
     return JsonResponse({"success": False, "error": "Método no permitido"}, status=405)
 
+@transaction.atomic
 def cambiar_estado_proforma(request, id):
     proforma = Proforma.objects.get(id=id)
     if request.POST.get('discount_percentage'):
@@ -282,13 +300,32 @@ def cambiar_estado_proforma(request, id):
                 producto = Producto.objects.get(id=detalle.producto.id)
                 producto.stock -= detalle.cantidad
                 producto.save()
+
+            # Crear el Movement para la venta (Egreso)
+            proforma_content_type = ContentType.objects.get_for_model(Proforma)
+            movement = Movement.objects.create(
+                movement_type='EGRESO',
+                content_type=proforma_content_type,
+                object_id=proforma.id,
+                description=f'Egreso por venta de la proforma #{proforma.id}',
+                user=request.user,
+            )
+
+            # Crear los MovementItems
+            for detalle in Detalle.productos_list(proforma):
+                producto = Producto.objects.get(id=detalle.producto.id)
+                MovementItem.objects.create(
+                    movement=movement,
+                    product=producto,
+                    quantity=detalle.cantidad,
+                )
+
             # Guardar la proforma
             proforma.save()
         else:
             messages.error(request, 'Esta proforma no tiene asignado un cliente')
             return redirect('proforma_edit', id)
         return redirect('proforma_list')
-    # Retornar a la misma vista
     else:
         return redirect(reverse_lazy('proforma_edit', args=[proforma.id]))
 

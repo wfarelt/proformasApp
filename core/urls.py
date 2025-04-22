@@ -1,7 +1,8 @@
 # core/urls.py
 
 from django.urls import path
-from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.views import LoginView, LogoutView, PasswordChangeDoneView
+from .views import CustomPasswordChangeView
 
 from core.views import *
 
@@ -9,8 +10,10 @@ urlpatterns = [
     
     path('login/', LoginView.as_view(template_name='core/registration/login.html'), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
-    #path('', Home2.as_view(), name='home2'),
-    
+    path('password/change/', CustomPasswordChangeView.as_view(), name='password_change'),
+    path('password/change/done/', PasswordChangeDoneView.as_view(
+        template_name='core/registration/password_change_done.html'), name='password_change_done'),
+        
     path('', home, name='home'),
     #productos
     path('producto/<int:id>/', product_detail, name='product_detail'),

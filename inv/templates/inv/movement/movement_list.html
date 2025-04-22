@@ -1,0 +1,50 @@
+{% extends 'core/index.html' %}
+
+{% block title %}{{title}}{% endblock %}
+
+{% block content %}
+<h1>{{subtitle}}</h1>
+<a href="#" class="btn btn-primary"><i class="fa fa-plus"></i> Crear Movimiento</a>
+<table class="table table-sm table-bordered table-striped mt-3">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Referencia</th>
+            <th>Usuario</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for movement in movements %}
+        <tr>
+            <td>{{ movement.id }}</td>
+            <td>{{ movement.date }}</td>
+            <td>{{ movement.movement_type }}</td>
+            <td>{{ movement.description }}</td>
+            <td>{{ movement.user.name }}</td>
+            <td>{{ movement.status }}</td>
+            <td>
+                <a href="{% url 'movement_detail' movement.id %}" class="btn btn-info btn-sm"><i class="fa fa-eye"></i></a>
+                <a href="#" class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></a>
+                <a href="#" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<div class="pagination">
+    <ul class="pagination">
+        {% for page in pages %}
+        <li class="page-item {% if page.is_current %}active{% endif %}">
+            <a class="page-link" href="?page={{ page.number }}">{{ page.number }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+</div>
+
+
+{% endblock %}

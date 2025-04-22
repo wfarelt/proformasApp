@@ -1,6 +1,8 @@
 from django.db import models
 from core.models import Producto, User, Supplier
-# Create your models here.
+# Para modificar el modelo de movimiento de inventario
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 # COMPRAS
 
@@ -37,3 +39,38 @@ class PurchaseDetail(models.Model):
     
     def __str__(self):
         return f"{self.product.nombre} - {self.quantity} unidades"
+
+
+# MOVIMIENTOS DE INVENTARIO
+
+class Movement(models.Model):
+    MOVEMENT_TYPES = [
+        ('IN', 'Ingreso'),
+        ('OUT', 'Egreso'),
+    ]
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('COMPLETED', 'Completed'),
+    ]
+
+    movement_type = models.CharField(max_length=10, choices=MOVEMENT_TYPES)
+    date = models.DateField(auto_now_add=True)
+    description = models.TextField(blank=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='COMPLETED')
+
+    # Generic relation for purchase or proforma
+    content_type = models.ForeignKey(ContentType, on_delete=models.SET_NULL, null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    related_document = GenericForeignKey('content_type', 'object_id')
+
+    def __str__(self):
+        return f"{self.movement_type} #{self.id} - {self.status}"
+
+class MovementItem(models.Model):
+    movement = models.ForeignKey(Movement, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Producto, on_delete=models.CASCADE)
+    quantity = models.IntegerField()  # positiva o negativa según tipo
+
+    def __str__(self):
+        return f"{self.product.nombre} ({self.quantity})"

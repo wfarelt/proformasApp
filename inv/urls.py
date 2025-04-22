@@ -21,6 +21,12 @@ urlpatterns = [
     path('compras/nueva/', create_purchase, name='create_purchase'),
     path('compras/<int:pk>/editar/', update_purchase, name='update_purchase'),
     path('compras/<int:pk>/detalle/', purchase_detail, name='purchase_detail'),    
-    path('compras/<int:pk>/anular/', cancelled_purchase, name='cancelled_purchase')
+    path('compras/<int:pk>/anular/', cancelled_purchase, name='cancelled_purchase'),
+    
+    # MOVIMIENTOS
+    path('movimientos/', movement_list, name='movement_list'),
+    #movimiento_detail
+    path('movimientos/<int:pk>/detalle', movement_detail, name='movement_detail'),
+    
 ]
 

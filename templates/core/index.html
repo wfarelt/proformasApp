@@ -190,9 +190,9 @@
             </a>
             <ul class="nav nav-treeview" style="display: none;">
               <li class="nav-item">
-                <a href="#" class="nav-link">
+                <a href="{% url 'movement_list' %}" class="nav-link">
                   <i class="far fa-circle nav-icon"></i>
-                  <p>Ingresos</p><span class="badge badge-info right">0</span>
+                  <p>Movimientos</p><span class="badge badge-info right">0</span>
                 </a>
               </li>
               <li class="nav-item">
@@ -210,6 +210,7 @@
             </ul>
           </li>
 
+          <!-- REPORTES -->
           <li class="nav-item">
             <a href="#" class="nav-link">
               <i class="nav-icon fas fa-book"></i>
@@ -238,7 +239,27 @@
                 </a>
               </li>
             </ul>
-          </li>         
+          </li>      
+          
+          <!-- OPCIONES -->
+          <li class="nav-item">
+            <a href="#" class="nav-link">
+              <i class="nav-icon fas fa-cog"></i>
+              <p>
+                Opciones
+                <i class="fas fa-angle-left right"></i>
+              </p>
+            </a>
+            <ul class="nav nav-treeview" style="display: none;">
+              <li class="nav-item">
+                <a href="{% url 'password_change' %}" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Cambiar contraseña</p>
+                </a>
+              </li>
+            </ul>
+          </li>   
+          
         </ul>
       </nav>
       <!-- /.sidebar-menu -->

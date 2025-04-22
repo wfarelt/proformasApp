@@ -8,7 +8,7 @@ from django.forms import modelformset_factory
 from datetime import timedelta
 
 from core.models import Producto, Detalle, productos_mas_vendidos
-from .models import Producto, Purchase, PurchaseDetail
+from .models import Producto, Purchase, PurchaseDetail, Movement, MovementItem
 from .forms import  PurchaseForm, PurchaseDetailFormSet
 
 from django.db import transaction
@@ -238,4 +238,29 @@ def purchase_detail(request, pk):
     }
     
     return render(request, 'inv/purchase/purchase.html', context)
-    
+
+
+# MOVIMIENTOS DE INVENTARIO
+@login_required
+def movement_list(request):
+    movements = Movement.objects.all().order_by('-date')
+    context = {
+        'movements': movements,
+        'title': 'Lista de Movimientos',
+        'subtitle': 'Lista de movimientos registrados',
+        'icon': 'fa-exchange-alt',
+    }   
+    return render(request, 'inv/movement/movement_list.html', context)
+
+def movement_detail(request, pk):
+    # Obtener el movimiento usando el ID
+    movement = get_object_or_404(Movement, id=pk)
+
+    # Obtener los MovementItems relacionados con el movimiento
+    movement_items = movement.items.all()
+
+    # Retornar la plantilla con el movimiento y sus items
+    return render(request, 'inv/movement/movement_detail.html', {
+        'movement': movement,
+        'movement_items': movement_items,
+    })
