@@ -304,7 +304,7 @@ def cambiar_estado_proforma(request, id):
             # Crear el Movement para la venta (Egreso)
             proforma_content_type = ContentType.objects.get_for_model(Proforma)
             movement = Movement.objects.create(
-                movement_type='EGRESO',
+                movement_type='OUT',
                 content_type=proforma_content_type,
                 object_id=proforma.id,
                 description=f'Egreso por venta de la proforma #{proforma.id}',
@@ -359,7 +359,7 @@ class ClientListView(ListView):
 
     def get_queryset(self):
         query = self.request.GET.get('q')
-        object_list = Cliente.objects.all()
+        object_list = Cliente.objects.all().order_by('name')
         if query:
             object_list = object_list.filter(name__icontains=query) | object_list.filter(nit__icontains=query)
         return object_list

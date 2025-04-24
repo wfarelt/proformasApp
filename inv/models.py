@@ -66,6 +66,12 @@ class Movement(models.Model):
 
     def __str__(self):
         return f"{self.movement_type} #{self.id} - {self.status}"
+    
+    def total(self):
+        total = 0
+        for item in self.items.all():
+            total += item.subtotal()
+        return total
 
 class MovementItem(models.Model):
     movement = models.ForeignKey(Movement, on_delete=models.CASCADE, related_name='items')
@@ -74,3 +80,6 @@ class MovementItem(models.Model):
 
     def __str__(self):
         return f"{self.product.nombre} ({self.quantity})"
+    
+    def subtotal(self):
+        return self.product.cost * self.quantity

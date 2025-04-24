@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Purchase, PurchaseDetail
+from .models import Purchase, PurchaseDetail, Movement, MovementItem
 
 # Register your models here.
 
@@ -13,3 +13,10 @@ class PurchaseAdmin(admin.ModelAdmin):
 admin.site.register(Purchase, PurchaseAdmin)
 
 admin.site.register(PurchaseDetail)
+
+# MOVIMIENTOS
+
+admin.site.register(Movement)
+
+admin.site.register(MovementItem)
+

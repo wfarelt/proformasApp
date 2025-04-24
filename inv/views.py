@@ -6,12 +6,16 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.forms import modelformset_factory
 from datetime import timedelta
+from django.db.models import Q
+from datetime import datetime
+from django.utils.timezone import make_aware
 
-from core.models import Producto, Detalle, productos_mas_vendidos
+from core.models import Producto, Detalle, productos_mas_vendidos, Proforma
 from .models import Producto, Purchase, PurchaseDetail, Movement, MovementItem
-from .forms import  PurchaseForm, PurchaseDetailFormSet
+from .forms import  PurchaseForm, PurchaseDetailFormSet, MovementForm, MovementItemFormSet
 
 from django.db import transaction
+from django.contrib.contenttypes.models import ContentType
 
 # INGRESOS
 
@@ -83,6 +87,34 @@ def reporte_inventario(request):
         "productos": productos
     })
 
+def proforma_report(request):
+    proformas = Proforma.objects.none()  # Vacío por defecto
+    total_general = 0
+
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
+
+    if fecha_inicio and fecha_fin:
+        try:
+            fi = make_aware(datetime.strptime(fecha_inicio, '%Y-%m-%d'))
+            ff = make_aware(datetime.strptime(fecha_fin, '%Y-%m-%d')) + timedelta(days=1)  
+            proformas = Proforma.objects.filter(
+                estado='EJECUTADO',
+                fecha__range=(fi, ff)
+            )
+            total_general = sum(p.total_neto() for p in proformas)
+             
+        except ValueError:
+            pass  # puedes agregar un mensaje si el formato es incorrecto
+
+    context = {
+        'proformas': proformas,
+        'fecha_inicio': fecha_inicio,
+        'fecha_fin': fecha_fin,
+        'total_general': total_general,
+        'title': 'Reporte de Proformas',
+    }
+    return render(request, 'inv/reports/proforma_report.html', context)
 # COMPRAS
 
 @login_required
@@ -129,6 +161,7 @@ def create_purchase(request):
 
                 # Redireccionar si está confirmada
                 if purchase.status == 'confirmed':
+                    create_purchase_movement(purchase)
                     messages.success(request, "Compra confirmada correctamente.")
                     return redirect('purchase_list')
                 else:
@@ -178,6 +211,7 @@ def update_purchase(request, pk):
                 
                 if purchase.status == 'confirmed':
                     # Redirigir a la lista de compras
+                    create_purchase_movement(purchase)
                     messages.success(request, "Compra confirmada y actualizada correctamente.")
                     return redirect('purchase_list')  
                 else:   
@@ -239,11 +273,40 @@ def purchase_detail(request, pk):
     
     return render(request, 'inv/purchase/purchase.html', context)
 
+def create_purchase_movement(purchase):
+    if purchase.status != 'confirmed':
+        return None  # Solo crea movimiento si está confirmado
+
+    # Verificar si ya se creó un movimiento para evitar duplicados
+    if hasattr(purchase, 'movement'):
+        return purchase.movement
+
+    movement = Movement.objects.create(
+        movement_type='IN',
+        content_type=ContentType.objects.get_for_model(purchase),
+        object_id=purchase.id,
+        user=purchase.user,
+        description=f"Ingreso generado por la compra #{purchase.id}"
+    )
+
+    for detail in purchase.details.all():
+        MovementItem.objects.create(
+            movement=movement,
+            product=detail.product,
+            quantity=detail.quantity
+        )
+
+        # Actualizar stock del producto
+        detail.product.stock += detail.quantity
+        detail.product.save()
+
+    return movement
+
 
 # MOVIMIENTOS DE INVENTARIO
 @login_required
 def movement_list(request):
-    movements = Movement.objects.all().order_by('-date')
+    movements = Movement.objects.all().order_by('-id', '-date')
     context = {
         'movements': movements,
         'title': 'Lista de Movimientos',
@@ -264,3 +327,51 @@ def movement_detail(request, pk):
         'movement': movement,
         'movement_items': movement_items,
     })
+    
+def create_movement(request):
+    if request.method == 'POST':
+        # Procesar el formulario de movimiento
+        form = MovementForm(request.POST)
+        formset = MovementItemFormSet(request.POST)
+        
+        if form.is_valid() and formset.is_valid():
+            with transaction.atomic():
+                # Crear el movimiento sin guardar aún
+                movement = form.save(commit=False)
+                movement.user = request.user
+                movement.date = now()
+                movement.save()
+
+                # Guardar detalles del movimiento
+                formset.instance = movement
+                formset.save()
+
+                # Actualizar stock de los productos
+                for item in formset:
+                    if item.cleaned_data and not item.cleaned_data.get('DELETE', False):
+                        product = item.cleaned_data.get('product')
+                        quantity = item.cleaned_data.get('quantity')
+                        if movement.movement_type == 'IN':
+                            product.stock += quantity
+                        else:
+                            product.stock -= quantity
+                        product.save()
+
+                messages.success(request, "Movimiento registrado correctamente.")
+                return redirect('movement_list')
+        else:
+            messages.error(request, "Error al registrar el movimiento.")
+    else:
+        form = MovementForm()
+        formset = MovementItemFormSet(queryset=MovementItem.objects.none())
+        
+    return render(request, 'inv/movement/movement_form.html', {
+        'form': form,
+        'formset': formset,
+    })
+    
+        
+
+        
+        
+       

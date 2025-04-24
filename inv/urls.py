@@ -15,6 +15,7 @@ urlpatterns = [
     path("reporte/historial-ventas/", historial_ventas_producto, name="historial_ventas"),
     path("api/productos/", buscar_productos, name="buscar_productos"),
     path("reporte/reporte-inventario/", reporte_inventario, name="reporte_inventario"),
+    path('reportes/proformas/', proforma_report, name='proforma_report'),
     
     # COMPRAS
     path('compras/', purchase_list, name='purchase_list'),
@@ -27,6 +28,7 @@ urlpatterns = [
     path('movimientos/', movement_list, name='movement_list'),
     #movimiento_detail
     path('movimientos/<int:pk>/detalle', movement_detail, name='movement_detail'),
+    path('movimientos/nuevo/', create_movement, name='create_movement'),
     
 ]
 

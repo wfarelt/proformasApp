@@ -5,5 +5,5 @@ class InvConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'inv'
 
-    def ready(self):
-        import inv.signals
+    #def ready(self):
+    #    import inv.signals

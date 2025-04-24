@@ -144,6 +144,7 @@
           <!-- Add icons to the links using the .nav-icon class
                with font-awesome or any other icon font library -->
 
+          <!-- RECURSOS -->
           <li class="nav-item">
             <a href="#" class="nav-link">
               <i class="nav-icon fas fa-tachometer-alt"></i>
@@ -180,11 +181,12 @@
             </ul>
           </li>
 
+          <!-- INVENTARIO -->
           <li class="nav-item">
             <a href="#" class="nav-link">
               <i class="nav-icon fas fa-truck"></i>
               <p>
-                Movimientos
+                Inventario
                 <i class="fas fa-angle-left right"></i>
               </p>
             </a>
@@ -193,12 +195,6 @@
                 <a href="{% url 'movement_list' %}" class="nav-link">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Movimientos</p><span class="badge badge-info right">0</span>
-                </a>
-              </li>
-              <li class="nav-item">
-                <a href="#" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
-                  <p>Egresos</p>
                 </a>
               </li>
               <li class="nav-item">
@@ -236,6 +232,12 @@
                 <a href="{% url 'reporte_inventario' %}" class="nav-link">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Reporte de inventario</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="{% url 'proforma_report' %}" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Reporte de ventas</p>
                 </a>
               </li>
             </ul>

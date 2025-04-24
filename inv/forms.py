@@ -1,6 +1,6 @@
 from django import forms
 from django.forms import inlineformset_factory
-from .models import Purchase, PurchaseDetail, Producto as Product
+from .models import Purchase, PurchaseDetail, Producto as Product, Movement, MovementItem
 
 # COMPRAS
 
@@ -52,6 +52,57 @@ PurchaseDetailFormSet = inlineformset_factory(
     PurchaseDetail,
     form=PurchaseDetailForm,
     fields=('product', 'quantity', 'unit_price'),
+    extra=1,
+    can_delete=True
+)
+
+# MOVIMIENTOS
+
+class MovementForm(forms.ModelForm):
+    class Meta:
+        model = Movement
+        fields = ['movement_type', 'description']
+        
+        widgets = {
+            'movement_type': forms.Select(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Descripción'}),
+            
+        }
+        
+        labels = {
+            'movement_type': 'Tipo de movimiento',
+            'description': 'Descripción',
+            
+        }
+
+class MovementItemForm(forms.ModelForm):
+    class Meta:
+        model = MovementItem
+        fields = ['product', 'quantity']
+        
+        widgets = {
+            'product': forms.Select(attrs={'class': 'form-control select2'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'placeholder': 'Cantidad'}),
+            
+        }
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Si hay instancia existente, usa su producto
+        if self.instance.pk and self.instance.product:
+            self.fields['product'].queryset = Product.objects.filter(pk=self.instance.product.pk)
+        
+        else:
+            # Si no hay instancia, muestra todos los productos
+            self.fields['product'].queryset = Product.objects.all()
+
+
+MovementItemFormSet = inlineformset_factory(
+    Movement,
+    MovementItem,
+    form=MovementItemForm,
+    fields=('product', 'quantity'),
     extra=1,
     can_delete=True
 )

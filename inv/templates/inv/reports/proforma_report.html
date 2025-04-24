@@ -1,0 +1,70 @@
+{% extends 'core/index.html' %}
+
+{% block title %}{{title}}{% endblock %}
+
+{% load static %}
+
+{% block style %}
+{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4">
+    <h2>Reporte de Proformas Ejecutadas</h2>
+
+    <form method="get" class="mb-4 row g-3">
+    <div class="col-md-4">
+        <label>Fecha Inicio</label>
+        <input type="date" name="fecha_inicio" class="form-control" value="{{ fecha_inicio }}">
+    </div>
+    <div class="col-md-4">
+        <label>Fecha Fin</label>
+        <input type="date" name="fecha_fin" class="form-control" value="{{ fecha_fin }}">
+    </div>
+    <div class="col-md-4 align-self-end">
+        <button type="submit" class="btn btn-primary">Buscar</button>
+    </div>
+    </form>
+
+    <table class="table table-bordered table-striped">
+    <thead class="thead-dark">
+        <tr>
+        <th>#</th>
+        <th>Cliente</th>
+        <th>Proforma</th>
+        <th>Fecha</th>
+        <th>Estado</th>
+        <th class="text-right">Total ($)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in proformas %}
+        <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>{{ p.cliente }}</td>
+        <td>{{ p.id }}</td>
+        <td>{{ p.fecha|date:"d/m/Y" }}</td>
+        <td>{{ p.estado }}</td>
+        <td class="text-right">{{ p.total_neto|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+        <td colspan="5">No se encontraron proformas ejecutadas.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <th colspan="5" class="text-right">Total: $</th>
+            <th class="text-right">{{ total_general|floatformat:2 }}</th>
+        </tr>
+    </tfoot>
+    </table>
+    
+
+</div>
+
+
+{% endblock %}
+    
+    
