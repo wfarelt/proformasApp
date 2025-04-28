@@ -93,7 +93,7 @@ class ProductoForm(forms.ModelForm):
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
             'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'brand': forms.Select(attrs={'class': 'form-control'}), # 'type': 'text
-            'stock': forms.NumberInput(attrs={'class': 'form-control'}), # 'type': 'number
+            'stock': forms.NumberInput(attrs={'class': 'form-control', 'readonly': 'readonly'}), # 'type': 'number
             'cost': forms.NumberInput(attrs={'class': 'form-control'}), # 'type': 'number
             'precio': forms.NumberInput(attrs={'class': 'form-control'}),            
             'location': forms.TextInput(attrs={'class': 'form-control'}),
@@ -169,7 +169,6 @@ class BrandForm(forms.ModelForm):
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
             'initials': forms.TextInput(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'class': 'form-control'}),
-            'status': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'description': forms.TextInput(attrs={'class': 'form-control'}),
         }
 

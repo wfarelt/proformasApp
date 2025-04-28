@@ -3,13 +3,23 @@
 {% block title %}{{title}}{% endblock %}
 
 {% block content %}
-<h2>{{ form.instance.id|yesno:"Editar cliente,Nuevo cliente" }}</h2>
-<div class="col-md-3 center">
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}        
-        <button type="submit" class="btn btn-success btn-sm">Guardar <i class="fa fa-save"></i></button>
-        <a href="{% url 'client_list' %}"><--Volver a Clientes</a>    
-    </form>
+<div class="col-md-6 offset-md-3 mt-3">
+    <div class="card card-dark">
+        <div class="card-header">
+            <h3>{{ form.instance.id|yesno:"Editar cliente,Nuevo cliente" }}</h3>
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <div class="card-body">
+                {{ form.as_p }}        
+            </div>
+            <hr>
+            <div class="card-footer text-center mb-3">
+                <button type="submit" class="btn btn-success">Guardar <i class="fa fa-save"></i></button>
+                <a href="{% url 'client_list' %} " class="btn btn-danger">Cancelar <i class="fa fa-times"></i></a>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}
+

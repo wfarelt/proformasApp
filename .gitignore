@@ -12,6 +12,7 @@ db.sqlite3-journal
 core_backup.js
 db_backup.sqlite3
 media
+/backups/
 
 # Ignore staticfiles
 /staticfiles/
