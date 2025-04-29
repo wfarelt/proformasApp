@@ -139,7 +139,7 @@ def create_purchase(request):
                 # Crear la compra sin guardar aún
                 purchase = form.save(commit=False)
                 purchase.user = request.user
-                purchase.date = now()
+                #purchase.date = now()
                 purchase.save()
 
                 # Guardar detalles de la compra
@@ -192,8 +192,7 @@ def update_purchase(request, pk):
             with transaction.atomic():
                 purchase = form.save(commit=False)
                 purchase.user = request.user
-                purchase.date = now()
-
+                #purchase.date = now()
                 purchase.save()  # Guardar primero para poder asignarlo a los detalles
 
                 total = 0

@@ -139,7 +139,7 @@ TIME_ZONE = 'America/La_Paz'  # Zona horaria de Bolivia
 
 USE_I18N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)

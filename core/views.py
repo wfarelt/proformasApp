@@ -6,8 +6,8 @@ from django.contrib import messages  # Importa el framework de mensajes
 from django.core.paginator import Paginator
 from django.views.generic import ListView, UpdateView, TemplateView
 from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand, Company
-from .forms import ProductoForm, ClienteForm, ProformaAddClientForm, SupplierForm, BrandForm, CustomPasswordChangeForm
-
+from .forms import ProductoForm, ClienteForm, ProformaAddClientForm, SupplierForm, BrandForm, \
+                    CustomPasswordChangeForm, UserProfileForm
 
 from inv.models import Movement, MovementItem  # Asegúrate de importar tus modelos correctamente
 from django.db import transaction
@@ -23,8 +23,6 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import PasswordChangeView
 from django.contrib.auth.forms import PasswordChangeForm
-
-
 from django.contrib.contenttypes.models import ContentType
 
 # PDF
@@ -61,6 +59,19 @@ class CustomPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
     def form_valid(self, form):
         messages.success(self.request, "Your password has been changed successfully.")
         return super().form_valid(form)
+
+@login_required
+def edit_profile(request):
+    user = request.user
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+            return redirect('home')  # Cambia por tu vista de perfil si la tienes
+    else:
+        form = UserProfileForm(instance=user)
+    
+    return render(request, 'core/registration/edit_profile.html', {'form': form})
 
 # PRODUCTO
 @login_required(login_url='login')
@@ -126,7 +137,8 @@ class ProformaListView(ListView):
 
     def get_queryset(self):
             query = self.request.GET.get('q')
-            object_list = Proforma.objects.filter(usuario=self.request.user).order_by('-fecha')
+            #object_list = Proforma.objects.filter(usuario=self.request.user).order_by('-fecha')
+            object_list = Proforma.objects.order_by('-fecha')
             if query:
                 object_list = self.model.objects.filter(cliente__name__icontains = query) | object_list.filter(id__icontains=query)
             return object_list

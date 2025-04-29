@@ -21,7 +21,7 @@
         {% for movement in movements %}
         <tr>
             <td>{{ movement.id }}</td>
-            <td>{{ movement.date }}</td>
+            <td>{{ movement.date|date:"d/m/Y" }}</td>
             <td>{{ movement.get_movement_type_display }}</td>
             <td>{{ movement.description }}</td>
             <td>{{ movement.user.name }}</td>

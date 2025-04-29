@@ -75,6 +75,21 @@ class CustomPasswordChangeForm(PasswordChangeForm):
         }),
     )
 
+class UserProfileForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['name', 'email', 'company']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+            'company': forms.Select(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'name': 'Nombre',
+            'email': 'Correo electrónico',
+            'company': 'Empresa',
+        }
+
 # CREAR UN FORMULARIO PARA PRODUCTO
 class ProductoForm(forms.ModelForm):
     class Meta:

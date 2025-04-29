@@ -32,9 +32,15 @@
         <tr>
             <td class="sin-borde td-izquierda" style="width: 30%;">
                 <strong>{{ company.name }}</strong> <br>
-                {{ company.address }} <br>
-                Telf.: {{ company.phone }} <br>
-                Santa Cruz
+                {% if company.address %}
+                    {{ company.address }} <br>
+                {% endif %}
+                {% if company.phone %}
+                    Telf.: {{ company.phone }} <br>
+                {% endif %}
+                {% if company.city %}
+                    {{ company.city }}
+                {% endif %}
             </td>
             <td class="sin-borde">
                 {% if proforma.estado == 'EJECUTADO' %}

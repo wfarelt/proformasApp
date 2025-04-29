@@ -13,6 +13,7 @@ urlpatterns = [
     path('password/change/', CustomPasswordChangeView.as_view(), name='password_change'),
     path('password/change/done/', PasswordChangeDoneView.as_view(
         template_name='core/registration/password_change_done.html'), name='password_change_done'),
+    path('perfil/editar/', edit_profile, name='edit_profile'),
         
     path('', home, name='home'),
     #productos

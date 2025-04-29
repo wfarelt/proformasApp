@@ -18,6 +18,7 @@ class Company(models.Model):
     phone = models.CharField(max_length=20, null=True, blank=True)  # Teléfono de contacto
     email = models.EmailField(unique=True)  # Correo electrónico
     address = models.TextField(null=True, blank=True)  # Dirección física
+    city = models.CharField(max_length=100, null=True, blank=True)  # Ciudad
     website = models.URLField(null=True, blank=True)  # Sitio web
     established_date = models.DateField(null=True, blank=True)  # Fecha de fundación
     industry = models.CharField(max_length=100, null=True, blank=True)  # Industria o sector

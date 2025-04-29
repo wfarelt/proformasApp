@@ -7,12 +7,12 @@ from .models import Purchase, PurchaseDetail, Producto as Product, Movement, Mov
 class PurchaseForm(forms.ModelForm):
     class Meta:
         model = Purchase
-        fields = ['supplier', 'invoice_number', 'total_amount', 'status']
+        fields = ['supplier', 'invoice_number', 'date', 'total_amount', 'status']
         
         widgets = {
             'supplier': forms.Select(attrs={'class': 'form-control'}),
             'invoice_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número de factura'}),
-            # Sin poder editar
+            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),            
             'total_amount': forms.NumberInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
         }
@@ -21,6 +21,7 @@ class PurchaseForm(forms.ModelForm):
         labels = {
             'supplier': 'Proveedor',
             'invoice_number': 'Número de factura',
+            'date': 'Fecha',
             'total_amount': 'Monto total',
             'status': 'Estado',
         }

@@ -3,6 +3,7 @@ from core.models import Producto, User, Supplier
 # Para modificar el modelo de movimiento de inventario
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.utils import timezone
 
 # COMPRAS
 
@@ -13,7 +14,7 @@ class Purchase(models.Model):
         ('cancelled', 'Anulado'),
     ]
     supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE)
-    date = models.DateField(auto_now_add=True)
+    date = models.DateField(default=timezone.now)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     invoice_number = models.CharField(max_length=100, blank=True, null=True)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
