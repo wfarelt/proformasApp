@@ -31,7 +31,7 @@
                 <td>{{ producto.descripcion }}</td>
                 <td class="text-center">{{ producto.brand.nombre|default:"N/A" }}</td>
                 <td class="text-right">{{ producto.stock }}</td>
-                <td class="text-right">${{ producto.cost|floatformat:2 }}</td>
+                <td class="text-right">{{ producto.cost|floatformat:2 }}</td>
                 <td>{{ producto.location|default:"-" }}</td>
             </tr>
             {% empty %}

@@ -26,15 +26,16 @@ class PurchaseForm(forms.ModelForm):
             'status': 'Estado',
         }
 
-class PurchaseDetailForm(forms.ModelForm):
+class PurchaseDetailForm(forms.ModelForm):    
     class Meta:
         model = PurchaseDetail
-        fields = ['product', 'quantity', 'unit_price']
+        fields = ['product', 'quantity', 'unit_price', 'sale_price']
         
         widgets = {
             'product': forms.Select(attrs={'class': 'form-control select2'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'placeholder': 'Cantidad'}),
-            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Precio unitario'}),
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Costo unitario'}),
+            'sale_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Precio de venta'}),
         }
         
     def __init__(self, *args, **kwargs):
@@ -52,7 +53,7 @@ PurchaseDetailFormSet = inlineformset_factory(
     Purchase,
     PurchaseDetail,
     form=PurchaseDetailForm,
-    fields=('product', 'quantity', 'unit_price'),
+    fields=('product', 'quantity', 'unit_price', 'sale_price'),
     extra=1,
     can_delete=True
 )

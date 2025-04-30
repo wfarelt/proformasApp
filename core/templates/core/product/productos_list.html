@@ -5,9 +5,10 @@
 <th>Código</th>
 <th>Descripción</th>
 <th>Marca</th>
-<th>Precio</th>
-<th style="text-align: center;">Stock</th>
-<th>Ubicación</th>
+<th class="text-right">Costo ($)</th>
+<th class="text-right">Precio ($)</th>
+<th class="text-right">Stock</th>
+<th class="text-center">Ubicación</th>
 <th></th>
 {% endblock columns %}
 
@@ -16,12 +17,13 @@
 <td>{{ obj.nombre }}</td>
 <td>{{ obj.descripcion }}</td>
 <td>{{ obj.brand.initials }}</td>
-<td style="text-align: right;">{{ obj.precio }}</td>
-<td style="text-align: center;">{{ obj.stock }}</td>
+<td class="text-right">{{ obj.cost }}</td>
+<td class="text-right">{{ obj.precio }}</td>
+<td class="text-right">{{ obj.stock }}</td>
 {% if obj.location %}
-    <td>{{ obj.location }}</td>
+    <td class="text-center">{{ obj.location }}</td>
 {% else %}
-    <td>-</td>
+    <td class="text-center">-</td>
 {% endif %}
 {% endblock rows %}
 

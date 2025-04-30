@@ -47,5 +47,8 @@ admin.site.register(Supplier)
 
 class ProductAdmin(ImportExportModelAdmin):
     resource_class = ProductResource
+    
+    list_display = ('nombre', 'descripcion')
+    search_fields = ('nombre', 'descripcion')
 
 admin.site.register(Producto, ProductAdmin)

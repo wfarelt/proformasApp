@@ -13,7 +13,7 @@
         <div class="card-body">
             <p><strong>Tipo:</strong> {{ movement.get_movement_type_display }}</p>
             <p><strong>Estado:</strong> {{ movement.get_status_display }}</p>
-            <p><strong>Fecha:</strong> {{ movement.date }}</p>
+            <p><strong>Fecha:</strong> {{ movement.date|date:"d/m/Y" }}</p>
             <p><strong>Descripción:</strong> {{ movement.description }}</p>
         </div>
     </div>
@@ -26,6 +26,7 @@
                 <th>Código</th>
                 <th>Producto</th>
                 <th class="text-right">Cantidad</th>
+                <th class="text-right">Costo Unitario ($)</th>
                 <th class="text-right">Subtotal ($)</th>
             </tr>
         </thead>
@@ -36,6 +37,7 @@
                     <td>{{ item.product.nombre }}</td>
                     <td>{{ item.product.descripcion }}</td>
                     <td class="text-right">{{ item.quantity }}</td>
+                    <td class="text-right">{{ item.product.cost }}</td>
                     <td class="text-right">{{ item.subtotal }}</td>
                 </tr>
             {% empty %}

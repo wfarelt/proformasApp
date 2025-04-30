@@ -297,8 +297,15 @@ def create_purchase_movement(purchase):
 
         # Actualizar stock del producto
         detail.product.stock += detail.quantity
+        
+        # Actualizar costo de producto
+        detail.product.cost = detail.unit_price
+        
+        # Actualizar precio de venta del producto
+        detail.product.precio = detail.sale_price
+        
         detail.product.save()
-
+        
     return movement
 
 
