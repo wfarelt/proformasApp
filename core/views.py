@@ -356,6 +356,46 @@ def proforma_view(request, id):
     }
     return render(request, 'core/proforma/proforma_view.html', context)
 
+@transaction.atomic
+def anular_proforma(request, id):
+    proforma = get_object_or_404(Proforma, id=id)
+
+    if proforma.estado != 'EJECUTADO':
+        messages.warning(request, 'Solo se pueden anular proformas que ya fueron ejecutadas.')
+        return redirect('proforma_edit', id)
+
+    # Cambiar estado a ANULADO
+    proforma.estado = 'ANULADO'
+    proforma.save()
+
+    # Revertir el stock (crear ingreso)
+    for detalle in Detalle.productos_list(proforma):
+        producto = Producto.objects.get(id=detalle.producto.id)
+        producto.stock += detalle.cantidad
+        producto.save()
+
+    # Crear movimiento tipo INGRESO
+    proforma_content_type = ContentType.objects.get_for_model(Proforma)
+    ingreso_movement = Movement.objects.create(
+        movement_type='IN',
+        content_type=proforma_content_type,
+        object_id=proforma.id,
+        description=f'Ingreso por anulación de proforma #{proforma.id}',
+        user=request.user,
+    )
+
+    # Registrar items del ingreso
+    for detalle in Detalle.productos_list(proforma):
+        producto = Producto.objects.get(id=detalle.producto.id)
+        MovementItem.objects.create(
+            movement=ingreso_movement,
+            product=producto,
+            quantity=detalle.cantidad,
+        )
+
+    messages.success(request, f'Proforma #{proforma.id} anulada y movimiento revertido.')
+    return redirect('proforma_list')    
+
 # CLIENTE    
 class ClientListView(ListView):
     model = Cliente

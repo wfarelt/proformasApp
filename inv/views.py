@@ -308,7 +308,6 @@ def create_purchase_movement(purchase):
         
     return movement
 
-
 # MOVIMIENTOS DE INVENTARIO
 @login_required
 def movement_list(request):
@@ -375,7 +374,7 @@ def create_movement(request):
         'form': form,
         'formset': formset,
     })
-    
+
         
 
         
