@@ -2,146 +2,158 @@
 
 {% block title %}{{title}}{% endblock %}
 {% load static %}
+
 {% block style %}
-
-<link rel="stylesheet" href="{% static 'plugins/select2/css/select2.min.css' %}">
-<link rel="stylesheet" href="{% static 'plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css' %}">
-
+    <link rel="stylesheet" href="{% static 'plugins/select2/css/select2.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css' %}">
 {% endblock %}
 
 {% block content %}
 
 {% if form.instance.pk %}
-    <h1>Modificar Compra</h1>
-    <form method="post" action="{% url 'update_purchase' form.instance.pk %}">
-{% else %}
+<h1>Modificar Compra</h1>
+<form method="post" action="{% url 'update_purchase' form.instance.pk %}">
+    {% else %}
     <h1>Registrar Compra</h1>
     <form method="post" action="{% url 'create_purchase' %}">
-{% endif %}
+        {% endif %}
 
-    {% csrf_token %}
-    <div class="card card-dark">
-        <div class="card-header">
-            <h3 class="card-title">Datos de la Compra</h3>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                {% for field in form %}
+        {% csrf_token %}
+        <div class="card card-dark">
+            <div class="card-header">
+                <h3 class="card-title">Datos de la Compra</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for field in form %}
                     <div class="col-md-6">
                         <div class="form-group">
                             <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                             {{ field }}
                             {% if field.errors %}
-                                <div class="text-danger small">
-                                    {{ field.errors }}
-                                </div>
+                            <div class="text-danger small">
+                                {{ field.errors }}
+                            </div>
                             {% endif %}
                         </div>
                     </div>
-                {% endfor %}
+                    {% endfor %}
+                </div>
             </div>
         </div>
-    </div>
-    
-    <h4>Detalle de Productos</h4>
-    {{ formset.management_form }}
-    <table class="table table-bordered table-striped table-sm">
-        <thead>
-            <tr>
-                <th>Producto</th>
-                <th>Cantidad</th>
-                <th class="text-right">Costo ($)</th>
-                <th class="text-right">Subtotal ($)</th>
-                <th class="text-right">Precio Venta ($)</th>
-                <th class="text-center"><i class="fas fa-trash"></i></th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for form in formset %}
-            {{ form.id }}  <!-- Campo oculto con el ID del objeto (importante) -->
-            <tr>
-                <td>{{ form.product }}</td>
-                <td>{{ form.quantity }}</td>
-                <td>{{ form.unit_price }}</td>
-                <td class="subtotal text-right">
-                    {% if form.instance.pk %}
-                        {{ form.instance.subtotal|floatformat:2 }}
-                    {% else %}
-                        0.00
-                    {% endif %}
-                </td>
-                <td>
-                    {{ form.sale_price }}               
-                </td>
-                <td class="text-center">
-                    {{ form.DELETE }} 
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="4">No hay productos en el detalle.</td></tr>
-            {% endfor %}
-        </tbody>
-        <tfoot>
-            <tr>
-                <td colspan="3">
-                    <strong>Total:</strong>
-                </td>
-                <td class="text-right total">{{ purchase.total_amount|floatformat:2 }}</td>
-            </tr>
-        </tfoot>
-    </table>
 
-    <div class="text-center mb-3">
-        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
-        <a href="{% url 'purchase_list' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Regresar</a>
-    </div>
-</form>
 
-{% endblock %}
+        <div class="card">
+            <div class="card-header">
+                <h4>Detalle de Productos</h4>
+                {{ formset.management_form }}
+            </div>
+            <div class="card-body">
+                <div class="table">
+                    <table class="table table-bordered table-striped table-sm">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                                <th class="text-right">Costo ($)</th>
+                                <th class="text-right">Subtotal ($)</th>
+                                <th class="text-right">Precio Venta ($)</th>
+                                <th class="text-center"><i class="fas fa-trash"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for form in formset %}
+                            {{ form.id }} <!-- Campo oculto con el ID del objeto (importante) -->
+                            <tr>
+                                <td>{{ form.product }}</td>
+                                <td>{{ form.quantity }}</td>
+                                <td>{{ form.unit_price }}</td>
+                                <td class="subtotal text-right">
+                                    {% if form.instance.pk %}
+                                    {{ form.instance.subtotal|floatformat:2 }}
+                                    {% else %}
+                                    0.00
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ form.sale_price }}
+                                </td>
+                                <td class="text-center">
+                                    {{ form.DELETE }}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4">No hay productos en el detalle.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3">
+                                    <strong>Total:</strong>
+                                </td>
+                                <td class="text-right total">{{ purchase.total_amount|floatformat:2 }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="text-center mb-3">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+                    <a href="{% url 'purchase_list' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i>
+                        Regresar</a>
+                </div>
+            </div>
+        </div>
+    </form>
 
-{% block scripts %}
-<script src="{% static 'plugins/select2/js/select2.min.js' %}"></script>
+    {% endblock %}
 
-<script>
-    $(document).ready(function() {
-        $('.select2').select2({
-            placeholder: "Seleccione un producto",
-            allowClear: true,
-            language: "es",  // 🔹 Usa el idioma español
-            minimumInputLength: 1,
-            width: '100%',
-            theme: 'bootstrap4',
-            ajax: {
-                url: '/inv/api/productos/',  // URL de tu API en Django
-                dataType: 'json',
-                delay: 250,  // Retraso para evitar demasiadas peticiones al servidor
-                data: function (params) {
-                    return {
-                        q: params.term,  // El usuario escribe en el input
-                        page: params.page || 1  // Soporte para paginación
-                    };
+    {% block scripts %}
+    <script src="{% static 'plugins/select2/js/select2.min.js' %}"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('.select2').select2({
+                placeholder: "Seleccione un producto",
+                allowClear: true,
+                language: "es",  // 🔹 Usa el idioma español
+                minimumInputLength: 1,
+                width: '100%',
+                theme: 'bootstrap4',
+                ajax: {
+                    url: '/inv/api/productos/',  // URL de tu API en Django
+                    dataType: 'json',
+                    delay: 250,  // Retraso para evitar demasiadas peticiones al servidor
+                    data: function (params) {
+                        return {
+                            q: params.term,  // El usuario escribe en el input
+                            page: params.page || 1  // Soporte para paginación
+                        };
+                    },
+                    processResults: function (data, params) {
+                        params.page = params.page || 1;
+                        return {
+                            results: data.results.map(item => ({
+                                id: item.id,
+                                text: item.nombre
+                            })),
+                            pagination: {
+                                more: data.has_next // Indica si hay más páginas
+                            }
+                        };
+                    },
+                    cache: true
                 },
-                processResults: function (data, params) {
-                    params.page = params.page || 1;
-                    return {
-                        results: data.results.map(item => ({
-                            id: item.id,
-                            text: item.nombre
-                        })),
-                        pagination: {
-                            more: data.has_next // Indica si hay más páginas
-                        }
-                    };
-                },
-                cache: true
-            },
-            minimumInputLength: 1,  // Buscar después de 1 carácter
-            width: '100%'
-        });
+                minimumInputLength: 1,  // Buscar después de 1 carácter
+                width: '100%'
+            });
 
-        $(document).on('select2:open', () => {
-            document.querySelector('.select2-container--open .select2-search__field').focus();
+            $(document).on('select2:open', () => {
+                document.querySelector('.select2-container--open .select2-search__field').focus();
+            });
         });
-    });
-</script>
-{% endblock %}
+    </script>
+    {% endblock %}

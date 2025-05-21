@@ -5,72 +5,82 @@ Lista de {{title}}
 {% endblock %}
 
 {% block content %}
-
-<h2>Lista de {{title}}</h2>
-<form method="get">
-    <input type="text" name="q" id="search-field" placeholder="{{placeholder}}" value="{{ request.GET.q }}">
-    <button type="submit">Buscar</button>
-    
-    <div id="mensaje">
-        {% if messages %}
-        <div>
-          {% for message in messages %}
-            <div class="alert alert-info alert-sm" role="alert">
-              {{ message }}
-            </div>
-          {% endfor %}
-        </div>
-        {% endif %}
+<div class="card mt-3">
+    <div class="card-header">
+        <h2>Lista de {{title}}</h2>
     </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <form method="get">
+                    <div class="input-group">
+                        <input type="text" name="q" id="search-field" placeholder="{{ placeholder }}"
+                            value="{{ request.GET.q }}" class="form-control">
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-info">Buscar</button>
+                            <button type="submit" name="q" value="" class="btn btn-secondary ml-2">Mostrar todos</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="col-md-6 text-right">
+                {% block create %}
+                {% endblock create %}
+            </div>
+        </div>
+        <br>
+        <div class="table table-responsive table-sm">
+            <table class="table table-striped ">
+                <thead class="thead-dark">
+                    <tr>
+                        {% block columns %}
+                        {% endblock columns %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for obj in object_list %}
+                    <tr>
+                        {% block rows %}
+                        {% endblock rows %}
+                        <td class="text-center">
+                            {% block actions %}
+                            {% endblock actions %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5">No se encontraron {{title}}.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+    </div>
+    <hr>
+    <div class="card-footer mb-3">
+        <div class="pagination justify-content-center">
+            <span class="step-links">
+                {% if page_obj.has_previous %}
+                <a href="?q={{ request.GET.q }}&page=1" class="btn btn-default">&laquo; primera</a>
+                <a href="?q={{ request.GET.q }}&page={{ page_obj.previous_page_number }}" class="btn btn-default"><span
+                        class="fas fa-arrow-left"></span> anterior</a>
+                {% endif %}
 
-</form>
-<br>
-<table class="table table-sm">
-    <thead>
-        <tr>
-            {% block columns %}
-            {% endblock columns %}
-        </tr>
-    </thead>
-    <tbody>
-        {% for obj in object_list %}
-        <tr>
-            {% block rows %}
-            {% endblock rows %}
-            <td>
-                {% block actions %}
-                {% endblock actions %}
-            </td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="5">No se encontraron {{title}}.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+                <span class="current">
+                    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}.
+                </span>
 
-<div class="pagination">
-    <span class="step-links">
-        {% if page_obj.has_previous %}
-        <a href="?q={{ request.GET.q }}&page=1">&laquo; primera</a>
-        <a href="?q={{ request.GET.q }}&page={{ page_obj.previous_page_number }}">anterior</a>
-        {% endif %}
-
-        <span class="current">
-            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}.
-        </span>
-
-        {% if page_obj.has_next %}
-        <a href="?q={{ request.GET.q }}&page={{ page_obj.next_page_number }}">siguiente</a>
-        <a href="?q={{ request.GET.q }}&page={{ page_obj.paginator.num_pages }}">última &raquo;</a>
-        {% endif %}
-    </span>
+                {% if page_obj.has_next %}
+                <a href="?q={{ request.GET.q }}&page={{ page_obj.next_page_number }}" class="btn btn-default">siguiente
+                    <span class="fas fa-arrow-right"></span></a>
+                <a href="?q={{ request.GET.q }}&page={{ page_obj.paginator.num_pages }}" class="btn btn-default">última
+                    &raquo;</a>
+                {% endif %}
+            </span>
+        </div>
+    </div>
 </div>
-<br>
-
-{% block create %}
-{% endblock create %}
 
 {% endblock content %}
 
@@ -81,7 +91,7 @@ Lista de {{title}}
         document.getElementById("search-field").focus();
     });
     // Quitar los especios en blancos del imput
-    document.getElementById('search-field').addEventListener('change', function() {
+    document.getElementById('search-field').addEventListener('change', function () {
         this.value = this.value.trim();
     });
 </script>

@@ -5,14 +5,18 @@
 <th>Inicial</th>
 <th>Descripción</th>
 <th>Estado</th>
-<th>Acciones</th>
+<th class="text-center">Acciones</th>
 {% endblock %}
 
 {% block rows %}
     <td>{{ obj.name }}</td>
     <td>{{ obj.initials }}</td>
     <td>{{ obj.description }}</td>
-    <td>{{ obj.status|yesno:"Activo,Inactivo" }}</td>
+    {% if obj.status == True %}
+        <td><span class="badge badge-success">Activo</span></td>
+    {% else %}
+        <td><span class="badge badge-danger">Inactivo</span></td>
+    {% endif %}
 {% endblock rows %}
 
 {% block actions %}
@@ -21,7 +25,7 @@
 {% endblock actions %}
 
 {% block create %}
-<a href="{% url 'brand_create' %}" class="btn btn-success btn-sm">Marca <i class="fa fa-plus"></i></a>
+<a href="{% url 'brand_create' %}" class="btn btn-success">Marca <i class="fa fa-plus"></i></a>
 {% endblock create %}
 
                 

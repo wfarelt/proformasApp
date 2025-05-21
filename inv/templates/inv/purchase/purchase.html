@@ -2,66 +2,87 @@
 
 {% block content %}
 
-<div class="container mt-4">
-    <h2><i class="fas {{ icon }}"></i> {{ title }}</h2>
-    <p class="text-muted">{{ subtitle }}</p>
-
-    <div class="card my-4">
-        <div class="card-body">
-            <div class="card-title">
-                <h5 class="text-center">Detalles de la Compra: {{ purchase.id }}</h5>
-            </div>
-            <div class="card-text">
-                <strong>Fecha:</strong> {{ purchase.date|date:"d/m/Y" }} <br>
-                <strong>Proveedor:</strong> {{ purchase.supplier }} <br>
-                <strong>Estado:</strong>
+<div class="card">
+    <div class="card-header">
+        <h2><i class="fas {{ icon }}"></i> {{ title }}</h2>
+        <p class="text-muted">{{ subtitle }} : {{ purchase.id }}</p>
+    </div>
+    <div class="card-body">
+        <div class="card-text">
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>Fecha:</strong> {{ purchase.date|date:"d/m/Y" }} <br>
+                    <strong>Proveedor:</strong> {{ purchase.supplier }} <br>
+                </div>
+                <div class="col-md-6">
+                    <strong>Registrado por:</strong> {{ purchase.user.name }}  <br>  
+                    <strong>Estado:</strong>
                     {% if purchase.status == 'confirmed' %}
-                        <span class="badge bg-success">Confirmado</span> <br>
+                    <span class="badge bg-success">Confirmado</span>
                     {% else %}
-                        <span class="badge bg-secondary">Pendiente</span> <br>
+                    <span class="badge bg-secondary">Pendiente</span>
                     {% endif %}
-                <strong>Registrado por:</strong> {{ purchase.user.name }}
+                </div>
             </div>
         </div>
     </div>
+</div>
 
-    <h5>Detalle de Productos</h5>
-    <table class="table table-striped table-bordered table-sm mt-3">
-        <thead class="table-dark">
-            <tr>
-                <th>#</th>
-                <th>Producto</th>
-                <th class="text-right">Cantidad</th>
-                <th class="text-right">Precio Unitario</th>
-                <th class="text-right">Subtotal</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for detail in details %}
-            <tr>
-                <td>{{ forloop.counter }}</td>
-                <td>{{ detail.product }}</td>
-                <td class="text-right">{{ detail.quantity }}</td>
-                <td class="text-right">{{ detail.unit_price|floatformat:2 }}</td>
-                <td class="text-right">{{ detail.subtotal|floatformat:2 }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-        <tfoot>
-            <tr>
-                <th colspan="4" class="text-right">Total:</th>
-                <th class="text-right">{{ purchase.total_amount|floatformat:2 }}</th>
-            </tr>
-        </tfoot>
-    </table>
+<div class="card">
+    <div class="card-header">
+        <h5>Detalle de Productos</h5>
+    </div>
+    <div class="card-body">
 
-    <div class="text-center mb-3">
-        <a href="{% url 'purchase_list' %}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Volver a la lista
-        </a>
+
+        <div class="table">
+            <table class="table table-striped table-bordered table-sm mt-3">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Producto</th>
+                        <th class="text-right">Cantidad</th>
+                        <th class="text-right">Precio Unitario</th>
+                        <th class="text-right">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for detail in details %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ detail.product }}</td>
+                        <td class="text-right">{{ detail.quantity }}</td>
+                        <td class="text-right">{{ detail.unit_price|floatformat:2 }}</td>
+                        <td class="text-right">{{ detail.subtotal|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="4" class="text-right">Total:</th>
+                        <th class="text-right">{{ purchase.total_amount|floatformat:2 }}</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="text-center mb-3">
+            <a href="{% url 'purchase_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver a la lista
+            </a>
+        </div>
     </div>
 </div>
 
+<div class="container mt-4">
+
+
+
+
+
+
+
+</div>
+
 {% endblock %}
-
-

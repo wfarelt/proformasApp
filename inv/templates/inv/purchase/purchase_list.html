@@ -3,49 +3,86 @@
 {% block title %}{{title}}{% endblock %}
 
 {% block content %}
-<h1>{{subtitle}}</h1>
-<a href="{% url 'create_purchase' %}" class="btn btn-primary"><i class="fa fa-plus"></i> Crear Compra</a>
-<table class="table table-sm table-bordered table-striped mt-3">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Fecha</th>
-            <th>Usuario</th>
-            <th>Proveedor</th>
-            <th>Total</th>
-            <th class="text-center">Estado</th>
-            <th class="text-center">Acciones</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for purchase in purchases %}
-            <tr>
-                <td>{{ purchase.id }}</td>
-                <td>{{ purchase.date|date:"d/m/Y" }}</td>
-                <td>{{ purchase.user.name }}</td>
-                <td>{{ purchase.supplier.name }}</td>
-                <td class="text-right">${{ purchase.total_amount|floatformat:2 }}</td>
-                <td class="text-center">
-                    {% if purchase.status == "confirmed" %} 
-                        <span class="badge badge-success">Confirmado</span> 
-                    {% elif purchase.status == "pending" %} 
-                        <span class="badge badge-warning">Pendiente</span> 
-                    {% elif purchase.status == "cancelled" %} 
-                        <span class="badge badge-danger">Cancelado</span> 
-                    {% endif %}
-                </td>
-                <td class="text-center">
-                    <a href="{% url 'purchase_detail' purchase.id %}" class="btn btn-info btn-sm"><i class="fa fa-eye"></i></a>
-                    {% if purchase.status == "pending" %}
-                        <a href="{% url 'update_purchase' purchase.id %}" class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></a>
-                    {% endif %}
-                    <a href="{% url 'cancelled_purchase' purchase.id %}" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></a>
-                </td>
-            </tr>
-        {% empty %}
-            <tr><td colspan="5">No hay compras registradas.</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
 
+<div class="card">
+    <div class="card-header">
+        <h1>{{ title }}</h1>
+        <a href="{% url 'create_purchase' %}" class="btn btn-default"><i class="fa fa-plus"></i> Crear Compra</a>
+    </div>
+    <div class="card-body">
+        <table class="table table-sm table-bordered table-striped table-hover">
+            <thead class="">
+                <tr>
+                    <th>ID</th>
+                    <th>Fecha</th>
+                    <th>Usuario</th>
+                    <th>Proveedor</th>
+                    <th>Total</th>
+                    <th class="text-center">Estado</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for purchase in purchases %}
+                    <tr>
+                        <td>{{ purchase.id }}</td>
+                        <td>{{ purchase.date|date:"d/m/Y" }}</td>
+                        <td>{{ purchase.user.name }}</td>
+                        <td>{{ purchase.supplier.name }}</td>
+                        <td class="text-right">${{ purchase.total_amount|floatformat:2 }}</td>
+                        <td class="text-center">
+                            {% if purchase.status == "confirmed" %} 
+                                <span class="badge badge-success">Confirmado</span> 
+                            {% elif purchase.status == "pending" %} 
+                                <span class="badge badge-warning">Pendiente</span> 
+                            {% elif purchase.status == "cancelled" %} 
+                                <span class="badge badge-danger">Cancelado</span> 
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'purchase_detail' purchase.id %}" class="btn btn-info btn-sm"><i class="fa fa-eye"></i></a>
+                            {% if purchase.status == "pending" %}
+                                <a href="{% url 'update_purchase' purchase.id %}" class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></a>
+                            {% endif %}
+                            <a href="{% url 'cancelled_purchase' purchase.id %}" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5">No hay compras registradas.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>        
+    </div>
+    <div class="card-footer justify-content-center d-flex">
+        {% if purchases.has_other_pages %}
+            <nav>
+                <ul class="pagination">
+                    {% if purchases.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ purchases.previous_page_number }}">Anterior</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+                    {% endif %}
+
+                    {% for num in purchases.paginator.page_range %}
+                        {% if purchases.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% else %}
+                            <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if purchases.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ purchases.next_page_number }}">Siguiente</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}      
+    </div>
+</div>
 {% endblock %}

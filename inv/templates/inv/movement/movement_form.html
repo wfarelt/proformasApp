@@ -10,7 +10,6 @@
 {% endblock %}
 
 {% block content %}
-<h1>Registrar Movimiento</h1>
 <form method="post" action="{% url 'create_movement' %}">
     {% csrf_token %}
     <div class="card card-dark">
@@ -36,55 +35,68 @@
         </div>
     </div>
 
-
-    <h4>Detalle de Productos</h4>
-    {{ formset.management_form }}
-    <table class="table table-bordered table-striped table-sm">
-        <thead>
-            <tr>
-                <th>Producto</th>
-                <th>Cantidad</th>
-                <th class="text-right">Precio Unitario</th>
-                <th class="text-right">Subtotal</th>
-                <th class="text-center"><i class="fas fa-trash"></i></th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for form in formset %}
-            {{ form.id }}  <!-- Campo oculto con el ID del objeto (importante) -->
-            <tr>
-                <td>{{ form.product }}</td>
-                <td>{{ form.quantity }}</td>
-                <td>{{ form.unit_price }}</td>
-                <td class="subtotal text-right">
-                    {% if form.instance.pk %}
-                        {{ form.instance.subtotal|floatformat:2 }}
-                    {% else %}
-                        0.00
-                    {% endif %}
-                </td>
-                <td class="text-center">
-                    {{ form.DELETE }}
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="4">No hay productos en el detalle.</td></tr>
-            {% endfor %}
-        </tbody>
-        <tfoot>
-            <tr>
-                <td colspan="3" class="text-right"><strong>Total:</strong></td>
-                <td class="total text-right">0.00</td>
-                <td></td>
-            </tr>
-        </tfoot>
-    </table>
-    <div class="form-group text-right">
-        <button type="submit" class="btn btn-primary">Guardar</button>
-        <a href="{% url 'movement_list' %}" class="btn btn-secondary">Cancelar</a>
+    <div class="card">
+        <div class="card-header">
+            <h4>Detalle de Productos</h4>
+            {{ formset.management_form }}
+        </div>
+        <div class="card-body">
+            <div class="table">
+                <table class="table table-bordered table-striped table-sm">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cantidad</th>
+                            <th class="text-right">Precio Unitario</th>
+                            <th class="text-right">Subtotal</th>
+                            <th class="text-center"><i class="fas fa-trash"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for form in formset %}
+                        {{ form.id }}  <!-- Campo oculto con el ID del objeto (importante) -->
+                        <tr>
+                            <td>{{ form.product }}</td>
+                            <td>{{ form.quantity }}</td>
+                            <td>{{ form.unit_price }}</td>
+                            <td class="subtotal text-right">
+                                {% if form.instance.pk %}
+                                    {{ form.instance.subtotal|floatformat:2 }}
+                                {% else %}
+                                    0.00
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {{ form.DELETE }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4">No hay productos en el detalle.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="text-right"><strong>Total:</strong></td>
+                            <td class="total text-right">0.00</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer">
+            <div class="form-group text-right">
+                <button type="submit" class="btn btn-primary">Guardar</button>
+                <a href="{% url 'movement_list' %}" class="btn btn-secondary">Cancelar</a>
+            </div>
+        </div>
     </div>
+
+    
+    
 </form>
-</div>
+
+
 
 {% endblock %}
 

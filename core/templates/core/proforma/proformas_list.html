@@ -3,105 +3,114 @@
 
 
 {% block content %}
-    <h2>Proformas</h2>
-    <form method="get">
-        <input type="text" name="q" id="search-field" placeholder="Buscar por proforma o cliente" value="{{ request.GET.q }}">
-        <button type="submit">Buscar</button>
-    </form>
-    <br>
-    <table class="table table-sm">
-        <thead>
-            <tr>
-                <th>Id</th>
-                <th>Fecha</th>
-                <th>Vendedor</th>
-                <th>Cliente</th>
-                <th>Nombre</th>
-                <th class="text-right">Total($)</th>
-                <th class="text-right">Descuento(%)</th>
-                <th class="text-right">Total Neto($)</th>
-                <th>Estado</th>
-                <th>Opciones</th>
-                <th>Pdf</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for proforma in proformas %}
-                <tr>
-                    <td>{{ proforma.id }}</td>
-                    <td>{{ proforma.fecha|date:"d/m/Y" }}</td>
-                    <td>{{ proforma.usuario.name }}</td>
-                    <td>{{ proforma.cliente.id }}</td>
-                    <td>{{ proforma.cliente }}</td>
-                    <td class="text-right">{{ proforma.total }}</td>
-                    <td class="text-right">{{ proforma.discount_percentage }}</td>
-                    <td class="text-right pr-3">{{ proforma.total_neto|floatformat:2 }}</td>
-                    
-                    {% if proforma.estado == 'PENDIENTE' %}
-                        <td><span class="badge bg-warning text-dark">{{ proforma.estado }}</span></td>
-                        <td>
-                            <a href="{% url 'proforma_view' proforma.id %}" class="btn btn-primary btn-sm"><i class="fas fa-eye"></i></a>
-                            <a href="{% url 'proforma_edit' proforma.id %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i></a>
-                        </td>
-                    {% elif proforma.estado == 'EJECUTADO' %}
-                        <td><span class="badge bg-success">{{ proforma.estado }}</span></td>
-                        <td>
-                            <a href="{% url 'proforma_view' proforma.id %}" class="btn btn-primary btn-sm"><i class="fas fa-eye"></i></a>
-                            {% if user.is_superuser %}
-                                <form method="post" action="{% url 'anular_proforma' proforma.id %}" onsubmit="return confirm('¿Estás seguro que deseas anular esta proforma?')">
-                                    {% csrf_token %}
-                                    <button class="btn btn-danger btn-sm" type="submit"><i class="fas fa-trash"></i></button>
-                                </form>
-                            {% endif %}
-                        </td>
-                
-                    {% else %}
-                        <td><span class="badge bg-danger">{{ proforma.estado }}</span></td>
-                        <td>
-                            <a href="{% url 'proforma_view' proforma.id %}" class="btn btn-primary btn-sm"><i class="fas fa-eye"></i></a>                        
-                        </td>
-                        
-
-                    {% endif %}
-                    <td>
-                        <a href="{% url 'proforma_pdf' proforma.id %}" target="_blank" rel="noopener noreferrer" 
-                            class="btn btn-danger btn-sm" data-bs-toggle="tooltip" title="Sin código">
-                            <i class="fas fa-file-pdf"></i>
-                        </a>
-                        <a href="{% url 'proforma_almacen' proforma.id %}" target="_blank" rel="noopener noreferrer" 
-                            class="btn btn-info btn-sm" data-bs-toggle="tooltip" title="Con código">
-                            <i class="fas fa-file-pdf"></i>
-                        </a>
-                    </td>
-                </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="5">No se encontraron proformas.</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <div class="pagination">
-        <span class="step-links">
-            {% if page_obj.has_previous %}
-                <a href="?q={{ request.GET.q }}&page=1">&laquo; primera</a>
-                <a href="?q={{ request.GET.q }}&page={{ page_obj.previous_page_number }}">anterior</a>
-            {% endif %}
-
-            <span class="current">
-                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}.
-            </span>
-
-            {% if page_obj.has_next %}
-                <a href="?q={{ request.GET.q }}&page={{ page_obj.next_page_number }}">siguiente</a>
-                <a href="?q={{ request.GET.q }}&page={{ page_obj.paginator.num_pages }}">última &raquo;</a>
-            {% endif %}
-        </span>
+<div class="card m-3">
+    <div class="card-header">
+        <h1>Proformas</h1>
+        <a href="{% url 'proforma_new' %}" class="btn btn-primary btn-sm">Proforma <i class="fas fa-plus"></i></a>
+        <br><br>
+        <form method="get">
+            <input type="text" name="q" id="search-field" placeholder="Buscar por proforma o cliente" value="{{ request.GET.q }}">
+            <button type="submit">Buscar</button>
+        </form>
     </div>
-    <br>
+    <div class="card-body">
+        <table class="table table-sm table-bordered table-striped table-hover">
+            <thead class="thead-dark">
+                <tr>
+                    <th>Id</th>
+                    <th>Fecha</th>
+                    <th>Vendedor</th>
+                    <th>Cliente</th>
+                    <th>Nombre</th>
+                    <th class="text-right">Total($)</th>
+                    <th style="width: 80px;"class="text-right">Desc.(%)</th>
+                    <th style="width: 80px;" class="text-right">TotalNeto($)</th>
+                    <th>Estado</th>
+                    <th style="width: 90px;" class="text-center">Opciones</th>
+                    <th style="width: 90px;" class="text-center">PDF</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for proforma in proformas %}
+                    <tr>
+                        <td>{{ proforma.id }}</td>
+                        <td>{{ proforma.fecha|date:"d/m/Y" }}</td>
+                        <td>{{ proforma.usuario.name }}</td>
+                        <td>{{ proforma.cliente.id }}</td>
+                        <td>{{ proforma.cliente }}</td>
+                        <td class="text-right">{{ proforma.total }}</td>
+                        <td class="text-right">{{ proforma.discount_percentage }}</td>
+                        <td class="text-right pr-3">{{ proforma.total_neto|floatformat:2 }}</td>
+                        
+                        {% if proforma.estado == 'PENDIENTE' %}
+                            <td><span class="badge bg-warning text-dark">{{ proforma.estado }}</span></td>
+                            <td>
+                                <a href="{% url 'proforma_view' proforma.id %}" class="btn btn-primary btn-sm"><i class="fas fa-eye"></i></a>
+                                <a href="{% url 'proforma_edit' proforma.id %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i></a>
+                            </td>
+                        {% elif proforma.estado == 'EJECUTADO' %}
+                            <td><span class="badge bg-success">{{ proforma.estado }}</span></td>
+                            <td>
+                                <a href="{% url 'proforma_view' proforma.id %}" class="btn btn-primary btn-sm"><i class="fas fa-eye"></i></a>
+                                {% if user.is_superuser %}
+                                    <form method="post" action="{% url 'anular_proforma' proforma.id %}" onsubmit="return confirm('¿Estás seguro que deseas anular esta proforma?')">
+                                        {% csrf_token %}
+                                        <button class="btn btn-danger btn-sm" type="submit"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                    
+                        {% else %}
+                            <td><span class="badge bg-danger">{{ proforma.estado }}</span></td>
+                            <td>
+                                <a href="{% url 'proforma_view' proforma.id %}" class="btn btn-primary btn-sm"><i class="fas fa-eye"></i></a>                        
+                            </td>
+                            
     
-    <a href="{% url 'proforma_new' %}" class="btn btn-success btn-sm">Proforma <i class="fas fa-plus"></i></a>
+                        {% endif %}
+                        <td>
+                            <a href="{% url 'proforma_pdf' proforma.id %}" target="_blank" rel="noopener noreferrer" 
+                                class="btn btn-danger btn-sm" data-bs-toggle="tooltip" title="Sin código">
+                                <i class="fas fa-file-pdf"></i>
+                            </a>
+                            <a href="{% url 'proforma_almacen' proforma.id %}" target="_blank" rel="noopener noreferrer" 
+                                class="btn btn-info btn-sm" data-bs-toggle="tooltip" title="Con código">
+                                <i class="fas fa-file-pdf"></i>
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5">No se encontraron proformas.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer">
+        <div class="pagination">
+            <span class="step-links">
+                {% if page_obj.has_previous %}
+                    <a href="?q={{ request.GET.q }}&page=1">&laquo; primera</a>
+                    <a href="?q={{ request.GET.q }}&page={{ page_obj.previous_page_number }}">anterior</a>
+                {% endif %}
+    
+                <span class="current">
+                    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}.
+                </span>
+    
+                {% if page_obj.has_next %}
+                    <a href="?q={{ request.GET.q }}&page={{ page_obj.next_page_number }}">siguiente</a>
+                    <a href="?q={{ request.GET.q }}&page={{ page_obj.paginator.num_pages }}">última &raquo;</a>
+                {% endif %}
+            </span>
+        </div>
+    </div>
+</div>
+
+
+    
+    
 {% endblock %}
 
 {% block scripts %}

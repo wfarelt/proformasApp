@@ -3,45 +3,80 @@
 {% block title %}{{title}}{% endblock %}
 
 {% block content %}
-<h1>{{subtitle}}</h1>
-<a href="{% url 'create_movement' %}" class="btn btn-primary"><i class="fa fa-plus"></i> Crear Movimiento</a>
-<table class="table table-sm table-bordered table-striped mt-3">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Fecha</th>
-            <th>Tipo</th>
-            <th>Referencia</th>
-            <th>Usuario</th>
-            <th>Estado</th>
-            <th>Acciones</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for movement in movements %}
-        <tr>
-            <td>{{ movement.id }}</td>
-            <td>{{ movement.date|date:"d/m/Y" }}</td>
-            <td>{{ movement.get_movement_type_display }}</td>
-            <td>{{ movement.description }}</td>
-            <td>{{ movement.user.name }}</td>
-            <td>{{ movement.status }}</td>
-            <td class="text-center">
-                <a href="{% url 'movement_detail' movement.id %}" class="btn btn-info btn-sm"><i class="fa fa-eye"></i></a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-<div class="pagination">
-    <ul class="pagination">
-        {% for page in pages %}
-        <li class="page-item {% if page.is_current %}active{% endif %}">
-            <a class="page-link" href="?page={{ page.number }}">{{ page.number }}</a>
-        </li>
-        {% endfor %}
-    </ul>
+<div class="card">
+    <div class="card-header">
+        <h1>{{subtitle}}</h1>
+        <a href="{% url 'create_movement' %}" class="btn btn-default"><i class="fa fa-plus"></i> Crear Movimiento</a>
+    </div>
+    <div class="card-body">
+        <div class="table">
+            <table class="table table-sm table-bordered table-striped mt-3">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Referencia</th>
+                        <th>Usuario</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for movement in movements %}
+                    <tr>
+                        <td>{{ movement.id }}</td>
+                        <td>{{ movement.date|date:"d/m/Y" }}</td>
+                        <td>{{ movement.get_movement_type_display }}</td>
+                        <td>{{ movement.description }}</td>
+                        <td>{{ movement.user.name }}</td>
+                        <td>{{ movement.status }}</td>
+                        <td class="text-center">
+                            <a href="{% url 'movement_detail' movement.id %}" class="btn btn-info btn-sm"><i
+                                    class="fa fa-eye"></i></a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+    <div class="card-footer justify-content-center d-flex">
+        {% if movements.has_other_pages %}
+        <nav>
+            <ul class="pagination">
+                {% if movements.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ movements.previous_page_number }}">Anterior</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+                {% endif %}
+
+                {% for num in movements.paginator.page_range %}
+                {% if movements.number == num %}
+                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                {% else %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+                {% endif %}
+                {% endfor %}
+
+                {% if movements.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ movements.next_page_number }}">Siguiente</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
 </div>
+
 </div>
 
 

@@ -38,7 +38,11 @@ def reporte_productos_mas_vendidos(request):
     
     productos = productos_mas_vendidos(dias)
     
-    return render(request, "inv/reports/productos_mas_vendidos.html", {"productos": productos, "dias": dias})
+    return render(request, "inv/reports/productos_mas_vendidos.html", {
+        "productos": productos, 
+        "dias": dias,
+        "title": "Productos más vendidos",
+        })
 
 def historial_ventas_producto(request):
     producto_id = request.GET.get("producto_id")
@@ -63,7 +67,8 @@ def historial_ventas_producto(request):
         "productos": productos,
         "ventas": ventas,
         "producto": producto,
-        "dias": dias
+        "dias": dias,
+        "title": "Historial de producto",
     })
     
 def buscar_productos(request):
@@ -84,11 +89,12 @@ def buscar_productos(request):
 def reporte_inventario(request):
     productos = Producto.objects.filter(stock__gt=0).order_by('location')  # Solo productos con stock > 0
     return render(request, "inv/reports/reporte_inventario.html", {
+        "title": "Reporte de Inventario",
         "productos": productos
     })
 
 def proforma_report(request):
-    proformas = Proforma.objects.none()  # Vacío por defecto
+    proformas = Proforma.objects.none()
     total_general = 0
 
     fecha_inicio = request.GET.get('fecha_inicio')
@@ -97,15 +103,22 @@ def proforma_report(request):
     if fecha_inicio and fecha_fin:
         try:
             fi = make_aware(datetime.strptime(fecha_inicio, '%Y-%m-%d'))
-            ff = make_aware(datetime.strptime(fecha_fin, '%Y-%m-%d')) + timedelta(days=1)  
-            proformas = Proforma.objects.filter(
+            ff = make_aware(datetime.strptime(fecha_fin, '%Y-%m-%d')) + timedelta(days=1)
+            proformas_queryset = Proforma.objects.filter(
                 estado='EJECUTADO',
                 fecha__range=(fi, ff)
-            )
-            total_general = sum(p.total_neto() for p in proformas)
-             
+            ).order_by('-fecha')
+
+            # Calcular total general antes de paginar
+            total_general = sum(p.total_neto() for p in proformas_queryset)
+
+            # Paginación
+            paginator = Paginator(proformas_queryset, 10)  # 10 por página
+            page_number = request.GET.get('page')
+            proformas = paginator.get_page(page_number)
+
         except ValueError:
-            pass  # puedes agregar un mensaje si el formato es incorrecto
+            pass
 
     context = {
         'proformas': proformas,
@@ -115,11 +128,15 @@ def proforma_report(request):
         'title': 'Reporte de Proformas',
     }
     return render(request, 'inv/reports/proforma_report.html', context)
+
 # COMPRAS
 
 @login_required
 def purchase_list(request):
     purchases = Purchase.objects.all().order_by('-status','-id', '-date')
+    paginator = Paginator(purchases, 10)  # 10 movimientos por página
+    page_number = request.GET.get('page')
+    purchases = paginator.get_page(page_number)
     context = {
         'purchases': purchases,
         'title': 'Lista de Compras',
@@ -312,10 +329,13 @@ def create_purchase_movement(purchase):
 @login_required
 def movement_list(request):
     movements = Movement.objects.all().order_by('-id', '-date')
+    paginator = Paginator(movements, 10)  # 10 movimientos por página
+    page_number = request.GET.get('page')
+    movements = paginator.get_page(page_number)
     context = {
         'movements': movements,
-        'title': 'Lista de Movimientos',
-        'subtitle': 'Lista de movimientos registrados',
+        'title': 'Movimientos',
+        'subtitle': 'Lista de movimientos',
         'icon': 'fa-exchange-alt',
     }   
     return render(request, 'inv/movement/movement_list.html', context)

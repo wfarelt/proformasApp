@@ -15,12 +15,26 @@
                     <h3 class="card-title">Datos de la proforma</h3>
                 </div>
                 <div class="card-body">
-                    Proforma: {{ proforma.id }} <br>
-                    Fecha: {{ proforma.fecha|date:"d/m/Y" }} <br>
-                    Vendedor: {{ proforma.usuario.name }} <br>
-                    Cliente: {{ proforma.cliente }} <br>
-                    Nit: {{ proforma.cliente.nit }} <br>
-                    Estado: {{ proforma.estado }} <br>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Proforma: {{ proforma.id }} <br></strong>
+                            Cliente: {{ proforma.cliente }} <br>
+                            Nit: {{ proforma.cliente.nit }} <br>
+                        </div>
+                        <div class="col-md-6">
+                            Fecha: {{ proforma.fecha|date:"d/m/Y" }} <br>
+                            Vendedor: {{ proforma.usuario.name }} <br>                            
+                            {% if proforma.estado == 'EJECUTADO' %}
+                                <span class="badge badge-success">Ejecutada</span>
+                            {% elif proforma.estado == 'PENDIENTE' %}
+                                <span class="badge badge-warning">Pendiente</span>
+                            {% elif proforma.estado == 'ANULADO' %}
+                                <span class="badge badge-danger">Anulada</span>
+                            {% else %}
+                                <span class="badge badge-secondary">Desconocido</span>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

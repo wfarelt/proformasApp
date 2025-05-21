@@ -1,4 +1,7 @@
-
+.content-wrapper {
+    background: linear-gradient(to right, #134E5E, #71B280);
+    padding: 10px;
+}
 
 .fixed-footer {
     position: fixed;

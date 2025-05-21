@@ -4,7 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   {% load static %}
-  <title>Sistema de Inventario</title>
+  <title>
+    {% block title %}
+    Sistema de Inventario
+    {% endblock %}
+  </title>
   <link rel="icon" href="{% static 'dist/img/favicon.ico' %}" type="image/x-icon">
   <!-- Google Font: Source Sans Pro -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
@@ -13,6 +17,10 @@
   <!-- Theme style -->
   <link rel="stylesheet" href="{% static 'dist/css/adminlte.min.css' %}">
   <!-- AdminLTE -->
+   <link rel="stylesheet" href="{% static 'dist/css/adminlte.min.css' %}">
+  <!-- Styles -->
+  <link rel="stylesheet" href="{% static 'core/css/styles.css' %}">
+  
   
   {% block style %}
   {% endblock %}
@@ -296,9 +304,9 @@
         {% endif %}
       {% endblock %}
 
-      {% block content %}
-
+      {% block content %}      
       {% endblock %}
+      
       </div>
     </div>
     
