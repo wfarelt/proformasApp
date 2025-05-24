@@ -328,7 +328,17 @@ def create_purchase_movement(purchase):
 # MOVIMIENTOS DE INVENTARIO
 @login_required
 def movement_list(request):
+    product_id = request.GET.get('producto_id')
     movements = Movement.objects.all().order_by('-id', '-date')
+    selected_producto_nombre = None
+    if product_id:
+        try:
+            movements = movements.filter(items__product_id=product_id).distinct()
+            selected_producto = Producto.objects.get(id=product_id)
+            selected_producto_nombre = selected_producto.nombre + " - " + selected_producto.descripcion
+        except Producto.DoesNotExist:
+            messages.error(request, "Producto no encontrado.")
+            return redirect('movement_list')
     paginator = Paginator(movements, 10)  # 10 movimientos por página
     page_number = request.GET.get('page')
     movements = paginator.get_page(page_number)
@@ -337,6 +347,8 @@ def movement_list(request):
         'title': 'Movimientos',
         'subtitle': 'Lista de movimientos',
         'icon': 'fa-exchange-alt',
+        'selected_producto': product_id,
+        'selected_producto_nombre': selected_producto_nombre,
     }   
     return render(request, 'inv/movement/movement_list.html', context)
 

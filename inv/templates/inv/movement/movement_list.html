@@ -1,12 +1,46 @@
 {% extends 'core/index.html' %}
+{% load static %}
 
 {% block title %}{{title}}{% endblock %}
+
+{% block style %}
+
+<link rel="stylesheet" href="{% static 'plugins/select2/css/select2.min.css' %}">
+<link rel="stylesheet" href="{% static 'plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css' %}">
+
+{% endblock %}
 
 {% block content %}
 <div class="card">
     <div class="card-header">
         <h1>{{subtitle}}</h1>
-        <a href="{% url 'create_movement' %}" class="btn btn-default"><i class="fa fa-plus"></i> Crear Movimiento</a>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <!-- Botón Crear a la izquierda -->
+            <a href="{% url 'create_movement' %}" class="btn btn-success">
+                <i class="fa fa-plus"></i> Crear Movimiento
+            </a>
+
+            <!-- Formulario Buscar a la derecha -->
+            <form method="get" class="form-inline filtro-form">
+                <div class="form-group mr-2">
+                    <select name="producto_id" id="producto_id" class="form-control select2" style="width: 100%;">
+                        {% if selected_producto %}
+                            <option value="{{ selected_producto }}" selected>
+                                {{ selected_producto_nombre|default:"Producto seleccionado" }}
+                            </option>
+                        {% endif %}
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary mr-2">Buscar</button>
+
+                {% if selected_producto %}
+                    <a href="{% url 'movement_list' %}" class="btn btn-secondary">Limpiar</a>
+                {% endif %}
+            </form>
+        </div>
+
+        
     </div>
     <div class="card-body">
         <div class="table">
@@ -36,6 +70,8 @@
                                     class="fa fa-eye"></i></a>
                         </td>
                     </tr>
+                    {% empty %}
+                    <tr><td colspan="5">No hay movimientos registrados.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -46,38 +82,107 @@
         {% if movements.has_other_pages %}
         <nav>
             <ul class="pagination">
+                {# Botón Anterior #}
                 {% if movements.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ movements.previous_page_number }}">Anterior</a>
-                </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ movements.previous_page_number }}">Anterior</a>
+                    </li>
                 {% else %}
-                <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+                    <li class="page-item disabled"><span class="page-link">Anterior</span></li>
                 {% endif %}
 
-                {% for num in movements.paginator.page_range %}
-                {% if movements.number == num %}
-                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                {% else %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                </li>
+                {# Primera página y puntos suspensivos si es necesario #}
+                {% if movements.number > 3 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1">1</a>
+                    </li>
                 {% endif %}
+                {% if movements.number > 4 %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+
+                {# Páginas alrededor de la actual #}
+                {% for num in movements.paginator.page_range %}
+                    {% if num >= movements.number|add:'-2' and num <= movements.number|add:'2' %}
+                        {% if movements.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endif %}
                 {% endfor %}
 
+                {# Puntos suspensivos y última página si es necesario #}
+                {% if movements.number < movements.paginator.num_pages|add:'-2' %}
+                    {% if movements.number < movements.paginator.num_pages|add:'-3' %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ movements.paginator.num_pages }}">{{ movements.paginator.num_pages }}</a>
+                    </li>
+                {% endif %}
+
+                {# Botón Siguiente #}
                 {% if movements.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ movements.next_page_number }}">Siguiente</a>
-                </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ movements.next_page_number }}">Siguiente</a>
+                    </li>
                 {% else %}
-                <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+                    <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
                 {% endif %}
             </ul>
         </nav>
         {% endif %}
     </div>
 </div>
-
 </div>
+{% endblock %}
 
+{% block scripts %}
+    <script src="{% static 'plugins/select2/js/select2.min.js' %}"></script>
 
+    <script>
+        $(document).ready(function () {
+            $('#producto_id').select2({
+                placeholder: "Seleccione un producto",
+                allowClear: true,
+                language: "es",  // 🔹 Usa el idioma español
+                minimumInputLength: 1,
+                width: '100%',
+                theme: 'bootstrap4',
+                ajax: {
+                    url: '/inv/api/productos/',  // URL de tu API en Django
+                    dataType: 'json',
+                    delay: 250,  // Retraso para evitar demasiadas peticiones al servidor
+                    data: function (params) {
+                        return {
+                            q: params.term,  // El usuario escribe en el input
+                            page: params.page || 1  // Soporte para paginación
+                        };
+                    },
+                    processResults: function (data, params) {
+                        params.page = params.page || 1;
+                        return {
+                            results: data.results.map(item => ({
+                                id: item.id,
+                                text: item.nombre
+                            })),
+                            pagination: {
+                                more: data.has_next // Indica si hay más páginas
+                            }
+                        };
+                    },
+                    cache: true
+                },
+                minimumInputLength: 1,  // Buscar después de 1 carácter
+                width: '100%'
+            });
+
+            $(document).on('select2:open', () => {
+                document.querySelector('.select2-container--open .select2-search__field').focus();
+            });
+        });
+    </script>
 {% endblock %}
