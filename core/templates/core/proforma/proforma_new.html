@@ -56,10 +56,17 @@
           Nit: {{proforma.cliente.nit}}
       </div>
       <div class="col-md-4 text-right">
-        Fecha: {{proforma.fecha|date:"d/m/Y"}}
+        <form method="post" action="{% url 'cambiar_fecha_proforma' proforma.id %}" class="d-inline">
+          {% csrf_token %}
+          <label for="fecha">Fecha:</label>
+          <input type="date" id="fecha" name="fecha"
+                value="{{ proforma.fecha|date:'Y-m-d' }}"
+                class="form-control form-control-sm d-inline-block"
+                style="width: 160px;">
+          <button type="submit" class="btn btn-primary btn-sm">Actualizar</button>
+      </form>
       </div>
     </div>
-    <hr class="no-mostrar">
   </div>
   
   <div class="card-body">
@@ -204,7 +211,7 @@
     
       <div class="form-group">
           <label for="observacion">Observaciones:</label>
-          <input type="text" name="observacion" id="observacion" class="form-control" value="{{proforma.observacion}}">
+          <input type="text" name="observacion" id="observacion" class="form-control" value="{{ proforma.observacion|default_if_none:'' }}">
       </div>
     
       <div class="text-center">

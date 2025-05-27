@@ -6,12 +6,21 @@
 <div class="card m-3">
     <div class="card-header">
         <h1>Proformas</h1>
-        <a href="{% url 'proforma_new' %}" class="btn btn-primary btn-sm">Proforma <i class="fas fa-plus"></i></a>
-        <br><br>
-        <form method="get">
-            <input type="text" name="q" id="search-field" placeholder="Buscar por proforma o cliente" value="{{ request.GET.q }}">
-            <button type="submit">Buscar</button>
-        </form>
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <a href="{% url 'proforma_new' %}" class="btn btn-success mb-2">
+                Proforma <i class="fas fa-plus"></i>
+            </a>
+            <form method="get" class="form-inline mb-2">
+                <select name="tipo_busqueda" class="form-control mr-2">
+                    <option value="id" {% if request.GET.tipo_busqueda == "id" %}selected{% endif %}>ID</option>
+                    <option value="cliente" {% if request.GET.tipo_busqueda == "cliente" %}selected{% endif %}>Cliente</option>
+                    <option value="producto" {% if request.GET.tipo_busqueda == "producto" %}selected{% endif %}>Producto</option>
+                </select>
+                <input type="text" name="q" id="search-field" class="form-control mr-2"
+                    placeholder="Buscar..." value="{{ request.GET.q }}">
+                <button type="submit" class="btn btn-primary">Buscar</button>
+            </form>
+        </div>
     </div>
     <div class="card-body">
         <table class="table table-sm table-bordered table-striped table-hover">
@@ -91,17 +100,17 @@
         <div class="pagination">
             <span class="step-links">
                 {% if page_obj.has_previous %}
-                    <a href="?q={{ request.GET.q }}&page=1">&laquo; primera</a>
-                    <a href="?q={{ request.GET.q }}&page={{ page_obj.previous_page_number }}">anterior</a>
+                    <a href="?q={{ request.GET.q }}&tipo_busqueda={{ request.GET.tipo_busqueda }}&page=1">&laquo; primera</a>
+                    <a href="?q={{ request.GET.q }}&tipo_busqueda={{ request.GET.tipo_busqueda }}&page={{ page_obj.previous_page_number }}">anterior</a>
                 {% endif %}
-    
+
                 <span class="current">
                     Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}.
                 </span>
-    
+
                 {% if page_obj.has_next %}
-                    <a href="?q={{ request.GET.q }}&page={{ page_obj.next_page_number }}">siguiente</a>
-                    <a href="?q={{ request.GET.q }}&page={{ page_obj.paginator.num_pages }}">última &raquo;</a>
+                    <a href="?q={{ request.GET.q }}&tipo_busqueda={{ request.GET.tipo_busqueda }}&page={{ page_obj.next_page_number }}">siguiente</a>
+                    <a href="?q={{ request.GET.q }}&tipo_busqueda={{ request.GET.tipo_busqueda }}&page={{ page_obj.paginator.num_pages }}">última &raquo;</a>
                 {% endif %}
             </span>
         </div>

@@ -34,6 +34,8 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.http import JsonResponse
 import json
 
+from django.utils.dateparse import parse_date
+
 # Create your views here.
 
 # HOME
@@ -136,12 +138,17 @@ class ProformaListView(ListView):
     paginate_by = 10  # Número de proformas por página
 
     def get_queryset(self):
-            query = self.request.GET.get('q')
-            #object_list = Proforma.objects.filter(usuario=self.request.user).order_by('-fecha')
-            object_list = Proforma.objects.order_by('-fecha')
-            if query:
-                object_list = self.model.objects.filter(cliente__name__icontains = query) | object_list.filter(id__icontains=query)
-            return object_list
+        query = self.request.GET.get('q')
+        tipo = self.request.GET.get('tipo_busqueda', 'id')
+        qs = Proforma.objects.order_by('-fecha')
+        if query:
+            if tipo == 'id':
+                qs = qs.filter(id__icontains=query)
+            elif tipo == 'cliente':
+                qs = qs.filter(cliente__name__icontains=query)
+            elif tipo == 'producto':
+                qs = qs.filter(detalles__producto__nombre__icontains=query)
+        return qs.distinct()
 
 def proforma_new(request):
     query = request.GET.get('q')
@@ -395,6 +402,19 @@ def anular_proforma(request, id):
 
     messages.success(request, f'Proforma #{proforma.id} anulada y movimiento revertido.')
     return redirect('proforma_list')    
+
+@login_required
+def cambiar_fecha_proforma(request, id):
+    proforma = Proforma.objects.get(id=id)
+    if request.method == 'POST':
+        fecha_str = request.POST.get('fecha')
+        if fecha_str:
+            # Si tu campo es DateTimeField, puedes hacer:
+            from datetime import datetime
+            proforma.fecha = datetime.strptime(fecha_str, "%Y-%m-%d")
+            proforma.save()
+            messages.success(request, "Fecha actualizada correctamente.")
+    return redirect('proforma_edit', id)
 
 # CLIENTE    
 class ClientListView(ListView):

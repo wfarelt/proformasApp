@@ -36,6 +36,7 @@ urlpatterns = [
     path('proforma/view/<int:id>/', proforma_view, name='proforma_view'),
     path('proforma/<int:proforma_id>/pdf/', proforma_pdf, name='proforma_pdf'),
     path('proforma/<int:proforma_id>/almacen/', proforma_almacen, name='proforma_almacen'),
+    path('proforma/<int:id>/cambiar_fecha/', cambiar_fecha_proforma, name='cambiar_fecha_proforma'),
 
     #clientes
     #path('clientes/', clientes_list, name='clientes_list'),
