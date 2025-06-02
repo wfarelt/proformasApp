@@ -20,7 +20,8 @@
    <link rel="stylesheet" href="{% static 'dist/css/adminlte.min.css' %}">
   <!-- Styles -->
   <link rel="stylesheet" href="{% static 'core/css/styles.css' %}">
-  
+  <!-- Toastr CSS -->
+  <link rel="stylesheet" href="{% static 'plugins/toastr/toastr.min.css' %}">
   
   {% block style %}
   {% endblock %}
@@ -291,19 +292,7 @@
 
     <div class="content">
       <div class="container-fluid">
-      {% block messages %}
-        {% if messages %}
-          <div class="alert alert-info alert-dismissible fade show" role="alert">
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-              <span aria-hidden="true">&times;</span>
-            </button>
-            {% for message in messages %}
-              {{ message }}
-            {% endfor %}
-          </div>
-        {% endif %}
-      {% endblock %}
-
+      
       {% block content %}      
       {% endblock %}
       
@@ -345,6 +334,21 @@
 <script src="{% static 'plugins/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
 <!-- AdminLTE App -->
 <script src="{% static 'dist/js/adminlte.min.js' %}"></script>
+
+<!-- Toastr JS -->
+<script src="{% static 'plugins/toastr/toastr.min.js' %}"></script>
+
+<script>
+  {% if messages %}
+      {% for message in messages %}
+          toastr.options = {
+              "closeButton": true,
+              "progressBar": true,
+          };
+          toastr["{{ message.tags|default:'info' }}"]("{{ message|escapejs }}");
+      {% endfor %}
+  {% endif %}
+</script>
 
 {% block scripts %}
 {% endblock %}

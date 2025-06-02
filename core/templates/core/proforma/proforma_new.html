@@ -3,7 +3,6 @@
 {% block title %}Proforma New{% endblock %}
 {% load static %}
 
-
 {% block style %}
 <style>
   /* Estilos generales */
@@ -35,7 +34,6 @@
   }
 </style>
 {% endblock style %}
-
 
 {% block content %}
 <div class="card">
@@ -70,6 +68,7 @@
   </div>
   
   <div class="card-body">
+    <!-- Busqueda de productos -->
     <div class="productos">
       <h2>PRODUCTOS</h2>
       <form method="get">
@@ -138,18 +137,7 @@
     <br>
     <hr class="no-mostrar">
     
-    <div id="mensaje">
-      {% if messages %}
-      <div>
-        {% for message in messages %}
-          <div class="alert alert-danger alert-sm" role="alert">
-            {{ message }}
-          </div>
-        {% endfor %}
-      </div>
-      {% endif %}
-    </div>
-    
+    <!-- Detalle de productos -->
     <div class="detalle">
       <h2>DETALLE DE PRODUCTOS</h2>
       <table class="table table-sm">
@@ -191,6 +179,7 @@
       </table>
     </div>
     
+    <!-- Total y descuento -->
     <div class="total">
       <table class="table table-sm">
         <tr>
@@ -205,7 +194,7 @@
       </table>
     </div>
 
-    <br>
+    <!-- Observaciones y estado de la proforma -->
     <form method="POST" action="{% url 'cambiar_estado_proforma' proforma.id %}" class="d-inline">
       {% csrf_token %}
     
@@ -249,6 +238,7 @@
       class="btn btn-default btn-sm" data-bs-toggle="tooltip" title="Con código">
       <i class="fas fa-file-pdf"></i> Con/Code</a>
   </div>
+
 </div>
 
 {% endblock %}

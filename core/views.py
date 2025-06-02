@@ -90,6 +90,7 @@ def producto_new(request):
         form = ProductoForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Producto creado correctamente.')
             return redirect('product_list')
     title = 'Nuevo producto'
     context = {'form': form, 'title': title}
@@ -103,6 +104,7 @@ def product_edit(request, id):
         form = ProductoForm(request.POST, instance=producto)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Producto actualizado correctamente.')
             return redirect('product_list')
     else:
         form = ProductoForm(instance=producto)
@@ -340,6 +342,7 @@ def cambiar_estado_proforma(request, id):
                 )
 
             # Guardar la proforma
+            messages.success(request, f'Proforma #{proforma.id} ejecutada correctamente.')
             proforma.save()
         else:
             messages.error(request, 'Esta proforma no tiene asignado un cliente')
@@ -443,6 +446,7 @@ def cliente_new(request):
         form = ClienteForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Cliente creado correctamente.')
             return redirect('client_list')
     title = 'Nuevo Cliente'
     context = {'form': form, 'title': title}
@@ -470,10 +474,12 @@ def crear_clientes(request):
 @login_required(login_url='login')
 def cliente_edit(request, id):
     cliente = get_object_or_404(Cliente, pk=id)
+    
     if request.method == 'POST':
         form = ClienteForm(request.POST, instance=cliente)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Cliente actualizado correctamente.')
             return redirect('client_list')
     else:
         form = ClienteForm(instance=cliente)
@@ -490,8 +496,10 @@ def cliente_status(request, id):
     cliente = Cliente.objects.get(pk=id)
     if cliente.status:
         cliente.status = False
+        messages.info(request, f'Cliente {cliente.name} desactivado correctamente.')
     else:
         cliente.status = True
+        messages.success(request, f'Cliente {cliente.name} activado correctamente.')
     cliente.save()
     return redirect('client_list')
 
@@ -522,7 +530,6 @@ def generate_proforma_pdf(request, id):
 def reportes(request):
     return render(request, 'core/reportes.html')
 
-
 # PROVEEDOR
 class SupplierListView(ListView):
     model = Supplier
@@ -549,6 +556,7 @@ def supplier_create(request):
         form = SupplierForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Proveedor creado correctamente.')
             return redirect('supplier_list')
     else:
         form = SupplierForm()
@@ -562,6 +570,7 @@ def supplier_update(request, pk):
         form = SupplierForm(request.POST, instance=supplier)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Proveedor actualizado correctamente.')
             return redirect('supplier_list')
     else:
         form = SupplierForm(instance=supplier)
@@ -593,6 +602,7 @@ def brand_create(request):
         form = BrandForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Marca creada correctamente.')
             return redirect('brand_list')
     else:
         form = BrandForm()
@@ -606,6 +616,7 @@ def brand_update(request, pk):
         form = BrandForm(request.POST, instance=brand)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Marca actualizada correctamente.')
             return redirect('brand_list')
     else:
         form = BrandForm(instance=brand)
@@ -615,8 +626,10 @@ def brand_status(request, pk):
     brand = Brand.objects.get(pk=pk)
     if brand.status:
         brand.status = False
+        messages.info(request, f'Marca {brand.name} desactivada correctamente.')
     else:
         brand.status = True
+        messages.success(request, f'Marca {brand.name} activada correctamente.')
     brand.save()
     return redirect('brand_list')
 
