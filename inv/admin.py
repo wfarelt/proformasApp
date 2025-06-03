@@ -16,7 +16,11 @@ admin.site.register(PurchaseDetail)
 
 # MOVIMIENTOS
 
-admin.site.register(Movement)
+class MovementAdmin(admin.ModelAdmin):
+    list_display = ('id', 'movement_type', 'date')
+    list_filter = ('movement_type', 'date')
+    search_fields = ('movement_type',)
+    
+admin.site.register(Movement, MovementAdmin)
 
 admin.site.register(MovementItem)
-

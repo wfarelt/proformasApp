@@ -7,7 +7,18 @@
 <div class="card">
     <div class="card-header">
         <h1>{{ title }}</h1>
-        <a href="{% url 'create_purchase' %}" class="btn btn-default"><i class="fa fa-plus"></i> Crear Compra</a>
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <a href="{% url 'create_purchase' %}" class="btn btn-default mb-2"><i class="fa fa-plus"></i> Crear Compra</a>
+            <form method="get" class="form-inline mb-2">
+                <select name="tipo_busqueda" class="form-control mr-2">
+                    <option value="id" {% if request.GET.tipo_busqueda == "id" %}selected{% endif %}>ID</option>
+                    <option value="proveedor" {% if request.GET.tipo_busqueda == "proveedor" %}selected{% endif %}>Proveedor</option>
+                </select>
+                <input type="text" name="q" id="search-field" class="form-control mr-2"
+                    placeholder="Buscar..." value="{{ request.GET.q }}">
+                <button type="submit" class="btn btn-primary">Buscar</button>
+            </form>
+        </div>
     </div>
     <div class="card-body">
         <table class="table table-sm table-bordered table-striped table-hover">

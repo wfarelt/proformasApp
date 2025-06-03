@@ -133,8 +133,15 @@ def proforma_report(request):
 
 @login_required
 def purchase_list(request):
-    purchases = Purchase.objects.all().order_by('-status','-id', '-date')
-    paginator = Paginator(purchases, 10)  # 10 movimientos por página
+    query = request.GET.get('q')
+    tipo = request.GET.get('tipo_busqueda', 'id')
+    purchases = Purchase.objects.all().order_by('-status', '-id', '-date')
+    if query:
+        if tipo == 'id':
+            purchases = purchases.filter(id__icontains=query)
+        elif tipo == 'proveedor':
+            purchases = purchases.filter(supplier__name__icontains=query)
+    paginator = Paginator(purchases, 10)
     page_number = request.GET.get('page')
     purchases = paginator.get_page(page_number)
     context = {
@@ -142,7 +149,7 @@ def purchase_list(request):
         'title': 'Lista de Compras',
         'subtitle': 'Lista de compras registradas',
         'icon': 'fa-shopping-cart',
-    }   
+    }
     return render(request, 'inv/purchase/purchase_list.html', context)
 
 def create_purchase(request):
