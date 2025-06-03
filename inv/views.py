@@ -135,7 +135,7 @@ def proforma_report(request):
 def purchase_list(request):
     query = request.GET.get('q')
     tipo = request.GET.get('tipo_busqueda', 'id')
-    purchases = Purchase.objects.all().order_by('-status', '-id', '-date')
+    purchases = Purchase.objects.all().order_by('-id', '-date', 'status')
     if query:
         if tipo == 'id':
             purchases = purchases.filter(id__icontains=query)
@@ -259,6 +259,30 @@ def update_purchase(request, pk):
         'details': details_with_subtotals,
     })
 
+def revert_purchase_movement(purchase):
+    # Solo si la compra tiene un movimiento de ingreso
+    if hasattr(purchase, 'movement'):
+        movement_in = purchase.movement
+        # Crear movimiento de egreso
+        movement_out = Movement.objects.create(
+            movement_type='OUT',
+            content_type=ContentType.objects.get_for_model(purchase),
+            object_id=purchase.id,
+            user=purchase.user,
+            description=f"Egreso por anulación de compra #{purchase.id}"
+        )
+        for item in movement_in.items.all():
+            MovementItem.objects.create(
+                movement=movement_out,
+                product=item.product,
+                quantity=item.quantity  # misma cantidad que el ingreso
+            )
+            # Actualizar stock
+            item.product.stock -= item.quantity
+            item.product.save()
+        return movement_out
+    return None
+
 # No se puede eliminar una compra, solo se puede anular
 @login_required
 def cancelled_purchase(request, pk):
@@ -266,7 +290,8 @@ def cancelled_purchase(request, pk):
     if request.method == 'POST':
         purchase.status = 'cancelled'
         purchase.save()
-        messages.success(request, "Compra anulada correctamente.")
+        revert_purchase_movement(purchase)
+        messages.success(request, "Compra anulada y stock revertido correctamente.")
         return redirect('purchase_list')
     return render(request, 'inv/purchase/cancelled_purchase.html', {
         'purchase': purchase,

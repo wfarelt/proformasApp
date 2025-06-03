@@ -26,8 +26,18 @@ class Purchase(models.Model):
     class Meta:
         verbose_name = 'Purchase'
         verbose_name_plural = 'Purchases'
-        # Ordenar por estado
-        ordering = ['status', 'date'] 
+        # Ordenar por id
+        ordering = ['-id']
+        
+    @property
+    def movement(self):
+        from .models import Movement  # Importación local para evitar ciclos
+        ct = ContentType.objects.get_for_model(Purchase)
+        return Movement.objects.filter(
+            content_type=ct,
+            object_id=self.id,
+            movement_type='IN'
+        ).first()
            
 class PurchaseDetail(models.Model):
     purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, related_name='details')
