@@ -1,0 +1,41 @@
+<!-- cargar_inventario.html -->
+{% extends 'core/index.html' %}
+
+{% block content %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h4>Cargar Inventario Inicial</h4>
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary">Cargar inventario</button>
+        </form>
+        <hr>
+        <p>Puedes subir un archivo <b>Excel (.xlsx)</b> con las columnas: <b>product_code, quantity, cost, precio, location</b></p>
+        <pre>
+            <table class="table table-bordered table-sm w-auto">
+                <thead>
+                    <tr>
+                        <th>product_code</th>
+                        <th>quantity</th>
+                        <th>cost</th>
+                        <th>precio</th>
+                        <th>location</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1R0750</td>
+                        <td>1</td>
+                        <td>10</td>
+                        <td>16</td>
+                        <td>a-1</td>
+                    </tr>
+                </tbody>
+            </table>
+        </pre>
+    </div>
+</div>
+{% endblock %}

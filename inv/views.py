@@ -17,6 +17,12 @@ from .forms import  PurchaseForm, PurchaseDetailFormSet, MovementForm, MovementI
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 
+# InventoryUploadForm
+import io
+import csv
+import openpyxl
+from .forms import InventoryUploadForm
+
 # INGRESOS
 
 @login_required       
@@ -439,8 +445,66 @@ def create_movement(request):
         'formset': formset,
     })
 
-        
+@login_required
+def cargar_inventario_inicial(request):
+    if request.method == 'POST':
+        form = InventoryUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            archivo = form.cleaned_data['archivo']
+            nombre_archivo = archivo.name.lower()
+            errores = []
+            items_a_crear = []
+            # Solo aceptar archivos .xlsx
+            if nombre_archivo.endswith('.xlsx'):
+                import openpyxl
+                wb = openpyxl.load_workbook(archivo)
+                ws = wb.active
+                for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+                    product_code = row[0]
+                    quantity = row[1]
+                    cost = row[2] if len(row) > 2 else None
+                    precio = row[3] if len(row) > 3 else None
+                    location = row[4] if len(row) > 4 else None
+                    try:
+                        producto_id = Producto.objects.filter(nombre=product_code).values_list('id', flat=True).first()
+                        producto = Producto.objects.get(id=producto_id)
+                        items_a_crear.append((producto, quantity, cost, precio, location))
+                    except Producto.DoesNotExist:
+                        errores.append(f"Línea {i}: Producto con código '{product_code}' no existe.")
+            else:
+                errores.append("Solo se permiten archivos Excel (.xlsx).")
 
-        
-        
-       
+            if errores:
+                from django.contrib import messages
+                for error in errores:
+                    messages.error(request, error)
+                return render(request, 'inv/movement/cargar_inventario.html', {'form': form})
+
+            # Si no hubo errores, ahora sí crea el movimiento y los items
+            movimiento = Movement.objects.create(
+                movement_type='IN',
+                description='Inventario inicial',
+                user=request.user
+            )
+            for producto, quantity, cost, precio, location in items_a_crear:
+                MovementItem.objects.create(
+                    movement=movimiento,
+                    product=producto,
+                    quantity=int(quantity)
+                )
+                # Actualizar stock del producto
+                producto.stock = (producto.stock or 0) + int(quantity)
+                # Actualizar cost y precio si vienen en el archivo
+                if cost is not None:
+                    producto.cost = cost
+                if precio is not None:
+                    producto.precio = precio
+                if location is not None:
+                    producto.location = location
+                producto.save()
+            from django.contrib import messages
+            messages.success(request, "Inventario inicial cargado correctamente.")
+            return redirect('movement_detail', movimiento.id)
+    else:
+        form = InventoryUploadForm()
+    return render(request, 'inv/movement/cargar_inventario.html', {'form': form})

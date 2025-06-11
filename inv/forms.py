@@ -105,6 +105,13 @@ MovementItemFormSet = inlineformset_factory(
     MovementItem,
     form=MovementItemForm,
     fields=('product', 'quantity'),
-    extra=1,
+    extra=5,
     can_delete=True
 )
+
+class InventoryUploadForm(forms.Form):
+    archivo = forms.FileField(label='Archivo XLSX')
+
+            
+            
+            

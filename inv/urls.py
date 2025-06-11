@@ -29,6 +29,7 @@ urlpatterns = [
     #movimiento_detail
     path('movimientos/<int:pk>/detalle', movement_detail, name='movement_detail'),
     path('movimientos/nuevo/', create_movement, name='create_movement'),
+    path('inventario/cargar/', cargar_inventario_inicial, name='cargar_inventario_inicial'),
     
 ]
 
