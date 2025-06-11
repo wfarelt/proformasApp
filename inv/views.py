@@ -331,9 +331,10 @@ def create_purchase_movement(purchase):
     if purchase.status != 'confirmed':
         return None  # Solo crea movimiento si está confirmado
 
-    # Verificar si ya se creó un movimiento para evitar duplicados
-    if hasattr(purchase, 'movement'):
-        return purchase.movement
+    # Verificar si ya se creó un movimiento para evitar duplicados y enviar mensaje de error
+    if hasattr(purchase, 'movement') and purchase.movement:
+        messages.error("Ya se ha creado un movimiento para esta compra.")
+        return None
 
     movement = Movement.objects.create(
         movement_type='IN',
