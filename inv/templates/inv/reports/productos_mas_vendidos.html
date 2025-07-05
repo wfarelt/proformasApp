@@ -26,28 +26,39 @@
     </div>
     <!-- /.card-header -->
     <div class="card-body">
-      <table class="table table-bordered table-sm">
-        <thead>
-          <tr>
-            <th style="width: 10px">#</th>
-            <th>Código</th>
-            <th>Producto</th>
-            <th style="width: 40px">Cantidad</th>
-          </tr>
-        </thead>
-        <tbody>
-            {% for producto in productos %}
+      <div class="table table-responsive">
+        <table class="table table-bordered table-sm">
+          <thead>
             <tr>
-                <td>{{ forloop.counter }}</td>
-                <td>{{ producto.producto__nombre }}</td>
-                <td>
-                    {{ producto.producto__descripcion }}
-                </td>
-                <td><span class="badge bg-danger">{{ producto.total_vendido }}</span></td>
-              </tr>
-            {% endfor %}
-        </tbody>
-      </table>
+              <th style="width: 10px">#</th>
+              <th>Código</th>
+              <th>Producto</th>
+              <th>Stock Actual</th>
+              <th>Cantidad Vendida</th>
+            </tr>
+          </thead>
+          <tbody>
+              {% for producto in productos %}
+              <tr>
+                  <td>{{ forloop.counter }}</td>
+                  <td>{{ producto.producto__nombre }}</td>
+                  <td>
+                      {{ producto.producto__descripcion }}
+                  </td>
+                  <td class="text-center">
+                      {% if producto.producto__stock > 0 %}
+                          <span class="badge bg-success">{{ producto.producto__stock }}</span>
+                      {% else %}
+                          <span class="badge bg-danger">Sin Stock</span>
+                      {% endif %}
+                  </td>
+                  <td class="text-center"><span class="badge">{{ producto.total_vendido }}</span></td>
+                </tr>
+              {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
     </div>
     <!-- /.card-body -->
     <div class="card-footer clearfix">

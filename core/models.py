@@ -190,7 +190,7 @@ def productos_mas_vendidos(dias=15):
     productos = (
         Detalle.objects
         .filter(proforma__estado="EJECUTADO", proforma__fecha__gte=fecha_limite)  # Filtrar por fecha
-        .values("producto__nombre", "producto__descripcion")
+        .values("producto__nombre", "producto__descripcion", "producto__stock")
         .annotate(total_vendido=Sum("cantidad"))
         .order_by("-total_vendido")
     )
