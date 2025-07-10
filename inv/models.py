@@ -79,19 +79,26 @@ class Movement(models.Model):
     def __str__(self):
         return f"{self.movement_type} #{self.id} - {self.status}"
     
+    @property
     def total(self):
-        total = 0
-        for item in self.items.all():
-            total += item.subtotal()
-        return total
+        return sum(item.subtotal for item in self.items.all())  # ✅ usamos la propiedad
 
 class MovementItem(models.Model):
     movement = models.ForeignKey(Movement, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Producto, on_delete=models.CASCADE)
-    quantity = models.IntegerField()  # positiva o negativa según tipo
+    quantity = models.IntegerField()
+
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    stock_after_movement = models.IntegerField(null=True, blank=True)
+    observation = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.product.nombre} ({self.quantity})"
-    
+
+    @property
     def subtotal(self):
-        return self.product.cost * self.quantity
+        price = self.unit_price or self.product.cost
+        return price * self.quantity
+
+    
+    

@@ -81,23 +81,19 @@ class MovementItemForm(forms.ModelForm):
     class Meta:
         model = MovementItem
         fields = ['product', 'quantity']
-        
         widgets = {
-            'product': forms.Select(attrs={'class': 'form-control select2'}),
+            'product': forms.Select(attrs={'class': 'form-control select2'}),  # ya estás usando select2
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'placeholder': 'Cantidad'}),
-            
         }
-        
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
-        # Si hay instancia existente, usa su producto
-        if self.instance.pk and self.instance.product:
+
+        # ⚠️ Evita precargar todos los productos
+        if self.instance and self.instance.pk:
             self.fields['product'].queryset = Product.objects.filter(pk=self.instance.product.pk)
-        
         else:
-            # Si no hay instancia, muestra todos los productos
-            self.fields['product'].queryset = Product.objects.all()
+            self.fields['product'].queryset = Product.objects.none()
 
 
 MovementItemFormSet = inlineformset_factory(

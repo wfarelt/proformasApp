@@ -30,6 +30,8 @@ urlpatterns = [
     path('movimientos/<int:pk>/detalle', movement_detail, name='movement_detail'),
     path('movimientos/nuevo/', create_movement, name='create_movement'),
     path('inventario/cargar/', cargar_inventario_inicial, name='cargar_inventario_inicial'),
+    path('api/producto/<int:id>/', get_producto, name='get_producto'),
+    path('movimientos/<int:pk>/pdf/', movement_pdf, name='movement_pdf'),
     
 ]
 

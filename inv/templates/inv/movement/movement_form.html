@@ -1,12 +1,10 @@
 {% extends 'core/index.html' %}
 
-{% block title %}{{title}}{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 {% load static %}
 {% block style %}
-
 <link rel="stylesheet" href="{% static 'plugins/select2/css/select2.min.css' %}">
 <link rel="stylesheet" href="{% static 'plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css' %}">
-
 {% endblock %}
 
 {% block content %}
@@ -24,9 +22,7 @@
                             <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                             {{ field }}
                             {% if field.errors %}
-                                <div class="text-danger small">
-                                    {{ field.errors }}
-                                </div>
+                                <div class="text-danger small">{{ field.errors }}</div>
                             {% endif %}
                         </div>
                     </div>
@@ -54,24 +50,16 @@
                     </thead>
                     <tbody>
                         {% for form in formset %}
-                        {{ form.id }}  <!-- Campo oculto con el ID del objeto (importante) -->
+                        {{ form.id }}
                         <tr>
                             <td>{{ form.product }}</td>
                             <td>{{ form.quantity }}</td>
-                            <td>{{ form.unit_price }}</td>
-                            <td class="subtotal text-right">
-                                {% if form.instance.pk %}
-                                    {{ form.instance.subtotal|floatformat:2 }}
-                                {% else %}
-                                    0.00
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                {{ form.DELETE }}
-                            </td>
+                            <td class="unit-price text-right">0.00</td>
+                            <td class="subtotal text-right">0.00</td>
+                            <td class="text-center">{{ form.DELETE }}</td>
                         </tr>
                         {% empty %}
-                        <tr><td colspan="4">No hay productos en el detalle.</td></tr>
+                        <tr><td colspan="5">No hay productos en el detalle.</td></tr>
                         {% endfor %}
                     </tbody>
                     <tfoot>
@@ -91,58 +79,80 @@
             </div>
         </div>
     </div>
-
-    
-    
 </form>
-
-
-
 {% endblock %}
 
 {% block scripts %}
 <script src="{% static 'plugins/select2/js/select2.min.js' %}"></script>
 
 <script>
-    $(document).ready(function() {
+    $(document).ready(function () {
         $('.select2').select2({
             placeholder: "Seleccione un producto",
             allowClear: true,
-            language: "es",  // 🔹 Usa el idioma español
+            language: "es",
             minimumInputLength: 1,
             width: '100%',
             theme: 'bootstrap4',
             ajax: {
-                url: '/inv/api/productos/',  // URL de tu API en Django
+                url: '/inv/api/productos/',
                 dataType: 'json',
-                delay: 250,  // Retraso para evitar demasiadas peticiones al servidor
+                delay: 250,
                 data: function (params) {
                     return {
-                        q: params.term,  // El usuario escribe en el input
-                        page: params.page || 1  // Soporte para paginación
+                        q: params.term,
+                        page: params.page || 1
                     };
                 },
                 processResults: function (data, params) {
-                    params.page = params.page || 1;
                     return {
-                        results: data.results.map(item => ({
-                            id: item.id,
-                            text: item.nombre
-                        })),
-                        pagination: {
-                            more: data.has_next // Indica si hay más páginas
-                        }
+                        results: data.results.map(item => ({ id: item.id, text: item.nombre })),
+                        pagination: { more: data.has_next }
                     };
                 },
                 cache: true
-            },
-            minimumInputLength: 1,  // Buscar después de 1 carácter
-            width: '100%'
+            }
         });
 
         $(document).on('select2:open', () => {
             document.querySelector('.select2-container--open .select2-search__field').focus();
         });
+
+        function updateSubtotals() {
+            let totalGeneral = 0;
+            $('table tbody tr').each(function () {
+                const row = $(this);
+                const productSelect = row.find('select');
+                const quantityInput = row.find('input[name$="quantity"]');
+                const unitPriceCell = row.find('.unit-price');
+                const subtotalCell = row.find('.subtotal');
+
+                const productId = productSelect.val();
+                const quantity = parseFloat(quantityInput.val()) || 0;
+
+                if (productId && quantity > 0) {
+                    $.get(`/inv/api/producto/${productId}/`, function (data) {
+                        const cost = parseFloat(data.cost) || 0;
+                        const subtotal = cost * quantity;
+
+                        unitPriceCell.text(cost.toFixed(2));
+                        subtotalCell.text(subtotal.toFixed(2));
+
+                        // Sumar al total general
+                        totalGeneral += subtotal;
+
+                        // Actualizar total al final
+                        $('.total').text(totalGeneral.toFixed(2));
+                    });
+                } else {
+                    unitPriceCell.text("0.00");
+                    subtotalCell.text("0.00");
+                }
+            });
+        }
+
+        $(document).on('change', 'select, input[name$="quantity"]', updateSubtotals);
+        updateSubtotals();
     });
 </script>
 {% endblock %}

@@ -16,7 +16,7 @@
 {% block rows %}                       
 <td>{{ obj.id }}</td>
 <td>{{ obj.nombre }}</td>
-<td>{{ obj.descripcion }}</td>
+<td>{{ obj.descripcion|truncatechars:45 }}</td>
 <td>{{ obj.brand.initials }}</td>
 <td class="text-right">{{ obj.cost }}</td>
 <td class="text-right">{{ obj.precio }}</td>

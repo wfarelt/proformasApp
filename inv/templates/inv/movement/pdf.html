@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: sans-serif; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #333; padding: 5px; text-align: left; }
+        th { background: #eee; }
+        h2 { text-align: center; }
+        .centro { text-align: center; }
+        .derecha { text-align: right; }
+        .izquierda { text-align: left; }
+    </style>
+</head>
+<body>
+    <h2>Detalle del Movimiento #{{ movement.id }}</h2>
+    <p><strong>Tipo:</strong> {{ movement.get_movement_type_display }}</p>
+    <p><strong>Fecha:</strong> {{ movement.date|date:"d/m/Y" }}</p>
+    <p><strong>Descripción:</strong> {{ movement.description }}</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Código</th>
+                <th>Descripción</th>
+                <th>Cantidad</th>
+                <th>Costo Unitario</th>
+                <th>Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ item.product.nombre }}</td>
+                <td>{{ item.product.descripcion }}</td>
+                <td class="centro">{{ item.quantity }}</td>
+                <td class="derecha">{{ item.unit_price|default:item.product.cost }}</td>
+                <td class="derecha">{{ item.subtotal|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h4 style="text-align: right;">Total: $ {{ movement.total|floatformat:2 }}</h4>
+</body>
+</html>

@@ -10,7 +10,7 @@ from django.db.models import Q
 from datetime import datetime
 from django.utils.timezone import make_aware
 
-from core.models import Producto, Detalle, productos_mas_vendidos, Proforma
+from core.models import Producto, Detalle, Proforma
 from .models import Producto, Purchase, PurchaseDetail, Movement, MovementItem
 from .forms import  PurchaseForm, PurchaseDetailFormSet, MovementForm, MovementItemFormSet
 
@@ -22,6 +22,17 @@ import io
 import csv
 import openpyxl
 from .forms import InventoryUploadForm
+
+from django.utils.timezone import now
+from datetime import timedelta
+from django.db.models import Sum
+
+from django.http import JsonResponse
+
+from django.template.loader import render_to_string
+from django.http import HttpResponse
+from weasyprint import HTML
+from io import BytesIO
 
 # INGRESOS
 
@@ -134,6 +145,17 @@ def proforma_report(request):
         'title': 'Reporte de Proformas',
     }
     return render(request, 'inv/reports/proforma_report.html', context)
+
+def productos_mas_vendidos(dias=15):
+    fecha_limite = now() - timedelta(days=dias)  # Calcular la fecha desde donde filtrar
+    productos = (
+        Detalle.objects
+        .filter(proforma__estado="EJECUTADO", proforma__fecha__gte=fecha_limite)  # Filtrar por fecha
+        .values("producto__nombre", "producto__descripcion", "producto__stock")
+        .annotate(total_vendido=Sum("cantidad"))
+        .order_by("-total_vendido")
+    )
+    return productos
 
 # COMPRAS
 
@@ -406,32 +428,47 @@ def movement_detail(request, pk):
     
 def create_movement(request):
     if request.method == 'POST':
-        # Procesar el formulario de movimiento
         form = MovementForm(request.POST)
         formset = MovementItemFormSet(request.POST)
-        
+
         if form.is_valid() and formset.is_valid():
             with transaction.atomic():
-                # Crear el movimiento sin guardar aún
                 movement = form.save(commit=False)
                 movement.user = request.user
                 movement.date = now()
                 movement.save()
 
-                # Guardar detalles del movimiento
                 formset.instance = movement
-                formset.save()
+                items = formset.save(commit=False)
 
-                # Actualizar stock de los productos
-                for item in formset:
-                    if item.cleaned_data and not item.cleaned_data.get('DELETE', False):
-                        product = item.cleaned_data.get('product')
-                        quantity = item.cleaned_data.get('quantity')
+                for item_form in formset:
+                    if item_form.cleaned_data and not item_form.cleaned_data.get('DELETE', False):
+                        product = item_form.cleaned_data.get('product')
+                        quantity = item_form.cleaned_data.get('quantity')
+
+                        # Calcular unit_price y subtotal
+                        unit_price = product.cost
+                        subtotal = unit_price * quantity
+
+                        # Stock antes del movimiento
+                        previous_stock = product.stock
+
+                        # Actualizar stock del producto
                         if movement.movement_type == 'IN':
                             product.stock += quantity
                         else:
                             product.stock -= quantity
                         product.save()
+
+                        # Completar los datos del MovementItem
+                        item = item_form.save(commit=False)
+                        item.unit_price = unit_price
+                        item.subtotal = subtotal
+                        item.stock_after_movement = product.stock
+                        item.save()
+
+                # Guardar eliminados (si se usó `can_delete`)
+                formset.save_m2m()
 
                 messages.success(request, "Movimiento registrado correctamente.")
                 return redirect('movement_list')
@@ -440,11 +477,36 @@ def create_movement(request):
     else:
         form = MovementForm()
         formset = MovementItemFormSet(queryset=MovementItem.objects.none())
-        
+
     return render(request, 'inv/movement/movement_form.html', {
         'form': form,
         'formset': formset,
     })
+
+def get_producto(request, id):
+    producto = Producto.objects.get(pk=id)
+    return JsonResponse({
+        'id': producto.id,
+        'nombre': producto.nombre,
+        'cost': float(producto.cost)
+    })
+
+def movement_pdf(request, pk):
+    movement = get_object_or_404(Movement, pk=pk)
+    html_string = render_to_string('inv/movement/pdf.html', {
+        'movement': movement,
+        'items': movement.items.all()
+    })
+
+    html = HTML(string=html_string, base_url=request.build_absolute_uri())
+    pdf_file = BytesIO()
+    html.write_pdf(pdf_file)
+    pdf_file.seek(0)
+
+    response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'filename=movement_{movement.id}.pdf'
+
+    return response
 
 @login_required
 def cargar_inventario_inicial(request):
