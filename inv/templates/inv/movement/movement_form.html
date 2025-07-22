@@ -8,78 +8,56 @@
 {% endblock %}
 
 {% block content %}
-<form method="post" action="{% url 'create_movement' %}">
+<div class="card p-4">
     {% csrf_token %}
-    <div class="card card-dark">
-        <div class="card-header">
-            <h3 class="card-title">Datos del movimiento</h3>
+    <form id="movement-form">
+        <div class="form-group">
+            <label for="movement_type">Tipo de Movimiento</label>
+            <select name="movement_type" class="form-control" required>
+            <option value="">-- Seleccione --</option>
+            <option value="IN">Ingreso</option>
+            <option value="OUT">Egreso</option>
+            </select>
         </div>
-        <div class="card-body">
-            <div class="row">
-                {% for field in form %}
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                            {{ field }}
-                            {% if field.errors %}
-                                <div class="text-danger small">{{ field.errors }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
 
-    <div class="card">
-        <div class="card-header">
-            <h4>Detalle de Productos</h4>
-            {{ formset.management_form }}
+        <div class="form-group">
+            <label for="description">Descripción</label>
+            <textarea name="description" class="form-control" required></textarea>
         </div>
-        <div class="card-body">
-            <div class="table">
-                <table class="table table-bordered table-striped table-sm">
-                    <thead class="thead-dark">
-                        <tr>
-                            <th>Producto</th>
-                            <th>Cantidad</th>
-                            <th class="text-right">Precio Unitario</th>
-                            <th class="text-right">Subtotal</th>
-                            <th class="text-center"><i class="fas fa-trash"></i></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for form in formset %}
-                        {{ form.id }}
-                        <tr>
-                            <td>{{ form.product }}</td>
-                            <td>{{ form.quantity }}</td>
-                            <td class="unit-price text-right">0.00</td>
-                            <td class="subtotal text-right">0.00</td>
-                            <td class="text-center">{{ form.DELETE }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="5">No hay productos en el detalle.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="3" class="text-right"><strong>Total:</strong></td>
-                            <td class="total text-right">0.00</td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
+
+        <hr>
+
+        <h5>Productos</h5>
+        <div class="table table-responsive">
+          <table class="table table-bordered" id="items-table">
+            <thead>
+              <tr>
+                  <th >Producto</th>
+                  <th style="width: 150px;">Cantidad</th>
+                  <th>Precio Unitario</th>
+                  <th>Subtotal</th>
+                  <th>Obs.</th>
+                  <th><button type="button" class="btn btn-success btn-sm" id="add-item">+</button></th>
+              </tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot>
+              <tr>
+                  <th colspan="3" class="text-right">Total:</th>
+                  <th class="total">0.00</th>
+                  <th colspan="2"></th>
+              </tr>
+              </tfoot>
+          </table>
         </div>
-        <div class="card-footer">
-            <div class="form-group text-right">
-                <button type="submit" class="btn btn-primary">Guardar</button>
-                <a href="{% url 'movement_list' %}" class="btn btn-secondary">Cancelar</a>
-            </div>
-        </div>
-    </div>
-</form>
+        
+
+        <button type="submit" class="btn btn-primary">Guardar Movimiento</button>
+        <a href="{% url 'movement_list' %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -87,72 +65,150 @@
 
 <script>
     $(document).ready(function () {
-        $('.select2').select2({
-            placeholder: "Seleccione un producto",
-            allowClear: true,
-            language: "es",
-            minimumInputLength: 1,
-            width: '100%',
-            theme: 'bootstrap4',
-            ajax: {
-                url: '/inv/api/productos/',
-                dataType: 'json',
-                delay: 250,
-                data: function (params) {
-                    return {
-                        q: params.term,
-                        page: params.page || 1
-                    };
-                },
-                processResults: function (data, params) {
-                    return {
-                        results: data.results.map(item => ({ id: item.id, text: item.nombre })),
-                        pagination: { more: data.has_next }
-                    };
-                },
-                cache: true
-            }
-        });
-
-        $(document).on('select2:open', () => {
-            document.querySelector('.select2-container--open .select2-search__field').focus();
-        });
-
-        function updateSubtotals() {
-            let totalGeneral = 0;
-            $('table tbody tr').each(function () {
-                const row = $(this);
-                const productSelect = row.find('select');
-                const quantityInput = row.find('input[name$="quantity"]');
-                const unitPriceCell = row.find('.unit-price');
-                const subtotalCell = row.find('.subtotal');
-
-                const productId = productSelect.val();
-                const quantity = parseFloat(quantityInput.val()) || 0;
-
-                if (productId && quantity > 0) {
-                    $.get(`/inv/api/producto/${productId}/`, function (data) {
-                        const cost = parseFloat(data.cost) || 0;
-                        const subtotal = cost * quantity;
-
-                        unitPriceCell.text(cost.toFixed(2));
-                        subtotalCell.text(subtotal.toFixed(2));
-
-                        // Sumar al total general
-                        totalGeneral += subtotal;
-
-                        // Actualizar total al final
-                        $('.total').text(totalGeneral.toFixed(2));
-                    });
-                } else {
-                    unitPriceCell.text("0.00");
-                    subtotalCell.text("0.00");
-                }
-            });
+    function initSelect2(select) {
+      select.select2({
+        placeholder: "Seleccione un producto",
+        allowClear: true,
+        theme: "bootstrap4",
+        width: "100%",
+        ajax: {
+          url: '/inv/api/productos/',
+          dataType: 'json',
+          delay: 250,
+          data: params => ({ q: params.term }),
+          processResults: data => ({
+            results: data.results.map(p => ({ id: p.id, text: p.nombre }))
+          }),
+          cache: true
         }
+      });
+    }
 
-        $(document).on('change', 'select, input[name$="quantity"]', updateSubtotals);
-        updateSubtotals();
+    function updateSubtotals() {
+      let total = 0.0;
+      $('#items-table tbody tr').each(function () {
+        const row = $(this);
+        const productId = row.find('select').val();
+        const quantity = parseFloat(row.find('input[name="quantity"]').val()) || 0;
+        const unitPriceCell = row.find('.unit-price');
+        const subtotalCell = row.find('.subtotal');
+
+        if (productId && quantity > 0) {
+          $.get(`/inv/api/producto/${productId}/`, function (data) {
+            const price = parseFloat(data.cost || 0);
+            const subtotal = price * quantity;
+
+            unitPriceCell.text(price.toFixed(2));
+            subtotalCell.text(subtotal.toFixed(2));
+
+            total += subtotal;
+            $('.total').text(total.toFixed(2));
+          });
+        } else {
+          unitPriceCell.text("0.00");
+          subtotalCell.text("0.00");
+        }
+      });
+    }
+
+    $('#add-item').click(function () {
+      const row = $(`
+        <tr>
+          <td><select class="form-control select2" name="product_id" required></select></td>
+          <td><input type="number" min="1" name="quantity" class="form-control" value="1"></td>
+          <td class="unit-price">0.00</td>
+          <td class="subtotal">0.00</td>
+          <td><input type="text" name="observation" class="form-control"></td>
+          <td><button type="button" class="btn btn-danger btn-sm remove-item">x</button></td>
+        </tr>
+      `);
+
+    $('#items-table tbody').append(row);
+      const select = row.find('select');
+      initSelect2(select);
+
+      // ✅ Autoabrir el select2 para escribir inmediatamente
+      setTimeout(() => select.select2('open'), 100);
+      // Enforcar el input select2-search__field para seleccionar el producto
+      select.on('select2:open', function () {
+        setTimeout(() => {
+          document.querySelector('.select2-search__field').focus();
+        }, 100);
+      });
     });
+
+    $(document).on('click', '.remove-item', function () {
+      $(this).closest('tr').remove();
+      updateSubtotals();
+    });
+
+    $(document).on('change', 'select, input[name="quantity"]', updateSubtotals);
+
+    $('#movement-form').submit(function (e) {
+      e.preventDefault();
+
+      const movement = {
+        movement_type: $('select[name="movement_type"]').val(),
+        description: $('textarea[name="description"]').val(),
+        items: []
+      };
+
+      $('#items-table tbody tr').each(function () {
+        const row = $(this);
+        movement.items.push({
+          product_id: row.find('select').val(),
+          quantity: parseInt(row.find('input[name="quantity"]').val()),
+          observation: row.find('input[name="observation"]').val()
+        });
+      });
+
+      
+
+      console.log("JSON a enviar:", JSON.stringify(movement));
+
+
+      const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        fetch('/inv/movimientos/nuevo/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify(movement)
+        })
+        .then(response => response.json())
+        .then(data => {
+        if (data.redirect_url) {
+            window.location.href = data.redirect_url;
+        }
+        if (data.error) {
+            alert("❌ " + data.error);
+        } else {
+            alert("✅ Movimiento guardado: ID " + data.movement_id);
+            // Redireccionar o limpiar formulario aquí si deseas
+        }
+        })
+        .catch(error => {
+        console.error('Error de red:', error);
+        });
+
+      // Aquí podrías enviar vía fetch o AJAX
+      /*
+      $.ajax({
+        url: '/inv/movimientos/nuevo/',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(movement),
+        success: function (response) {
+          alert("Movimiento guardado correctamente");
+        },
+        error: function () {
+          alert("Error al guardar el movimiento");
+        }
+      });
+      */
+    });
+  });
 </script>
 {% endblock %}

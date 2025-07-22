@@ -571,3 +571,65 @@ def cargar_inventario_inicial(request):
     else:
         form = InventoryUploadForm()
     return render(request, 'inv/movement/cargar_inventario.html', {'form': form})
+
+import json
+from django.views import View
+from django.http import JsonResponse
+from django.db import transaction
+from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+from django.urls import reverse
+
+from .models import Movement, MovementItem, Producto
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(csrf_exempt, name='dispatch')  # ⚠️ solo si no usas CSRF token con JS
+class CreateMovementView(View):
+    def post(self, request, *args, **kwargs):
+        try:
+            data = json.loads(request.body)
+
+            with transaction.atomic():
+                # Crear movimiento principal
+                movement = Movement.objects.create(
+                    movement_type=data['movement_type'],
+                    description=data.get('description', ''),
+                    user=request.user,
+                    status='COMPLETED'
+                )
+
+                for item in data['items']:
+                    producto = Producto.objects.get(id=item['product_id'])
+                    cantidad = int(item['quantity'])
+
+                    # Validar stock si es egreso
+                    if movement.movement_type == 'OUT' and producto.stock < cantidad:
+                        raise ValueError(f"Stock insuficiente para el producto {producto.nombre}")
+
+                    # Crear ítem
+                    MovementItem.objects.create(
+                        movement=movement,
+                        product=producto,
+                        quantity=cantidad,
+                        unit_price=producto.cost,
+                        stock_after_movement=producto.stock + cantidad if movement.movement_type == 'IN' else producto.stock - cantidad,
+                        observation=item.get('observation', '')
+                    )
+
+                    # Actualizar stock
+                    producto.stock += cantidad if movement.movement_type == 'IN' else -cantidad
+                    producto.save()
+                    
+                    
+                # Retornar respuesta exitosa y direccionar a la lista de movimientos
+            return JsonResponse({'message': 'Movimiento guardado correctamente.', 'movement_id': movement.id, 'redirect_url': reverse('movement_list')}, status=201 )
+
+
+
+        except Producto.DoesNotExist:
+            return JsonResponse({'error': 'Producto no encontrado.'}, status=404)
+        except ValueError as ve:
+            return JsonResponse({'error': str(ve)}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': 'Ocurrió un error inesperado.', 'detalle': str(e)}, status=500)

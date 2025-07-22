@@ -28,6 +28,7 @@
                 <th>Cantidad</th>
                 <th>Costo Unitario</th>
                 <th>Subtotal</th>
+                <th>Ubicación</th>
             </tr>
         </thead>
         <tbody>
@@ -39,6 +40,7 @@
                 <td class="centro">{{ item.quantity }}</td>
                 <td class="derecha">{{ item.unit_price|default:item.product.cost }}</td>
                 <td class="derecha">{{ item.subtotal|floatformat:2 }}</td>
+                <td class="centro">{{ item.product.location|default:"No especificada" }}</td>
             </tr>
             {% endfor %}
         </tbody>

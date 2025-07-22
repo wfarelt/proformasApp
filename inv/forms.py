@@ -101,8 +101,7 @@ MovementItemFormSet = inlineformset_factory(
     MovementItem,
     form=MovementItemForm,
     fields=('product', 'quantity'),
-    extra=5,
-    can_delete=True
+    extra=1,
 )
 
 class InventoryUploadForm(forms.Form):
