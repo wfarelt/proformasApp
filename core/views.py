@@ -36,6 +36,8 @@ import json
 
 from django.utils.dateparse import parse_date
 
+from django.db.models import Q
+
 # Create your views here.
 
 # HOME
@@ -152,6 +154,7 @@ class ProformaListView(ListView):
                 qs = qs.filter(detalles__producto__nombre__icontains=query)
         return qs.distinct()
 
+@login_required(login_url='login')
 def proforma_new(request):
     query = request.GET.get('q')
     
@@ -166,7 +169,11 @@ def proforma_new(request):
     productos_list = Producto.objects.all()
         
     if query:
-        productos_list = productos_list.filter(nombre__icontains=query)
+        palabras = [p.strip() for p in query.split('%') if p.strip()]
+        for palabra in palabras:
+            productos_list = productos_list.filter(
+                Q(nombre__icontains=palabra) | Q(descripcion__icontains=palabra)
+            )
     
     paginator = Paginator(productos_list, 5)
     page_number = request.GET.get('page')
@@ -213,23 +220,29 @@ def proforma_add_client(request, id):
             
     return render(request, 'core/proforma/proforma_add_client.html', context)
 
+@login_required(login_url='login')
 def proforma_edit(request, id):
     proforma = Proforma.objects.get(id=id)
     detalles = Detalle.productos_list(proforma)
     productos_list = Producto.objects.all()
-        
-    if query := request.GET.get('q'):
-        productos_list = productos_list.filter(nombre__icontains=query)
-        paginator = Paginator(productos_list, 5)
-        page_number = request.GET.get('page')
-        page_obj = paginator.get_page(page_number)
-        context = {'proforma': proforma, 'productos_list': page_obj, 'detalles': detalles, 'page_obj': page_obj }
-    else:
-        paginator = Paginator(productos_list, 5)
-        page_number = request.GET.get('page')
-        page_obj = paginator.get_page(page_number)
-        context = {'proforma': proforma, 'productos_list': page_obj, 'detalles': detalles, 'page_obj': page_obj }
-        
+    
+    query = request.GET.get('q')
+    if query:
+        palabras = [p.strip() for p in query.split('%') if p.strip()]
+        for palabra in palabras:
+            productos_list = productos_list.filter(
+                Q(nombre__icontains=palabra) | Q(descripcion__icontains=palabra)
+            )
+    
+    paginator = Paginator(productos_list, 5)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    context = {
+        'proforma': proforma,
+        'productos_list': page_obj,
+        'detalles': detalles,
+        'page_obj': page_obj
+    }
     return render(request, 'core/proforma/proforma_new.html', context)
 
 def agregar_producto_a_detalle(request):

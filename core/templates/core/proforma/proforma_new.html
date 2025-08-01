@@ -71,9 +71,15 @@
     <!-- Busqueda de productos -->
     <div class="productos">
       <h2>PRODUCTOS</h2>
-      <form method="get">
-        <input type="text" name="q" id="search-field" placeholder="{{placeholder}}" value="{{ request.GET.q }}">
-        <button type="submit">Buscar</button>
+      <form method="get" class="mb-3">
+        <div class="input-group input-group-sm">
+          <input type="text" name="q" id="search-field" class="form-control" placeholder="{{placeholder}}" value="{{ request.GET.q }}">
+          <div class="input-group-append">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-search"></i> Buscar
+            </button>
+          </div>
+        </div>
       </form>
       <br>
       <table class="table table-bordered table-sm">
