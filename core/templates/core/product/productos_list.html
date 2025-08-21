@@ -5,8 +5,22 @@
 <th>Código</th>
 <th>Descripción</th>
 <th>Marca</th>
-<th class="text-right" style="width: 10%;">Costo ($)</th>
-<th class="text-right" style="width: 10%;">Precio ($)</th>
+<th class="text-right" style="width: 10%;">
+    Costo 
+    {% if user.company.currency == 'BOB' %}
+        (Bs)
+    {% elif user.company.currency == 'USD' %}
+        ($)
+    {% endif %}   
+</th>
+<th class="text-right" style="width: 10%;">
+    Precio 
+    {% if user.company.currency == 'BOB' %}
+        (Bs)
+    {% elif user.company.currency == 'USD' %}
+        ($)
+    {% endif %}
+</th>
 <th class="text-right">Stock</th>
 <th class="text-center">Ubicación</th>
 <th class="text-center" style="width: 10%;">Acciones</th>

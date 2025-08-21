@@ -78,18 +78,28 @@ class CustomPasswordChangeForm(PasswordChangeForm):
 class UserProfileForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ['name', 'email', 'company']
+        fields = ['name', 'email', 'company', 'profile_picture']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
             'company': forms.Select(attrs={'class': 'form-control'}),
+            'profile_picture': forms.ClearableFileInput(attrs={'class': 'form-control-file'}),
         }
         labels = {
             'name': 'Nombre',
             'email': 'Correo electrónico',
             'company': 'Empresa',
+            'profile_picture': 'Foto de perfil',
         }
-
+    
+    # Editar ClearableFileInput para los labes Change= Cambiar, Clear= Eliminar, y el checkbox
+    def __init__(self, *args, **kwargs):
+        super(UserProfileForm, self).__init__(*args, **kwargs)
+        self.fields['profile_picture'].widget.clear_checkbox_label = 'Eliminar'
+        self.fields['profile_picture'].widget.initial_text = 'Foto actual'
+        self.fields['profile_picture'].widget.input_text = 'Cambiar'
+          
+          
 # CREAR UN FORMULARIO PARA PRODUCTO
 class ProductoForm(forms.ModelForm):
     class Meta:

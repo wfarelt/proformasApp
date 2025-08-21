@@ -68,7 +68,7 @@ class CustomPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
 def edit_profile(request):
     user = request.user
     if request.method == 'POST':
-        form = UserProfileForm(request.POST, instance=user)
+        form = UserProfileForm(request.POST, request.FILES, instance=user)
         if form.is_valid():
             form.save()
             return redirect('home')  # Cambia por tu vista de perfil si la tienes
@@ -112,7 +112,7 @@ def product_edit(request, id):
         form = ProductoForm(instance=producto)
     return render(request, 'core/product/producto_new.html', {'form': form, 'title': title})
 
-class ProductListView(LoginRequiredMixin, ListView):
+class ProductListView(LoginRequiredMixin, ListView):   
     model = Producto
     template_name = 'core/product/productos_list.html'  # Nombre de la plantilla
     context_object_name = 'productos'

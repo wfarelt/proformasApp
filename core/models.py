@@ -9,6 +9,12 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseU
 
 # EMPRESA
 class Company(models.Model):
+    CURRENCY_CHOICES = [
+        ('BOB', 'Boliviano'),
+        ('USD', 'Dólar estadounidense'),
+        ('EUR', 'Euro'),
+        # Agrega más monedas si lo necesitas
+    ]
     name = models.CharField(max_length=255, unique=True)  # Nombre de la empresa
     logo = models.ImageField(upload_to='logos/', null=True, blank=True)  # Logo de la empresa
     tax_id = models.CharField(max_length=50, unique=True)  # Identificación fiscal (RUC, NIT, etc.)
@@ -19,6 +25,12 @@ class Company(models.Model):
     website = models.URLField(null=True, blank=True)  # Sitio web
     established_date = models.DateField(null=True, blank=True)  # Fecha de fundación
     industry = models.CharField(max_length=100, null=True, blank=True)  # Industria o sector
+    currency = models.CharField(
+        max_length=3,
+        choices=CURRENCY_CHOICES,
+        default='USD',
+        verbose_name='Moneda'
+    )  # Moneda predeterminada
     is_active = models.BooleanField(default=True)  # Estado activo/inactivo
     created_at = models.DateTimeField(auto_now_add=True)  # Fecha de creación
     updated_at = models.DateTimeField(auto_now=True)  # Última actualización
@@ -48,6 +60,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=255)
     company = models.ForeignKey(Company, on_delete=models.SET_NULL, null=True, blank=True)
+    profile_picture = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
     
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)  # Necesario para Django Admin
@@ -180,5 +193,3 @@ class Supplier(models.Model):
 
     def __str__(self):
         return self.name
-
-# REPORTES

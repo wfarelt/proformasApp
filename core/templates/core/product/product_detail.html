@@ -15,8 +15,20 @@
             </div>
             <div class="card-body">
                 <p class="mb-2"><strong>Descripción:</strong> {{ producto.descripcion|default:"Sin descripción" }}</p>
-                <p class="mb-2"><strong>Costo:</strong> <span class="badge badge-secondary">${{ producto.cost }}</span></p>
-                <p class="mb-2"><strong>Precio:</strong> <span class="badge badge-success">${{ producto.precio }}</span></p>
+                <p class="mb-2"><strong>Costo:</strong> <span class="badge badge-secondary">
+                    {% if user.company.currency == 'BOB' %}
+                        (Bs)
+                    {% elif user.company.currency == 'USD' %}
+                        ($)
+                    {% endif %}
+                    {{ producto.cost }}</span></p>
+                <p class="mb-2"><strong>Precio:</strong> <span class="badge badge-success">
+                    {% if user.company.currency == 'BOB' %}
+                        (Bs)
+                    {% elif user.company.currency == 'USD' %}
+                        ($)
+                    {% endif %}
+                    {{ producto.precio }}</span></p>
                 <p class="mb-2"><strong>Stock:</strong> <span class="badge badge-info">{{ producto.stock }}</span></p>
                 <p class="mb-2"><strong>Ubicación:</strong> {{ producto.location|default:"No especificada" }}</p>
             </div>
