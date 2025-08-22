@@ -321,21 +321,28 @@ def cambiar_estado_proforma(request, id):
         proforma.observacion = request.POST.get('observacion')
         proforma.save()
     if request.POST.get('estado') == 'EJECUTADO':
-        if proforma.cliente:    
+        if proforma.cliente:
             proforma.estado = 'EJECUTADO'
-            # Verificar si hay suficiente stock para cada producto
-            for detalle in Detalle.productos_list(proforma):
-                producto = Producto.objects.get(id=detalle.producto.id)
-                if producto.stock < detalle.cantidad:
+            from collections import defaultdict
+            cantidades_por_producto = defaultdict(int)
+            detalles = Detalle.productos_list(proforma)
+            for detalle in detalles:
+                cantidades_por_producto[detalle.producto.id] += detalle.cantidad
+
+            # Verificar stock agrupado
+            for producto_id, cantidad_total in cantidades_por_producto.items():
+                producto = Producto.objects.get(id=producto_id)
+                if producto.stock < cantidad_total:
                     messages.error(request, f'No hay suficiente stock para el producto "{producto.nombre}".')
                     return redirect('proforma_edit', id)
-            # Actualizar el stock de cada producto
-            for detalle in Detalle.productos_list(proforma):
-                producto = Producto.objects.get(id=detalle.producto.id)
-                producto.stock -= detalle.cantidad
+
+            # Descontar stock agrupado
+            for producto_id, cantidad_total in cantidades_por_producto.items():
+                producto = Producto.objects.get(id=producto_id)
+                producto.stock -= cantidad_total
                 producto.save()
 
-            # Crear el Movement para la venta (Egreso)
+            # Crear Movement (egreso)
             proforma_content_type = ContentType.objects.get_for_model(Proforma)
             movement = Movement.objects.create(
                 movement_type='OUT',
@@ -345,16 +352,14 @@ def cambiar_estado_proforma(request, id):
                 user=request.user,
             )
 
-            # Crear los MovementItems
-            for detalle in Detalle.productos_list(proforma):
-                producto = Producto.objects.get(id=detalle.producto.id)
+            # Crear MovementItems: uno por cada detalle de la proforma (sin agrupar)
+            for detalle in detalles:
                 MovementItem.objects.create(
                     movement=movement,
-                    product=producto,
+                    product=detalle.producto,
                     quantity=detalle.cantidad,
                 )
 
-            # Guardar la proforma
             messages.success(request, f'Proforma #{proforma.id} ejecutada correctamente.')
             proforma.save()
         else:

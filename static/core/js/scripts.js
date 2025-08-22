@@ -1,6 +1,18 @@
 // scripts.js
 
 document.addEventListener('DOMContentLoaded', function() {
+
+    // Mostrar mensajes de Django con Toastr
+    const messages = JSON.parse(document.getElementById("django-messages").textContent);
+    messages.forEach(msg => {
+        toastr.options = {
+            closeButton: true,
+            progressBar: true
+        };
+        toastr[msg.tags || "info"](msg.text);
+    });
+
+
     // Selecciona todos los inputs que pueden afectar el subtotal
     const inputs = document.querySelectorAll('input[type="number"]');
 

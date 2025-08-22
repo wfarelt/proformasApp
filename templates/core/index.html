@@ -354,16 +354,15 @@
 <!-- Toastr JS -->
 <script src="{% static 'plugins/toastr/toastr.min.js' %}"></script>
 
-<script>
-  {% if messages %}
-      {% for message in messages %}
-          toastr.options = {
-              "closeButton": true,
-              "progressBar": true,
-          };
-          toastr["{{ message.tags|default:'info' }}"]("{{ message|escapejs }}");
-      {% endfor %}
-  {% endif %}
+<!-- Custom JS -->
+<script src="{% static 'core/js/scripts.js' %}"></script>
+
+<script id="django-messages" type="application/json">
+  [
+    {% for message in messages %}
+      {"tags": "{{ message.tags|default:'info' }}", "text": "{{ message|escapejs }}"}{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ]
 </script>
 
 {% block scripts %}
