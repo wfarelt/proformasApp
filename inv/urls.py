@@ -16,6 +16,7 @@ urlpatterns = [
     path("api/productos/", buscar_productos, name="buscar_productos"),
     path("reporte/reporte-inventario/", reporte_inventario, name="reporte_inventario"),
     path('reportes/proformas/', proforma_report, name='proforma_report'),
+    path('pre-inventario/', pre_inventario, name='pre_inventario'),
     
     # COMPRAS
     path('compras/', purchase_list, name='purchase_list'),

@@ -633,3 +633,50 @@ class CreateMovementView(View):
             return JsonResponse({'error': str(ve)}, status=400)
         except Exception as e:
             return JsonResponse({'error': 'Ocurrió un error inesperado.', 'detalle': str(e)}, status=500)
+
+
+
+# PRE-INVENTARIO
+
+@login_required(login_url='login')
+def pre_inventario(request):
+    ubicacion = request.GET.get('ubicacion', '__all__')
+    query = request.GET.get('q', '')
+    con_stock = request.GET.get('con_stock') == 'on'
+
+    productos = Producto.objects.all()
+
+    # Filtro de ubicación
+    if ubicacion == "":
+        # Solo productos sin ubicación (location vacío o None)
+        productos = productos.filter(Q(location__exact="") | Q(location__isnull=True))
+    elif ubicacion != "__all__":
+        productos = productos.filter(location__iexact=ubicacion)
+    # Si es "__all__", no se filtra por ubicación
+
+    # Filtro de búsqueda
+    if query:
+        productos = productos.filter(
+            Q(nombre__icontains=query) | Q(descripcion__icontains=query)
+        )
+    # Filtro de stock
+    if con_stock:
+        productos = productos.filter(stock__gt=0)
+
+    # Lista de ubicaciones distintas (sin None ni vacío)
+    ubicaciones = Producto.objects.exclude(location__isnull=True).exclude(location__exact="").values_list('location', flat=True).distinct().order_by('location')
+
+    paginator = Paginator(productos, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'productos': page_obj,
+        'ubicaciones': ubicaciones,
+        'ubicacion_actual': ubicacion,
+        'query': query,
+        'con_stock': con_stock,
+        'title': 'Pre-inventario por ubicación',
+        'placeholder': 'Buscar por código o descripción'
+    }
+    return render(request, 'inv/reports/pre_inventario.html', context)

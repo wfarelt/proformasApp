@@ -257,6 +257,12 @@
                   <p>Reporte de ventas</p>
                 </a>
               </li>
+              <li class="nav-item">
+                <a href="{% url 'pre_inventario' %}" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Pre inventario</p>
+                </a>
+              </li>
             </ul>
           </li>      
           
@@ -332,7 +338,7 @@
 
 {% block footer %}
   <!-- Main Footer -->
-  <footer class="main-footer no-mostrar">
+  <footer class="main-footer no-mostrar no-print">
     <div class="text-center" style="background-color: rgba(0, 0, 0, 0.05)">
       © 2024 Copyright:
       <a class="text-orange" href="/">WFarel</a>
