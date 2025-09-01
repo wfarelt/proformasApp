@@ -98,7 +98,7 @@ def buscar_productos(request):
     productos_pagina = paginator.get_page(page)
 
     data = {
-        "results": [{"id": p.id, "nombre": p.nombre} for p in productos_pagina],
+        "results": [{"id": p.id, "nombre": p.nombre, "marca": p.brand.name } for p in productos_pagina],
         "has_next": productos_pagina.has_next()
     }
     return JsonResponse(data)

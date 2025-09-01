@@ -51,8 +51,22 @@
                                 <th>Código</th>
                                 <th>Producto</th>
                                 <th class="text-center">Cantidad</th>
-                                <th class="text-right">Precio($)</th>
-                                <th class="text-right">Subtotal($)</th>
+                                <th class="text-right">
+                                    Precio
+                                    {% if user.company.currency == 'BOB' %}
+                                        (Bs)
+                                    {% elif user.company.currency == 'USD' %}
+                                        ($)
+                                    {% endif %}
+                                </th>
+                                <th class="text-right">
+                                    Subtotal
+                                    {% if user.company.currency == 'BOB' %}
+                                        (Bs)
+                                    {% elif user.company.currency == 'USD' %}
+                                        ($)
+                                    {% endif %}
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -78,13 +92,20 @@
                                 <td></td>
                                 <td></td>
                                 <td class="text-right" >
-                                    Total: $ {{ proforma.total }}
+                                    Total: &nbsp;&nbsp;  {{ proforma.total }}
                                     <br>
-                                    Descuento: -$ {{ proforma.total_descuento|floatformat:2 }}
+                                    Descuento:&nbsp;&nbsp;&nbsp;&nbsp; -{{ proforma.total_descuento|floatformat:2 }}
                                     <br>
                                     ----
                                     <br>
-                                    <strong>Total_Neto: $ {{ proforma.total_neto|floatformat:2 }}</strong>                                    
+                                    <strong>
+                                        Total_Neto:
+                                        {% if user.company.currency == 'BOB' %}
+                                            (Bs)
+                                        {% elif user.company.currency == 'USD' %}
+                                            ($)
+                                        {% endif %} 
+                                        {{ proforma.total_neto|floatformat:2 }}</strong>                                    
                                 </td>
                             </tr>
                         </tbody>

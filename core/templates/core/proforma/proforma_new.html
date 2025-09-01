@@ -189,13 +189,25 @@
     <div class="total">
       <table class="table table-sm">
         <tr>
-          <td>Total: {{literal}}</td>
-          <td style="text-align: right;">$ {{ proforma.total }}<br>
-            -$ {{ proforma.total_descuento|floatformat:2 }} <br>
-            -------------<br>
-            $ <strong> {{ proforma.total_neto|floatformat:2 }}</strong> 
+          <td>Total: {{ literal }}</td>
+          <td style="text-align: right;">
+            {% if user.company.currency == 'BOB' %}
+               {{ proforma.total }}<br>
+              -{{ proforma.total_descuento|floatformat:2 }} <br>
+              -------------<br>
+              Bs <strong>{{ proforma.total_neto|floatformat:2 }}</strong>
+            {% elif user.company.currency == 'USD' %}
+              $ {{ proforma.total }}<br>
+              -$ {{ proforma.total_descuento|floatformat:2 }} <br>
+              -------------<br>
+              $ <strong>{{ proforma.total_neto|floatformat:2 }}</strong>
+            {% elif user.company.currency == 'EUR' %}
+              € {{ proforma.total }}<br>
+              -€ {{ proforma.total_descuento|floatformat:2 }} <br>
+              -------------<br>
+              € <strong>{{ proforma.total_neto|floatformat:2 }}</strong>
+            {% endif %}
           </td>
-          
         </tr>
       </table>
     </div>

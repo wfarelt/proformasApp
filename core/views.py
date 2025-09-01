@@ -128,7 +128,7 @@ class ProductListView(LoginRequiredMixin, ListView):
        
     def get_queryset(self):
         query = self.request.GET.get('q')
-        object_list = Producto.objects.all().order_by('nombre')
+        object_list = Producto.objects.all().order_by('id')
         if query:
             object_list = object_list.filter(nombre__icontains=query) | object_list.filter(descripcion__icontains=query)
         return object_list
@@ -526,7 +526,7 @@ def cliente_status(request, id):
 def numero_a_literal(numero):
     entero = int(numero)
     decimal = int((numero - entero) * 100)
-    return nl.Numero(entero).a_letras + ' con ' + str(decimal) + '/100 Dólares'
+    return nl.Numero(entero).a_letras + ' con ' + str(decimal) + '/100'
 
 # Generar proforma en PDF
 def generate_proforma_pdf(request, id):

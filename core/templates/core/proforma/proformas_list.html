@@ -32,9 +32,23 @@
                         <th>Vendedor</th>
                         <th>Cliente</th>
                         <th>Nombre</th>
-                        <th class="text-right">Total($)</th>
+                        <th class="text-right">
+                            Total
+                            {% if user.company.currency == 'BOB' %}
+                                (Bs)
+                            {% elif user.company.currency == 'USD' %}
+                                ($)
+                            {% endif %}
+                        </th>
                         <th style="width: 80px;"class="text-right">Desc.(%)</th>
-                        <th style="width: 80px;" class="text-right">TotalNeto($)</th>
+                        <th style="width: 80px;" class="text-right">
+                            Total
+                            {% if user.company.currency == 'BOB' %}
+                                (Bs)
+                            {% elif user.company.currency == 'USD' %}
+                                ($)
+                            {% endif %}
+                        </th>
                         <th>Estado</th>
                         <th style="width: 100px;" class="text-center">Opciones</th>
                         <th style="width: 100px;" class="text-center">PDF</th>

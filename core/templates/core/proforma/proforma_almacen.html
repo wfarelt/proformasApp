@@ -81,8 +81,26 @@
                 <th>Ubicación</th>
                 <th>Producto</th>
                 <th>Cantidad</th>
-                <th>Precio($)</th>
-                <th>Subtotal($)</th>
+                <th>
+                    Precio
+                    {% if company.currency == 'BOB' %}
+                        (Bs)
+                    {% elif company.currency == 'USD' %}
+                        ($)
+                    {% elif company.currency == 'EUR' %}
+                        (€)
+                    {% endif %}
+                </th>
+                <th>
+                    Subtotal
+                    {% if company.currency == 'BOB' %}
+                        (Bs)
+                    {% elif company.currency == 'USD' %}
+                        ($)
+                    {% elif company.currency == 'EUR' %}
+                        (€)
+                    {% endif %}
+                </th>
             </tr>
         </thead>
         <tbody>
@@ -102,17 +120,32 @@
 
     <table>
         <td class="sin-borde td-izquierda">
-            {{ total_literal }}
+             {{ total_literal }}
+            {% if company.currency == 'BOB' %}
+                Bs.-
+            {% elif company.currency == 'USD' %}
+                Dólares
+            {% elif company.currency == 'EUR' %}
+                Euros
+            {% endif %}
         </td>
         <td class="sin-borde td-derecha">
-            <strong>Total: $ </strong>{{ proforma.total }}<br>
-            <strong>Descuento: - $ </strong>{{ proforma.total_descuento|floatformat:2  }}<br>
-            ----- <br> 
-            <strong>Total Neto: $ </strong>{{ proforma.total_neto|floatformat:2 }}     
+            <strong>Total:
+                {% if company.currency == 'BOB' %}Bs{% elif company.currency == 'USD' %}${% elif company.currency == 'EUR' %}€{% endif %}
+            </strong> {{ proforma.total }}<br>
+            <strong>Descuento:
+                - {% if company.currency == 'BOB' %}Bs{% elif company.currency == 'USD' %}${% elif company.currency == 'EUR' %}€{% endif %}
+            </strong> {{ proforma.total_descuento|floatformat:2 }}<br>
+            ----- <br>
+            <strong>Total Neto:
+                {% if company.currency == 'BOB' %}Bs{% elif company.currency == 'USD' %}${% elif company.currency == 'EUR' %}€{% endif %}
+            </strong> {{ proforma.total_neto|floatformat:2 }}     
         </td>
 </table>
 
-<h3 class="h3-derecha">Bs.- {{ total_bs|floatformat:2 }}</h3>
+{% if company.currency != 'BOB' %}
+    <h3 id="dolarBoliviano" class="h3-derecha">Bs.- {{ total_bs|floatformat:2 }}</h3>
+{% endif %}
 
 <br>
 <table>
