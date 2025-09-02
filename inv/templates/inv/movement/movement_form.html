@@ -77,7 +77,7 @@
           delay: 250,
           data: params => ({ q: params.term }),
           processResults: data => ({
-            results: data.results.map(p => ({ id: p.id, text: p.nombre + ' | ' + p.marca })),
+            results: data.results.map(p => ({ id: p.id, text: p.nombre + ' | ' + p.description })),
           }),
           cache: true
         }
