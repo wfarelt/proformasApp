@@ -169,6 +169,8 @@ def purchase_list(request):
             purchases = purchases.filter(id__icontains=query)
         elif tipo == 'proveedor':
             purchases = purchases.filter(supplier__name__icontains=query)
+        elif tipo == 'factura':
+            purchases = purchases.filter(invoice_number__icontains=query)
     paginator = Paginator(purchases, 10)
     page_number = request.GET.get('page')
     purchases = paginator.get_page(page_number)
@@ -177,6 +179,8 @@ def purchase_list(request):
         'title': 'Lista de Compras',
         'subtitle': 'Lista de compras registradas',
         'icon': 'fa-shopping-cart',
+        'tipo_busqueda': tipo,  # Para mantener el select en el template
+        'q': query, # Para mantener el valor de búsqueda en el template
     }
     return render(request, 'inv/purchase/purchase_list.html', context)
 

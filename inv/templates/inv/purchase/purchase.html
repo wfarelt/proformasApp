@@ -13,14 +13,17 @@
                 <div class="col-md-6">
                     <strong>Fecha:</strong> {{ purchase.date|date:"d/m/Y" }} <br>
                     <strong>Proveedor:</strong> {{ purchase.supplier }} <br>
+                    <strong>Número de Factura:</strong> {{ purchase.invoice_number }} <br>
                 </div>
                 <div class="col-md-6">
                     <strong>Registrado por:</strong> {{ purchase.user.name }}  <br>  
                     <strong>Estado:</strong>
                     {% if purchase.status == 'confirmed' %}
-                    <span class="badge bg-success">Confirmado</span>
-                    {% else %}
-                    <span class="badge bg-secondary">Pendiente</span>
+                        <span class="badge bg-success">Confirmado</span>
+                    {% elif purchase.status == 'pending' %}
+                        <span class="badge bg-warning text-dark">Pendiente</span>
+                    {% elif purchase.status == 'cancelled' %}
+                        <span class="badge bg-danger">Cancelado</span>
                     {% endif %}
                 </div>
             </div>

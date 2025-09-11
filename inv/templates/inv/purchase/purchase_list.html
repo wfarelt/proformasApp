@@ -9,13 +9,13 @@
         <h1>{{ title }}</h1>
         <div class="d-flex justify-content-between align-items-center flex-wrap">
             <a href="{% url 'create_purchase' %}" class="btn btn-default mb-2"><i class="fa fa-plus"></i> Crear Compra</a>
-            <form method="get" class="form-inline mb-2">
+            <form method="get" class="form-inline mb-3">
                 <select name="tipo_busqueda" class="form-control mr-2">
-                    <option value="id" {% if request.GET.tipo_busqueda == "id" %}selected{% endif %}>ID</option>
-                    <option value="proveedor" {% if request.GET.tipo_busqueda == "proveedor" %}selected{% endif %}>Proveedor</option>
+                    <option value="id" {% if tipo_busqueda == 'id' %}selected{% endif %}>ID</option>
+                    <option value="proveedor" {% if tipo_busqueda == 'proveedor' %}selected{% endif %}>Proveedor</option>
+                    <option value="factura" {% if tipo_busqueda == 'factura' %}selected{% endif %}>Factura</option>
                 </select>
-                <input type="text" name="q" id="search-field" class="form-control mr-2"
-                    placeholder="Buscar..." value="{{ request.GET.q }}">
+                <input type="text" name="q" class="form-control mr-2" value="{{ q|default:'' }}" placeholder="Buscar...">
                 <button type="submit" class="btn btn-primary">Buscar</button>
             </form>
         </div>
