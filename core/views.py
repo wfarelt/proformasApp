@@ -130,7 +130,11 @@ class ProductListView(LoginRequiredMixin, ListView):
         query = self.request.GET.get('q')
         object_list = Producto.objects.all().order_by('id')
         if query:
-            object_list = object_list.filter(nombre__icontains=query) | object_list.filter(descripcion__icontains=query)
+            palabras = [p.strip() for p in query.split('%') if p.strip()]
+            for palabra in palabras:
+                object_list = object_list.filter(
+                    Q(nombre__icontains=palabra) | Q(descripcion__icontains=palabra)
+                )
         return object_list
 
 # PROFORMA

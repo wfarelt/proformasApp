@@ -78,15 +78,17 @@ class CustomPasswordChangeForm(PasswordChangeForm):
 class UserProfileForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ['name', 'email', 'company', 'profile_picture']
+        fields = ['username', 'name', 'email', 'company', 'profile_picture']
         widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control'}),
             'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'email': forms.EmailInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'company': forms.Select(attrs={'class': 'form-control'}),
             'profile_picture': forms.ClearableFileInput(attrs={'class': 'form-control-file'}),
         }
         labels = {
-            'name': 'Nombre',
+            'username': 'Usuario',
+            'name': 'Nombre completo',
             'email': 'Correo electrónico',
             'company': 'Empresa',
             'profile_picture': 'Foto de perfil',
