@@ -170,8 +170,8 @@
             <td style="text-align: right;">{{ detalle.subtotal }}</td>
             <td style="text-align: center;">{{ detalle.producto.location }}</td>
             <td>
-                <a href="{% url 'editar_cantidad_detalle' detalle.id %}" class="btn btn-warning btn-sm no-mostrar"><i
-                class="fas fa-edit editar-cantidad"></i></a>
+                <a href="{% url 'editar_cantidad_detalle' detalle.id %}" class="btn btn-warning btn-sm no-mostrar editar-cantidad"><i
+                class="fas fa-edit"></i></a>
             </td>
             <td><a href="{% url 'eliminar_producto_a_detalle' detalle.id %}" class="btn btn-danger btn-sm no-mostrar"><i
                   class="fas fa-trash-alt"></i></a></td>
@@ -269,68 +269,114 @@
     
     document.querySelectorAll(".editar-cantidad").forEach(btn => {
         btn.addEventListener("click", function (event) {
-            event.preventDefault();  // Evita que se abra el enlace
+            event.preventDefault();
+            let row = this.closest("tr");
+            let cantidadTd = row.querySelector("td:nth-child(4)");
+            let precioTd = row.querySelector("td:nth-child(5)");
             
-            let row = this.closest("tr");  // Encuentra la fila actual
-            let cantidadTd = row.querySelector("td:nth-child(4)");  // Celda de cantidad
-            
-            let cantidadActual = cantidadTd.innerText.trim();  // Obtener el valor actual
+            let cantidadActual = cantidadTd.innerText.trim();
+            let precioActual = precioTd.innerText.trim();
 
-            // Crear un input de número
-            let input = document.createElement("input");
-            input.type = "number";
-            input.value = cantidadActual;
-            input.className = "form-control";
-            input.style.width = "80px";
+            let inputCantidad = document.createElement("input");
+            inputCantidad.type = "number";
+            inputCantidad.value = cantidadActual;
+            inputCantidad.className = "form-control";
+            inputCantidad.style.width = "80px";
 
-            // Reemplazar el contenido de la celda con el input
+            let inputPrecio = document.createElement("input");
+            inputPrecio.type = "number";
+            inputPrecio.step = "0.01";
+            inputPrecio.value = precioActual;
+            inputPrecio.className = "form-control";
+            inputPrecio.style.width = "100px";
+            inputPrecio.style.textAlign = "right";
+
             cantidadTd.innerHTML = "";
-            cantidadTd.appendChild(input);
+            cantidadTd.appendChild(inputCantidad);
 
-            // Enfocar el input
-            input.focus();
+            precioTd.innerHTML = "";
+            precioTd.appendChild(inputPrecio);
 
-            // Guardar el nuevo valor al perder el foco o al presionar "Enter"
-            input.addEventListener("blur", function () {
-                actualizarCantidad(row, input.value);
-            });
+            inputCantidad.focus();
 
-            input.addEventListener("keypress", function (event) {
-                if (event.key === "Enter") {
-                    event.preventDefault();
-                    actualizarCantidad(row, input.value);
+            // Guardado diferido: espera un poco al blur y comprueba el elemento enfocado
+            let saveTimeout = null;
+            function scheduleSave() {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => {
+                    // Si ninguno de los dos inputs está enfocado, guardamos
+                    if (document.activeElement !== inputCantidad && document.activeElement !== inputPrecio) {
+                        doSave();
+                    }
+                }, 120); // pequeño retraso para permitir cambios de foco entre inputs
+            }
+
+            function doSave() {
+                const cantVal = inputCantidad.value === "" ? null : inputCantidad.value;
+                const precVal = inputPrecio.value === "" ? null : inputPrecio.value;
+                actualizarCantidadYPrecio(row, cantVal, precVal);
+            }
+
+            // Eventos: no guardan inmediatamente al cambiar foco entre los dos inputs
+            inputCantidad.addEventListener("blur", scheduleSave);
+            inputPrecio.addEventListener("blur", scheduleSave);
+
+            // Si el usuario presiona Enter en cualquiera, guardamos inmediatamente
+            inputCantidad.addEventListener("keypress", function (ev) {
+                if (ev.key === "Enter") {
+                    ev.preventDefault();
+                    clearTimeout(saveTimeout);
+                    doSave();
                 }
             });
+            inputPrecio.addEventListener("keypress", function (ev) {
+                if (ev.key === "Enter") {
+                    ev.preventDefault();
+                    clearTimeout(saveTimeout);
+                    doSave();
+                }
+            });
+
+            // Si hace clic fuera de la fila (no en alguno de los inputs), forzamos guardado
+            document.addEventListener("click", function docClick(e) {
+                if (!row.contains(e.target)) {
+                    clearTimeout(saveTimeout);
+                    doSave();
+                    document.removeEventListener("click", docClick);
+                }
+            }, { once: true });
         });
     });
 
-    function actualizarCantidad(row, nuevaCantidad) {
-        let detalleId = row.dataset.detalleId;  // ID del detalle (debe estar en el `data-detalle-id`)
+    function actualizarCantidadYPrecio(row, nuevaCantidad, nuevoPrecio) {
+        let detalleId = row.dataset.detalleId;
         
         fetch(`/editar_cantidad_detalle/${detalleId}/`, {
             method: "POST",
             headers: {
-                "X-CSRFToken": getCSRFToken(),  // Obtener el token CSRF
+                "X-CSRFToken": getCSRFToken(),
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ cantidad: nuevaCantidad })
-            
+            body: JSON.stringify({ cantidad: nuevaCantidad, precio: nuevoPrecio })
         })
-        
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                row.querySelector("td:nth-child(4)").innerText = nuevaCantidad;  // Actualiza la cantidad en la celda
                 location.reload();
             } else {
-                alert("Error al actualizar la cantidad.");
+                alert("Error: " + (data.error || "al actualizar"));
+                location.reload();
             }
         })
-        .catch(error => console.error("Error:", error));
+        .catch(error => {
+            console.error("Error:", error);
+            alert("Error en la petición");
+        });
     }
 
     function getCSRFToken() {
-        return document.querySelector("[name=csrfmiddlewaretoken]").value;  // Obtener el token CSRF del formulario
+        const el = document.querySelector("[name=csrfmiddlewaretoken]");
+        return el ? el.value : "";
     }
   });
 </script>

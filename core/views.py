@@ -30,6 +30,7 @@ import weasyprint
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from decimal import Decimal, ROUND_HALF_UP
+from decimal import InvalidOperation
 
 from django.http import JsonResponse
 import json
@@ -288,32 +289,83 @@ def eliminar_producto_a_detalle(request, id):
     detalle.delete()
     return redirect(reverse_lazy('proforma_edit', args=[proforma.id]))
 
-@csrf_exempt
+@transaction.atomic
 def editar_cantidad_detalle(request, detalle_id):
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-            nueva_cantidad = int(data.get("cantidad"))
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Método no permitido"}, status=405)
 
-            detalle = Detalle.objects.get(id=detalle_id)
-            proforma = Proforma.objects.get(id=detalle.proforma.id)
-            proforma.total = proforma.total - detalle.subtotal
-            proforma.save()
+    try:
+        data = json.loads(request.body)
+        cantidad = data.get("cantidad", None)
+        precio = data.get("precio", None)
+
+        # Normalizar valores vacíos a None
+        if cantidad in ("", "null"):
+            cantidad = None
+        if precio in ("", "null"):
+            precio = None
+
+        # Bloquea filas para evitar condiciones de carrera
+        detalle = Detalle.objects.select_for_update().get(id=detalle_id)
+        proforma = Proforma.objects.select_for_update().get(id=detalle.proforma.id)
+
+        old_subtotal = Decimal(detalle.subtotal)
+
+        # Validar y asignar cantidad si viene
+        if cantidad is not None:
+            try:
+                nueva_cantidad = int(cantidad)
+            except (TypeError, ValueError):
+                raise ValueError("Cantidad inválida")
+            if nueva_cantidad < 1:
+                raise ValueError("La cantidad debe ser >= 1")
             detalle.cantidad = nueva_cantidad
-            detalle.subtotal = detalle.precio_venta * detalle.cantidad
-            detalle.save()
-            proforma.total = proforma.total + detalle.subtotal
-            proforma.save()
-            
-            return JsonResponse({"success": True, "nueva_cantidad": nueva_cantidad})
-        except Detalle.DoesNotExist:
-            return JsonResponse({"success": False, "error": "Detalle no encontrado"}, status=404)
-        except json.JSONDecodeError:
-            return JsonResponse({"success": False, "error": "Error en el formato JSON"}, status=400)
-        except Exception as e:
-            return JsonResponse({"success": False, "error": str(e)}, status=400)
-    
-    return JsonResponse({"success": False, "error": "Método no permitido"}, status=405)
+
+        # Validar y asignar precio si viene
+        if precio is not None:
+            # limpiar formato: comas a punto, quitar símbolos no numéricos salvo "-" y "."
+            precio_str = str(precio).strip().replace(",", ".")
+            import re
+            precio_str = re.sub(r"[^\d\.\-]", "", precio_str)
+            try:
+                nuevo_precio = Decimal(precio_str).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            except (InvalidOperation, ValueError):
+                raise ValueError("Precio inválido")
+            if nuevo_precio <= 0:
+                raise ValueError("El precio debe ser > 0")
+            detalle.precio_venta = nuevo_precio
+            # opcional: actualizar latest_price del producto
+            try:
+                producto = detalle.producto
+                producto.latest_price = nuevo_precio
+                producto.save()
+            except Exception:
+                pass
+
+        # Recalcular subtotal con precisión
+        detalle.subtotal = (Decimal(detalle.precio_venta) * Decimal(detalle.cantidad)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        detalle.save()
+
+        # Actualizar total de la proforma (restar viejo subtotal y sumar nuevo)
+        proforma.total = (Decimal(proforma.total) - old_subtotal + detalle.subtotal).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        proforma.save()
+
+        return JsonResponse({
+            "success": True,
+            "nueva_cantidad": detalle.cantidad,
+            "nuevo_precio": str(detalle.precio_venta),
+            "nuevo_subtotal": str(detalle.subtotal),
+            "total": str(proforma.total)
+        })
+    except Detalle.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Detalle no encontrado"}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "error": "Error en el formato JSON"}, status=400)
+    except (ValueError, InvalidOperation) as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
 
 @transaction.atomic
 def cambiar_estado_proforma(request, id):
