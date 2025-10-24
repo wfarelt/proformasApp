@@ -66,8 +66,9 @@
                         <td>{{ movement.user.name }}</td>
                         <td>{{ movement.status }}</td>
                         <td class="text-center">
-                            <a href="{% url 'movement_detail' movement.id %}" class="btn btn-info btn-sm"><i
-                                    class="fa fa-eye"></i></a>
+                            <a href="javascript:void(0);" class="btn btn-info btn-sm" onclick="openMovementDetail({{ movement.id }})">
+                                <i class="fa fa-eye"></i>
+                            </a>
                         </td>
                     </tr>
                     {% empty %}
@@ -78,6 +79,23 @@
         </div>
 
     </div>
+
+    <div class="modal fade" id="movementDetailModal" tabindex="-1" role="dialog" aria-labelledby="movementDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">  <!-- Added modal-lg class -->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="movementDetailModalLabel">Detalles del Movimiento</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="movementDetailContent">
+                    <!-- Contenido cargado dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="card-footer justify-content-center d-flex">
         {% if movements.has_other_pages %}
         <nav>
@@ -85,7 +103,7 @@
                 {# Botón Anterior #}
                 {% if movements.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ movements.previous_page_number }}">Anterior</a>
+                        <a class="page-link" href="?page={{ movements.previous_page_number }}{% if selected_producto %}&producto_id={{ selected_producto }}{% endif %}">Anterior</a>
                     </li>
                 {% else %}
                     <li class="page-item disabled"><span class="page-link">Anterior</span></li>
@@ -94,7 +112,7 @@
                 {# Primera página y puntos suspensivos si es necesario #}
                 {% if movements.number > 3 %}
                     <li class="page-item">
-                        <a class="page-link" href="?page=1">1</a>
+                        <a class="page-link" href="?page=1{% if selected_producto %}&producto_id={{ selected_producto }}{% endif %}">1</a>
                     </li>
                 {% endif %}
                 {% if movements.number > 4 %}
@@ -108,7 +126,7 @@
                             <li class="page-item active"><span class="page-link">{{ num }}</span></li>
                         {% else %}
                             <li class="page-item">
-                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                <a class="page-link" href="?page={{ num }}{% if selected_producto %}&producto_id={{ selected_producto }}{% endif %}">{{ num }}</a>
                             </li>
                         {% endif %}
                     {% endif %}
@@ -120,14 +138,14 @@
                         <li class="page-item disabled"><span class="page-link">...</span></li>
                     {% endif %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ movements.paginator.num_pages }}">{{ movements.paginator.num_pages }}</a>
+                        <a class="page-link" href="?page={{ movements.paginator.num_pages }}{% if selected_producto %}&producto_id={{ selected_producto }}{% endif %}">{{ movements.paginator.num_pages }}</a>
                     </li>
                 {% endif %}
 
                 {# Botón Siguiente #}
                 {% if movements.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ movements.next_page_number }}">Siguiente</a>
+                        <a class="page-link" href="?page={{ movements.next_page_number }}{% if selected_producto %}&producto_id={{ selected_producto }}{% endif %}">Siguiente</a>
                     </li>
                 {% else %}
                     <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
@@ -136,6 +154,7 @@
         </nav>
         {% endif %}
     </div>
+
 </div>
 </div>
 {% endblock %}
@@ -184,5 +203,19 @@
                 document.querySelector('.select2-container--open .select2-search__field').focus();
             });
         });
+
+        function openMovementDetail(movementId) {
+            $.ajax({
+                url: "{% url 'movement_detail' 0 %}".replace('0', movementId),  // Replace with the correct URL
+                type: 'GET',
+                success: function(data) {
+                    $('#movementDetailContent').html(data);
+                    $('#movementDetailModal').modal('show');
+                },
+                error: function() {
+                    alert('Error al cargar los detalles del movimiento.');
+                }
+            });
+        }
     </script>
 {% endblock %}

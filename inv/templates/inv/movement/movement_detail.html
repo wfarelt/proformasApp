@@ -1,10 +1,10 @@
-{% extends 'core/index.html' %}
+
 {% load static %}
 
 {% block content %}
 <div class="card mb-3 card-dark">
     <div class="card-header">
-        <h1>Detalle del Movimiento</h1>
+        <h3>Detalle del Movimiento</h3>
     </div>
     <div class="card-body">
         <div class="row">
@@ -22,14 +22,14 @@
     </div>
 </div>
 
-<div class="card">
+<div class="card-dark">
     <div class="card-header">
         <h3>Detalle de Productos</h3>
     </div>
     <div class="card-body">
         <div class="table-responsive">
             <table class="table table-bordered table-striped table-sm">
-                <thead class="thead-dark">
+                <thead class="thead-light">
                     <tr>
                         <th>#</th>
                         <th>Código</th>
@@ -64,12 +64,12 @@
         </div>
     </div>
     <div class="card-footer text-center">
-        <a href="{% url 'movement_list' %}" class="btn btn-primary">
-            <i class="fas fa-arrow-left"></i> Volver a la lista
-        </a>
-        <a href="{% url 'movement_pdf' movement.id %}" class="btn btn-danger" target="_blank">
+        <a href="{% url 'movement_pdf' movement.id %}" class="btn btn-info" target="_blank">
             <i class="fas fa-file-pdf"></i> Descargar PDF
         </a>
+        <button type="button" class="btn btn-danger" data-dismiss="modal">
+            <i class="fas fa-times"></i> Cerrar
+        </button>
     </div>
 </div>
 {% endblock %}
