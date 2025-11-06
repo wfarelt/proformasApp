@@ -58,28 +58,67 @@ Lista de {{title}}
         
     </div>
     <hr>
-    <div class="card-footer mb-3">
-        <div class="pagination justify-content-center">
-            <span class="step-links">
-                {% if page_obj.has_previous %}
-                <a href="?q={{ request.GET.q }}&page=1" class="btn btn-default">&laquo; primera</a>
-                <a href="?q={{ request.GET.q }}&page={{ page_obj.previous_page_number }}" class="btn btn-default"><span
-                        class="fas fa-arrow-left"></span> anterior</a>
-                {% endif %}
 
-                <span class="current">
-                    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}.
-                </span>
+    <div class="card-footer justify-content-center d-flex">
+        {% if page_obj.has_other_pages %}
+        <nav>
+            <ul class="pagination">
+            
+            <!-- Botón Anterior -->
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}">Anterior</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+            {% endif %}
+            
+            <!-- Mostrar primera página -->
+            {% if page_obj.number > 3 %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}">1</a>
+            </li>
+            {% if page_obj.number > 4 %}
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+            {% endif %}
 
-                {% if page_obj.has_next %}
-                <a href="?q={{ request.GET.q }}&page={{ page_obj.next_page_number }}" class="btn btn-default">siguiente
-                    <span class="fas fa-arrow-right"></span></a>
-                <a href="?q={{ request.GET.q }}&page={{ page_obj.paginator.num_pages }}" class="btn btn-default">última
-                    &raquo;</a>
+            <!-- Rango de páginas cercanas -->
+            {% for num in page_obj.paginator.page_range %}
+                {% if num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+                {% if num == page_obj.number %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                {% else %}
+                    <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}">{{ num }}</a>
+                    </li>
                 {% endif %}
-            </span>
+                {% endif %}
+            {% endfor %}
+
+            <!-- Mostrar última página -->
+            {% if page_obj.number < page_obj.paginator.num_pages|add:"-2" %}
+                {% if page_obj.number < page_obj.paginator.num_pages|add:"-3" %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+                {% endif %}
+                <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}">{{ page_obj.paginator.num_pages }}</a>
+                </li>
+            {% endif %}
+
+            <!-- Botón Siguiente -->
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}">Siguiente</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+            {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
         </div>
-    </div>
+
 </div>
 
 {% endblock content %}
@@ -88,11 +127,15 @@ Lista de {{title}}
 <!-- JavaScript para enfocar el campo de búsqueda -->
 <script type="text/javascript">
     document.addEventListener("DOMContentLoaded", function () {
-        document.getElementById("search-field").focus();
-    });
-    // Quitar los especios en blancos del imput
-    document.getElementById('search-field').addEventListener('change', function () {
-        this.value = this.value.trim();
+        const searchField = document.getElementById("search-field");
+        searchField.focus();
+
+        // Quitar espacios en blanco
+        searchField.addEventListener('change', function () {
+            this.value = this.value.trim();
+        });
+
+        
     });
 </script>
 {% endblock %}
