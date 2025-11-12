@@ -144,6 +144,19 @@ class Proforma(models.Model):
     estado = models.CharField(max_length=10, choices=ESTADO, default='PENDIENTE')
     observacion = models.TextField(max_length=200, blank=True, null=True, help_text="Observaciones adicionales sobre la proforma")
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="proformas", default=1)
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="proformas"
+    )
+    
+    def save(self, *args, **kwargs):
+        # Solo al crear (no actualizar), asignar la empresa actual del usuario
+        if not self.pk and self.usuario and self.usuario.company:
+            self.company = self.usuario.company
+        super().save(*args, **kwargs)
     
     def total_neto(self):
         """Calcula el total después de aplicar el descuento porcentual."""

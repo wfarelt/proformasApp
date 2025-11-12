@@ -726,11 +726,11 @@ def proforma_pdf(request, proforma_id):
     total_bs = (total_neto * Decimal('6.96')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
     
     total_literal = numero_a_literal(total_neto)
-    company = Company.objects.get(id=proforma.usuario.company.id)
+    company = Company.objects.get(id=proforma.company.id)
     
     logo_url = None
-    if proforma.usuario.company.logo:
-        logo_url = request.build_absolute_uri(proforma.usuario.company.logo.url)
+    if company.logo:
+        logo_url = request.build_absolute_uri(company.logo.url)
         
     context = {
         'proforma': proforma,
@@ -770,11 +770,11 @@ def proforma_almacen(request, proforma_id):
     total_bs = (total_neto * Decimal('6.96')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
     
     total_literal = numero_a_literal(total_neto)
-    company = Company.objects.get(id=proforma.usuario.company.id)
+    company = Company.objects.get(id=proforma.company.id)
     
     logo_url = None
-    if proforma.usuario.company.logo:
-        logo_url = request.build_absolute_uri(proforma.usuario.company.logo.url)
+    if company.logo:
+        logo_url = request.build_absolute_uri(company.logo.url)
         
     context = {
         'proforma': proforma,
