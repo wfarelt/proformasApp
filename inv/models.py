@@ -97,7 +97,7 @@ class MovementItem(models.Model):
 
     @property
     def subtotal(self):
-        price = self.unit_price or self.product.cost
+        price = self.unit_price or self.product.cost or 0
         return price * self.quantity
 
     
