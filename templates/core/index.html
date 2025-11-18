@@ -288,7 +288,7 @@
                   <p>Perfil</p>
                 </a>
               </li>
-              {% if user.is_superuser %}
+              {% if user.is_admin %}
               <li class="nav-item">
                 <a href="{% url 'cargar_inventario_inicial' %}" class="nav-link">
                   <i class="far fa-circle nav-icon"></i>

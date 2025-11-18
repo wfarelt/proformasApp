@@ -11,7 +11,7 @@ class UserAdmin(UserAdmin):
     finaly = (
         (None, {'fields': ('email', 'password')}),
         ('Información personal', {'fields': ('name', 'company')}),
-        ('Permisos', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
+        ('Permisos', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups')}),
     )
     add_fieldsets = (
         (None, {
@@ -21,11 +21,11 @@ class UserAdmin(UserAdmin):
     )
     form = UserChangeForm
     add_form = UserCreationForm
-    list_display = ('email', 'name', 'company', 'is_staff')
+    list_display = ('id','email', 'name', 'company', 'is_staff')
     list_filter = ('is_staff', 'is_superuser', 'is_active')
     fieldsets = finaly
     search_fields = ('email', 'name', 'company')
-    ordering = ('email',)
+    ordering = ('id',)
 
 admin.site.site_header = 'Sistema de Inventario'
 admin.site.site_title = 'Sistema de Inventario'

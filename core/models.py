@@ -75,6 +75,14 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+    
+    def is_in_group(self, group_name):
+        """Verifica si el usuario pertenece a un grupo específico"""
+        return self.groups.filter(name=group_name).exists()
+    
+    @property
+    def is_admin(self):
+        return self.is_in_group("Administrador")
 
 # CLIENTE
 class Cliente(models.Model):

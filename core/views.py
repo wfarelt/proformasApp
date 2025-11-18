@@ -138,6 +138,7 @@ class ProductListView(LoginRequiredMixin, ListView):
                 )
         return object_list
 
+from django.contrib.auth import get_user_model
 # PROFORMA
 class ProformaListView(ListView):
     model = Proforma
@@ -150,14 +151,29 @@ class ProformaListView(ListView):
         query = self.request.GET.get('q')
         tipo = self.request.GET.get('tipo_busqueda', 'id')
         qs = Proforma.objects.order_by('-fecha')
+        
+        usuario_id = self.request.GET.get("usuario")
+        if usuario_id:
+            qs = qs.filter(usuario__id=usuario_id)
+            
         if query:
             if tipo == 'id':
-                qs = qs.filter(id__icontains=query)
+                qs = qs.filter(id=query)
             elif tipo == 'cliente':
                 qs = qs.filter(cliente__name__icontains=query)
             elif tipo == 'producto':
                 qs = qs.filter(detalles__producto__nombre__icontains=query)
         return qs.distinct()
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        User = get_user_model()  
+        # 👈 Lista de usuarios menos superadmin
+        context["usuarios"] = User.objects.filter(is_superuser=False)
+        context["usuario_seleccionado"] = self.request.GET.get("usuario")  # Opcional
+        
+        return context
 
 @login_required(login_url='login')
 def proforma_new(request):
