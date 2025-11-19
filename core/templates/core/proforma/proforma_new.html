@@ -73,7 +73,13 @@
       <h2>PRODUCTOS</h2>
       <form method="get" class="mb-3">
         <div class="input-group input-group-sm">
-          <input type="text" name="q" id="search-field" class="form-control" placeholder="{{placeholder}}" value="{{ request.GET.q }}">
+            <!-- Busqueda de productos por id o por codigo -->
+            <select name="tipo_busqueda" class="form-control" style="flex:0 0 25%; max-width:25%; width:25%;">
+                <option value="codigo" {% if request.GET.tipo_busqueda == "codigo" %}selected{% endif %}>Código</option>
+                <option value="id_producto" {% if request.GET.tipo_busqueda == "id_producto" %}selected{% endif %}>Id</option>
+            </select>
+            <input type="text" name="q" id="search-field" class="form-control ml-2"
+                  placeholder="Buscar..." value="{{ request.GET.q }}">
           <div class="input-group-append">
             <button type="submit" class="btn btn-primary">
               <i class="fas fa-search"></i> Buscar
@@ -82,8 +88,9 @@
         </div>
       </form>
       <br>
+
       <table class="table table-bordered table-sm">
-        <tr>
+        <tr class="thead-light">
           <th>Codigo</th>
           <th>Descripcion</th>
           <th>Marca</th>
@@ -101,6 +108,7 @@
             {% csrf_token %}
             <input type="hidden" name="proforma_id" value="{{ proforma.id }}">
             <input type="hidden" name="producto_id" value="{{ producto.id }}">
+            <input type="hidden" name="tipo_busqueda" value="{{ request.GET.tipo_busqueda }}">
             <td>{{ producto.nombre }}</td>
             <td>{{ producto.descripcion }}</td>
             {% if producto.brand == None %}
@@ -190,8 +198,8 @@
     <!-- Detalle de productos -->
     <div class="detalle">
       <h2>DETALLE DE PRODUCTOS</h2>
-      <table class="table table-sm">
-        <thead>
+      <table class="table table-sm table-bordered">
+        <thead class="thead-light">
           <tr>
             <th>Item</th>
             <th>Producto</th>
@@ -213,11 +221,10 @@
             <td style="text-align: right;">{{ detalle.precio_venta }}</td>
             <td style="text-align: right;">{{ detalle.subtotal }}</td>
             <td style="text-align: center;">{{ detalle.producto.location }}</td>
-            <td>
+            <td style="text-align: center;">
                 <a href="{% url 'editar_cantidad_detalle' detalle.id %}" class="btn btn-warning btn-sm no-mostrar editar-cantidad"><i
-                class="fas fa-edit"></i></a>
-            </td>
-            <td><a href="{% url 'eliminar_producto_a_detalle' detalle.id %}" class="btn btn-danger btn-sm no-mostrar"><i
+                class="fas fa-edit"></i></a> 
+                <a href="{% url 'eliminar_producto_a_detalle' detalle.id %}" class="btn btn-danger btn-sm no-mostrar"><i
                   class="fas fa-trash-alt"></i></a></td>
           </tr>
           {% empty %}

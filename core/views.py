@@ -175,40 +175,59 @@ class ProformaListView(ListView):
         
         return context
 
+def _get_proforma_context(proforma, request):
+    """Helper para obtener el contexto común de proforma_new y proforma_edit"""
+    detalles = Detalle.productos_list(proforma)
+    productos_list = Producto.objects.none()
+    
+    query = request.GET.get('q')
+    tipo_busqueda = request.GET.get('tipo_busqueda', 'codigo')
+    
+    if query:
+        productos_list = Producto.objects.all()
+        if tipo_busqueda == 'id_producto':
+            if query.isdigit():
+                productos_list = productos_list.filter(id=query)
+            else:
+                productos_list = Producto.objects.none()
+                messages.error(request, 'El ID del producto debe ser un número entero.')
+        else:
+            palabras = [p.strip() for p in query.split('%') if p.strip()]
+            for palabra in palabras:
+                productos_list = productos_list.filter(
+                    Q(nombre__icontains=palabra) | Q(descripcion__icontains=palabra)
+                )
+    
+    paginator = Paginator(productos_list, 5)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return {
+        'proforma': proforma,
+        'productos_list': page_obj,
+        'detalles': detalles,
+        'page_obj': page_obj,
+        'tipo_busqueda': tipo_busqueda,
+    }
+
 @login_required(login_url='login')
 def proforma_new(request):
-    query = request.GET.get('q')
-    
-    # Verificar si la última proforma creada no tiene productos en su detalle
+    # Verificar si la última proforma creada no tiene productos
     last_proforma = Proforma.objects.filter(usuario=request.user).last()
     if last_proforma and Detalle.productos_list(last_proforma).count() < 1:
         proforma = last_proforma
     else:
         proforma = Proforma.objects.create(usuario=request.user)
-        
-    detalles = Detalle.productos_list(proforma)
-    productos_list = Producto.objects.all()
-        
-    if query:
-        palabras = [p.strip() for p in query.split('%') if p.strip()]
-        for palabra in palabras:
-            productos_list = productos_list.filter(
-                Q(nombre__icontains=palabra) | Q(descripcion__icontains=palabra)
-            )
     
-    paginator = Paginator(productos_list, 5)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    context = {
-        'proforma': proforma,
-        'productos_list': page_obj,
-        'detalles': detalles,
-        'page_obj': page_obj
-    }
-
+    context = _get_proforma_context(proforma, request)
     return render(request, 'core/proforma/proforma_new.html', context)
-    
+
+@login_required(login_url='login')
+def proforma_edit(request, id):
+    proforma = Proforma.objects.get(id=id)
+    context = _get_proforma_context(proforma, request)
+    return render(request, 'core/proforma/proforma_new.html', context)
+
 def proforma_add_client(request, id):
     context_title = 'Seleccionar cliente'
     proforma = Proforma.objects.get(id=id)
@@ -241,31 +260,6 @@ def proforma_add_client(request, id):
             
     return render(request, 'core/proforma/proforma_add_client.html', context)
 
-@login_required(login_url='login')
-def proforma_edit(request, id):
-    proforma = Proforma.objects.get(id=id)
-    detalles = Detalle.productos_list(proforma)
-    productos_list = Producto.objects.all()
-    
-    query = request.GET.get('q')
-    if query:
-        palabras = [p.strip() for p in query.split('%') if p.strip()]
-        for palabra in palabras:
-            productos_list = productos_list.filter(
-                Q(nombre__icontains=palabra) | Q(descripcion__icontains=palabra)
-            )
-    
-    paginator = Paginator(productos_list, 5)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    context = {
-        'proforma': proforma,
-        'productos_list': page_obj,
-        'detalles': detalles,
-        'page_obj': page_obj
-    }
-    return render(request, 'core/proforma/proforma_new.html', context)
-
 def agregar_producto_a_detalle(request):
     # VALIR DATOS SI ES POST O GET
     if request.method == 'POST':
@@ -292,8 +286,12 @@ def agregar_producto_a_detalle(request):
         proforma.save()
         producto.latest_price = precio
         producto.save()
-        # REDIRECCIONAR A LA MISMA PAGINA
-        return redirect(reverse_lazy('proforma_edit', args=[proforma_id]))
+        
+        # Capturar tipo_busqueda
+        tipo_busqueda = request.POST.get('tipo_busqueda', 'codigo')
+        redirect_url = f"{reverse_lazy('proforma_edit', args=[proforma_id])}?tipo_busqueda={tipo_busqueda}"
+        
+        return redirect(redirect_url)
     else:
         return render(request, 'core/home.html')
 
