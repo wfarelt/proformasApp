@@ -29,33 +29,56 @@
     <form method="get" class="mb-3">
         <div class="form-row align-items-end">
             <div class="col-md-3 mb-2">
-            <select name="ubicacion" class="form-control">
-                <option value="__all__" {% if ubicacion_actual == "__all__" %}selected{% endif %}>-- Todas las ubicaciones --</option>
-                <option value="" {% if ubicacion_actual == "" %}selected{% endif %}>Sin ubicación</option>
-                {% for u in ubicaciones %}
-                {% if u %}
-                    <option value="{{ u }}" {% if u == ubicacion_actual %}selected{% endif %}>{{ u }}</option>
-                {% endif %}
-                {% endfor %}
-            </select>
+              <select name="ubicacion" class="form-control">
+                  <option value="__all__" {% if ubicacion_actual == "__all__" %}selected{% endif %}>-- Todas las ubicaciones --</option>
+                  <option value="" {% if ubicacion_actual == "" %}selected{% endif %}>Sin ubicación</option>
+                  {% for u in ubicaciones %}
+                  {% if u %}
+                      <option value="{{ u }}" {% if u == ubicacion_actual %}selected{% endif %}>{{ u }}</option>
+                  {% endif %}
+                  {% endfor %}
+              </select>
             </div>
-            <div class="col-md-4 mb-2">
-            <input type="text" name="q" class="form-control" placeholder="{{ placeholder }}" value="{{ query }}">
-            </div>
-            <div class="col-md-2 mb-3 d-flex align-items-center">
-            <input type="checkbox" name="con_stock" id="con_stock" {% if con_stock %}checked{% endif %}>
-            <label for="con_stock" class="ml-2 mb-0">Solo con stock</label>
-            </div>
+
+            <div class="col-md-6 mb-2">
+              <input type="text" name="q" class="form-control" placeholder="{{ placeholder }}" value="{{ query }}">
+            </div>                      
+
             <div class="col-md-1 mb-2 d-flex justify-content-center">
-            <button type="button" class="btn btn-outline-secondary w-100" onclick="window.print()" title="Imprimir">
-                <i class="fas fa-print"></i>
-            </button>
+              <button type="button" class="btn btn-outline-secondary w-100" onclick="window.print()" title="Imprimir">
+                  <i class="fas fa-print"></i>
+              </button>
             </div>
+
             <div class="col-md-2 mb-2">
-            <button type="submit" class="btn btn-primary w-100">
-                <i class="fas fa-search"></i> Buscar
-            </button>
+              <button type="submit" class="btn btn-primary w-100">
+                  <i class="fas fa-search"></i> Buscar
+              </button>
             </div>
+
+            <div class="col-md-6 mb-3 d-flex align-items-center">
+              <ul class="list-inline mb-0">
+                <li class="list-inline-item mr-3">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="con_stock" id="con_stock" {% if con_stock %}checked{% endif %}>
+                    <label class="form-check-label ml-2 mb-0" for="con_stock">Con stock</label>
+                  </div>
+                </li>
+                <li class="list-inline-item mr-3">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="sin_costo" id="sin_costo" {% if sin_costo %}checked{% endif %}>
+                    <label class="form-check-label ml-2 mb-0" for="sin_costo">Sin costo</label>
+                  </div>
+                </li>
+                <li class="list-inline-item">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="sin_precio" id="sin_precio" {% if sin_precio %}checked{% endif %}>
+                    <label class="form-check-label ml-2 mb-0" for="sin_precio">Sin precio</label>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            
         </div>
     </form>
     <div class="table-responsive">
@@ -65,8 +88,10 @@
             <th>ID</th>
             <th>Código</th>
             <th>Descripción</th>
-            <th>Marca</th>
-            <th class="text-right">Stock</th>
+            <th class="text-center">Marca</th>
+            <th class="text-center">Stock</th>
+            <th class="text-right">Costo</th>
+            <th class="text-right">Precio</th>
             <th class="text-center">Ubicación</th>
           </tr>
         </thead>
@@ -78,6 +103,8 @@
               <td>{{ obj.descripcion|truncatechars:45 }}</td>
               <td>{{ obj.brand.initials }}</td>
               <td class="text-right">{{ obj.stock }}</td>
+              <td class="text-right">{{ obj.cost|floatformat:2 }}</td>
+              <td class="text-right">{{ obj.precio|floatformat:2 }}</td>
               <td class="text-center">{{ obj.location }}</td>
             </tr>
           {% empty %}
@@ -95,7 +122,7 @@
         <ul class="pagination">
           {% if productos.has_previous %}
             <li class="page-item">
-              <a class="page-link" href="?q={{ query }}&ubicacion={{ ubicacion_actual }}{% if con_stock %}&con_stock=on{% endif %}&page={{ productos.previous_page_number }}">Anterior</a>
+              <a class="page-link" href="?q={{ query }}&ubicacion={{ ubicacion_actual }}{% if con_stock %}&con_stock=on{% endif %}{% if sin_costo %}&sin_costo=on{% endif %}{% if sin_precio %}&sin_precio=on{% endif %}&page={{ productos.previous_page_number }}">Anterior</a>
             </li>
           {% else %}
             <li class="page-item disabled"><span class="page-link">Anterior</span></li>
@@ -107,7 +134,7 @@
                 <li class="page-item active"><span class="page-link">{{ num }}</span></li>
               {% else %}
                 <li class="page-item">
-                  <a class="page-link" href="?q={{ query }}&ubicacion={{ ubicacion_actual }}{% if con_stock %}&con_stock=on{% endif %}&page={{ num }}">{{ num }}</a>
+                  <a class="page-link" href="?q={{ query }}&ubicacion={{ ubicacion_actual }}{% if con_stock %}&con_stock=on{% endif %}{% if sin_costo %}&sin_costo=on{% endif %}{% if sin_precio %}&sin_precio=on{% endif %}&page={{ num }}">{{ num }}</a>
                 </li>
               {% endif %}
             {% elif num == productos.number|add:'-3'|add:"0" or num == productos.number|add:'3'|add:"0" %}
@@ -117,7 +144,7 @@
 
           {% if productos.has_next %}
             <li class="page-item">
-              <a class="page-link" href="?q={{ query }}&ubicacion={{ ubicacion_actual }}{% if con_stock %}&con_stock=on{% endif %}&page={{ productos.next_page_number }}">Siguiente</a>
+              <a class="page-link" href="?q={{ query }}&ubicacion={{ ubicacion_actual }}{% if con_stock %}&con_stock=on{% endif %}{% if sin_costo %}&sin_costo=on{% endif %}{% if sin_precio %}&sin_precio=on{% endif %}&page={{ productos.next_page_number }}">Siguiente</a>
             </li>
           {% else %}
             <li class="page-item disabled"><span class="page-link">Siguiente</span></li>

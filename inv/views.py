@@ -647,6 +647,8 @@ def pre_inventario(request):
     ubicacion = request.GET.get('ubicacion', '__all__')
     query = request.GET.get('q', '')
     con_stock = request.GET.get('con_stock') == 'on'
+    sin_costo = request.GET.get('sin_costo') == 'on'
+    sin_precio = request.GET.get('sin_precio') == 'on'
 
     productos = Producto.objects.all()
 
@@ -667,6 +669,15 @@ def pre_inventario(request):
     if con_stock:
         productos = productos.filter(stock__gt=0)
 
+    # Filtro sin costo
+    if sin_costo:
+        productos = productos.filter(Q(cost__isnull=True) | Q(cost=0))
+    
+    # Filtro sin precio
+    if sin_precio:
+        productos = productos.filter(Q(precio__isnull=True) | Q(precio=0))
+        
+        
     # Lista de ubicaciones distintas (sin None ni vacío)
     ubicaciones = Producto.objects.exclude(location__isnull=True).exclude(location__exact="").values_list('location', flat=True).distinct().order_by('location')
 
@@ -680,6 +691,8 @@ def pre_inventario(request):
         'ubicacion_actual': ubicacion,
         'query': query,
         'con_stock': con_stock,
+        'sin_costo': sin_costo,
+        'sin_precio': sin_precio,
         'title': 'Pre-inventario por ubicación',
         'placeholder': 'Buscar por código o descripción'
     }
