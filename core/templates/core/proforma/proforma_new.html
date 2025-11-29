@@ -68,6 +68,54 @@
   </div>
   
   <div class="card-body">
+
+    <!-- Busqueda de kits -->
+    <div class="kit-selector mb-3">
+        <div class="input-group input-group-sm">
+            <select id="kit-select" class="form-control">
+                <option value="">-- Selecciona un kit --</option>
+                {% for kit in kits %}
+                    <option value="{{ kit.id }}">{{ kit.name }} ({{ kit.get_items_count }})</option>
+                {% endfor %}
+            </select>
+            <button type="button" class="btn btn-info btn-sm" id="load-kit-btn">
+                <i class="fas fa-download"></i> Cargar Kit
+            </button>
+        </div>
+    </div>
+
+    <div id="kit-items-preview" class="alert alert-info d-none" role="alert">
+        <h6>Productos del kit:</h6>
+
+        <div class="table-responsive">
+            <table class="table table-sm" id="kit-items-table">
+                <thead>
+                    <tr>
+                        <th style="width:30px"><input type="checkbox" id="kit-select-all" title="Seleccionar todo"></th>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th class="text-right">Precio</th>
+                    </tr>
+                </thead>
+                <tbody id="kit-items-list"></tbody>
+            </table>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-success btn-sm" id="add-selected-kit-items" 
+                    data-proforma-id="{{ proforma.id }}">
+                <i class="fas fa-plus"></i> Agregar seleccionados
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" id="clear-kit-selection">
+                <i class="fas fa-eraser"></i> Limpiar selección
+            </button>
+            <button type="button" class="btn btn-warning btn-sm" id="close-kit-preview">
+                <i class="fas fa-times"></i> Cerrar
+            </button>
+        </div>
+    </div>
+    <hr>
+
     <!-- Busqueda de productos -->
     <div class="productos">
       <h2>PRODUCTOS</h2>
@@ -236,76 +284,113 @@
       </table>
     </div>
     
-    <!-- Total y descuento -->
-    <div class="total">
-      <table class="table table-sm">
-        <tr>
-          <td>Total: {{ literal }}</td>
-          <td style="text-align: right;">
-            {% if user.company.currency == 'BOB' %}
-               {{ proforma.total }}<br>
-              -{{ proforma.total_descuento|floatformat:2 }} <br>
-              -------------<br>
-              Bs <strong>{{ proforma.total_neto|floatformat:2 }}</strong>
-            {% elif user.company.currency == 'USD' %}
-              $ {{ proforma.total }}<br>
-              -$ {{ proforma.total_descuento|floatformat:2 }} <br>
-              -------------<br>
-              $ <strong>{{ proforma.total_neto|floatformat:2 }}</strong>
-            {% elif user.company.currency == 'EUR' %}
-              € {{ proforma.total }}<br>
-              -€ {{ proforma.total_descuento|floatformat:2 }} <br>
-              -------------<br>
-              € <strong>{{ proforma.total_neto|floatformat:2 }}</strong>
-            {% endif %}
-          </td>
-        </tr>
-      </table>
+    <!-- Total y descuento - VERSIÓN MEJORADA -->
+    <div class="total mt-4">
+        <div class="row">
+            <!-- Subtotal -->
+            <div class="col-md-3">
+                <div class="card bg-light border-0">
+                    <div class="card-body text-center p-3">
+                        <small class="text-muted d-block">Subtotal</small>
+                        <h5 id="subtotal-value" class="mb-0">
+                            {% if user.company.currency == 'BOB' %}Bs{% elif user.company.currency == 'USD' %}${% else %}€{% endif %} {{ proforma.total|floatformat:2 }}
+                        </h5>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Descuento % -->
+            <div class="col-md-3">
+                <div class="card bg-light border-0">
+                    <div class="card-body p-3">
+                        <form method="POST" action="{% url 'cambiar_estado_proforma' proforma.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <label for="discount_percentage" class="small text-muted d-block mb-2">Descuento (%)</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" step="0.01" min="0" max="100" 
+                                    class="form-control text-center" id="discount_percentage" name="discount_percentage"
+                                    value="{{ proforma.discount_percentage|default:0 }}" onchange="this.form.submit()">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monto Descuento -->
+            <div class="col-md-3">
+                <div class="card bg-light border-0">
+                    <div class="card-body text-center p-3">
+                        <small class="text-muted d-block">Desc. Monto</small>
+                        <h5 id="discount-amount" class="mb-0">
+                            {% if user.company.currency == 'BOB' %}Bs{% elif user.company.currency == 'USD' %}${% else %}€{% endif %} {{ proforma.total_descuento|floatformat:2 }}
+                        </h5>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Final -->
+            <div class="col-md-3">
+                <div class="card bg-success text-white border-0">
+                    <div class="card-body text-center p-3">
+                        <small class="d-block">Total Final</small>
+                        <h4 id="total-value" class="mb-0">
+                            {% if user.company.currency == 'BOB' %}Bs{% elif user.company.currency == 'USD' %}${% else %}€{% endif %} {{ proforma.total_neto|floatformat:2 }}
+                        </h4>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Observaciones y estado de la proforma -->
-    <form method="POST" action="{% url 'cambiar_estado_proforma' proforma.id %}" class="d-inline">
-      {% csrf_token %}
-    
-      <div class="form-group">
-          <label for="observacion">Observaciones:</label>
-          <input type="text" name="observacion" id="observacion" class="form-control" value="{{ proforma.observacion|default_if_none:'' }}">
-      </div>
-    
-      <div class="text-center">
-        <h3>ESTADO DE LA PROFORMA</h3>
-        
-          <!-- Campo de descuento -->
-          <div class="row mb-3">
-            <div class="col-md-2 offset-md-5">
-              <label for="descuento" class="form-label">Descuento (%)</label>
-              <input type="number" step="0.01" min="0" max="10" 
-                  class="form-control text-end" id="discount_percentage" name="discount_percentage"
-                  value="{{ proforma.discount_percentage|default:0 }}">  
-            </div>      
-          </div>
-          <!-- Campo de estado -->
-          <div class="form-check pb-3">
-            <input class="form-check-input" type="checkbox" value="EJECUTADO" id="estado" name="estado"
-              {% if proforma.estado == 'EJECUTADO' %} checked {% endif %}>
-            <label class="form-check-label" for="estado">
-              EJECUTADO
-            </label>
-          </div>
-          <button type="submit" class="btn btn-success btn-sm"><i class="fas fa-check"></i> Guardar</button>
-          <a href="{% url 'proforma_list' %}" class="btn btn-danger btn-sm"><i class="fas fa-times"></i> Cerrar</a>
-      </div>
-    </form>
-  </div>
+    <hr class="my-4">
 
-  <div class="card-footer text-center">
-      <!-- Botones fuera del formulario -->
-    <a href="{% url 'proforma_pdf' proforma.id %}" 
-      target="_blank" rel="noopener noreferrer" class="btn btn-info btn-sm" data-bs-toggle="tooltip" title="Sin código">
-      <i class="fas fa-file-pdf"></i> Sin/Code</a>
-    <a href="{% url 'proforma_almacen' proforma.id %}" target="_blank" rel="noopener noreferrer" 
-      class="btn btn-default btn-sm" data-bs-toggle="tooltip" title="Con código">
-      <i class="fas fa-file-pdf"></i> Con/Code</a>
+    <!-- Observaciones y estado de la proforma -->
+    <form method="POST" action="{% url 'cambiar_estado_proforma' proforma.id %}" class="mt-4">
+        {% csrf_token %}
+        
+        <!-- Observaciones -->
+        <div class="form-group mb-3">
+            <label for="observacion" class="form-label fw-bold">Observaciones</label>
+            <textarea name="observacion" id="observacion" class="form-control form-control-sm" 
+                      rows="2" placeholder="Añade observaciones adicionales...">{{ proforma.observacion|default_if_none:'' }}</textarea>
+        </div>
+
+        <!-- Estado -->
+        <div class="form-check form-check-lg mb-3">
+            <input class="form-check-input" type="checkbox" value="EJECUTADO" id="estado" name="estado"
+                {% if proforma.estado == 'EJECUTADO' %} checked disabled {% endif %}>
+            <label class="form-check-label fw-bold" for="estado">
+                Marcar como EJECUTADO
+            </label>
+            {% if proforma.estado == 'EJECUTADO' %}
+                <small class="text-success d-block mt-1">✓ Proforma ejecutada</small>
+            {% endif %}
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="d-flex gap-2 justify-content-between">
+            <div>
+                <button type="submit" class="btn btn-success btn-sm">
+                    <i class="fas fa-check"></i> Guardar
+                </button>
+                <a href="{% url 'proforma_list' %}" class="btn btn-danger btn-sm">
+                    <i class="fas fa-times"></i> Cerrar
+                </a>
+            </div>
+            <div>
+                <a href="{% url 'proforma_pdf' proforma.id %}" 
+                  target="_blank" rel="noopener noreferrer" class="btn btn-info btn-sm">
+                  <i class="fas fa-file-pdf"></i> Sin/Code
+                </a>
+                <a href="{% url 'proforma_almacen' proforma.id %}" target="_blank" rel="noopener noreferrer" 
+                  class="btn btn-secondary btn-sm">
+                  <i class="fas fa-file-pdf"></i> Con/Code
+                </a>
+            </div>
+        </div>
+    </form>
+
   </div>
 
 </div>
@@ -317,6 +402,8 @@
 <script type="text/javascript">
   document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("search-field").focus();
+
+    
     
     document.querySelectorAll(".editar-cantidad").forEach(btn => {
         btn.addEventListener("click", function (event) {
@@ -431,4 +518,148 @@
     }
   });
 </script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Debug: confirmar que proforma está presente
+    console.log('Context proforma:', typeof proforma !== 'undefined' ? proforma : 'proforma var not available');
+
+    const loadBtn = document.getElementById('load-kit-btn');
+    const kitSelect = document.getElementById('kit-select');
+    const preview = document.getElementById('kit-items-preview');
+    const itemsList = document.getElementById('kit-items-list');
+    const selectAll = document.getElementById('kit-select-all');
+    const addSelectedBtn = document.getElementById('add-selected-kit-items');
+    const clearBtn = document.getElementById('clear-kit-selection');
+
+    function getCSRFToken() {
+        const el = document.querySelector('[name=csrfmiddlewaretoken]');
+        return el ? el.value : '';
+    }
+
+    loadBtn.addEventListener('click', function() {
+        const kitId = kitSelect.value;
+        if (!kitId) {
+            alert('Selecciona un kit primero');
+            return;
+        }
+
+        fetch(`/api/kits/${kitId}/items/`)
+            .then(r => {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(data => {
+                itemsList.innerHTML = '';
+                if (!data.items || data.items.length === 0) {
+                    itemsList.innerHTML = '<tr><td colspan="4">No hay productos en este kit.</td></tr>';
+                    preview.classList.remove('d-none');
+                    return;
+                }
+                data.items.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="text-center">
+                            <input type="checkbox" class="kit-item-checkbox"
+                                data-producto-id="${item.producto__id}"
+                                data-cantidad="${item.cantidad}"
+                                data-precio="${item.producto__precio}">
+                        </td>
+                        <td>
+                            <strong>${item.producto__nombre}</strong>
+                            ${item.producto__descripcion ? `<br><small class="text-dark">${item.producto__descripcion}</small>` : ''}
+                        </td>
+                        <td>${item.cantidad}</td>
+                        <td class="text-right">${parseFloat(item.producto__precio).toFixed(2)}</td>
+                    `;
+                    itemsList.appendChild(tr);
+                });
+                preview.classList.remove('d-none');
+                if (selectAll) selectAll.checked = false;
+            })
+            .catch(err => {
+                console.error('Error cargando items del kit:', err);
+                alert('Error al cargar items del kit. Revisa la consola y el endpoint /api/kits/<id>/items/');
+            });
+    });
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            document.querySelectorAll('.kit-item-checkbox').forEach(cb => cb.checked = this.checked);
+        });
+    }
+
+    clearBtn.addEventListener('click', function() {
+        document.querySelectorAll('.kit-item-checkbox').forEach(cb => cb.checked = false);
+        if (selectAll) selectAll.checked = false;
+    });
+
+    // Cerrar preview del kit
+    const closeBtn = document.getElementById('close-kit-preview');
+    closeBtn.addEventListener('click', function() {
+        preview.classList.add('d-none');
+        kitSelect.value = '';
+        itemsList.innerHTML = '';
+        if (selectAll) selectAll.checked = false;
+    });
+
+    addSelectedBtn.addEventListener('click', function() {
+        const checked = Array.from(document.querySelectorAll('.kit-item-checkbox:checked'));
+        if (checked.length === 0) {
+            alert('Selecciona al menos un producto del kit');
+            return;
+        }
+
+        // Obtener proformaId del atributo data del botón
+        const proformaId = document.getElementById('add-selected-kit-items').dataset.proformaId;
+        
+        if (!proformaId) {
+            alert('No hay proforma disponible en el contexto. Imposible agregar productos.');
+            return;
+        }
+
+        const csrfToken = getCSRFToken();
+
+        function sendItem(cb) {
+            const productoId = cb.dataset.productoId;
+            const cantidad = cb.dataset.cantidad;
+            const precio = cb.dataset.precio;
+
+            const form = new FormData();
+            form.append('proforma_id', proformaId);
+            form.append('producto_id', productoId);
+            form.append('cantidad', cantidad);
+            form.append('precio', precio);
+            form.append('tipo_busqueda', 'codigo');
+            if (csrfToken) form.append('csrfmiddlewaretoken', csrfToken);
+
+            // Debug: mostrar lo que se envía
+            console.log('Enviando item:', { proformaId, productoId, cantidad, precio });
+
+            return fetch('{% url "agregar_producto_a_detalle" %}', {
+                method: 'POST',
+                body: form
+            }).then(resp => {
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                return resp.text(); // o json() si el endpoint devuelve json
+            });
+        }
+
+        (async function() {
+            try {
+                for (const cb of checked) {
+                    await sendItem(cb);
+                }
+                location.reload();
+            } catch (e) {
+                console.error('Error al agregar items del kit:', e);
+                alert('Ocurrió un error al agregar los productos seleccionados. Revisa la consola y la pestaña Network.');
+            }
+        })();
+    });
+});
+</script>
+
+
+
 {% endblock %}

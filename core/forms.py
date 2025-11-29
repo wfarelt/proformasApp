@@ -199,3 +199,29 @@ class BrandForm(forms.ModelForm):
             'description': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
+
+# FORMULARIOS PARA KITS DE PRODUCTOS
+
+from .models import ProductKit, ProductKitItem, Producto
+
+class ProductKitForm(forms.ModelForm):
+    class Meta:
+        model = ProductKit
+        fields = ['name', 'description']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del kit'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Descripción'}),
+        }
+
+class ProductKitItemForm(forms.ModelForm):
+    producto = forms.ModelChoiceField(
+        queryset=Producto.objects.all(),
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    class Meta:
+        model = ProductKitItem
+        fields = ['producto', 'cantidad']
+        widgets = {
+            'cantidad': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+        }

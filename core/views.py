@@ -5,7 +5,7 @@ from django.urls import reverse_lazy
 from django.contrib import messages  # Importa el framework de mensajes
 from django.core.paginator import Paginator
 from django.views.generic import ListView, UpdateView, TemplateView
-from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand, Company
+from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand, Company, ProductKit
 from .forms import ProductoForm, ClienteForm, ProformaAddClientForm, SupplierForm, BrandForm, \
                     CustomPasswordChangeForm, UserProfileForm
 
@@ -202,12 +202,15 @@ def _get_proforma_context(proforma, request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    kits = ProductKit.objects.filter(company=request.user.company, is_active=True)
+
     return {
         'proforma': proforma,
         'productos_list': page_obj,
         'detalles': detalles,
         'page_obj': page_obj,
         'tipo_busqueda': tipo_busqueda,
+        'kits': kits,
     }
 
 @login_required(login_url='login')
@@ -380,16 +383,30 @@ def editar_cantidad_detalle(request, detalle_id):
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=400)
 
-
 @transaction.atomic
 def cambiar_estado_proforma(request, id):
     proforma = Proforma.objects.get(id=id)
+    
+    # VALIDAR DESCUENTO PORCENTUAL
     if request.POST.get('discount_percentage'):
-        proforma.discount_percentage = request.POST.get('discount_percentage')
-        proforma.save()
+        try:
+            discount = float(request.POST.get('discount_percentage'))
+            if discount < 0:
+                messages.error(request, 'El descuento no puede ser negativo.')
+                return redirect('proforma_edit', id)
+            if discount > 100:
+                messages.warning(request, 'El descuento no puede ser mayor a 100%.')
+                return redirect('proforma_edit', id)
+            proforma.discount_percentage = discount
+            proforma.save()
+        except (ValueError, TypeError):
+            messages.error(request, 'El descuento debe ser un número válido.')
+            return redirect('proforma_edit', id)
+    
     if request.POST.get('observacion'):
         proforma.observacion = request.POST.get('observacion')
         proforma.save()
+    
     if request.POST.get('estado') == 'EJECUTADO':
         if proforma.cliente:
             proforma.estado = 'EJECUTADO'
@@ -494,6 +511,9 @@ def anular_proforma(request, id):
     messages.success(request, f'Proforma #{proforma.id} anulada y movimiento revertido.')
     return redirect('proforma_list')    
 
+from django.utils import timezone
+from datetime import datetime
+
 @login_required
 def cambiar_fecha_proforma(request, id):
     proforma = Proforma.objects.get(id=id)
@@ -501,8 +521,9 @@ def cambiar_fecha_proforma(request, id):
         fecha_str = request.POST.get('fecha')
         if fecha_str:
             # Si tu campo es DateTimeField, puedes hacer:
-            from datetime import datetime
-            proforma.fecha = datetime.strptime(fecha_str, "%Y-%m-%d")
+            
+            fecha_naive = datetime.strptime(fecha_str, "%Y-%m-%d")
+            proforma.fecha = timezone.make_aware(fecha_naive)
             proforma.save()
             messages.success(request, "Fecha actualizada correctamente.")
     return redirect('proforma_edit', id)
@@ -807,3 +828,152 @@ def proforma_almacen(request, proforma_id):
     response.write(pdf)
     
     return response
+
+
+from .models import ProductKit, ProductKitItem
+from .forms import ProductKitForm, ProductKitItemForm
+
+# KIT DE PRODUCTOS
+class ProductKitListView(LoginRequiredMixin, ListView):
+    model = ProductKit
+    template_name = 'core/kit/kit_list.html'
+    context_object_name = 'kits'
+    paginate_by = 10
+    login_url = 'login'
+    
+    def get_queryset(self):
+        query = self.request.GET.get('q')
+        kits = ProductKit.objects.filter(company=self.request.user.company)
+        if query:
+            kits = kits.filter(name__icontains=query)
+        return kits.order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'kits de productos'
+        context['placeholder'] = 'Buscar por nombre'
+        return context
+
+@login_required(login_url='login')
+def kit_create(request):
+    if request.method == 'POST':
+        form = ProductKitForm(request.POST)
+        if form.is_valid():
+            kit = form.save(commit=False)
+            kit.user = request.user
+            kit.company = request.user.company
+            kit.save()
+            messages.success(request, 'Kit creado correctamente.')
+            return redirect('kit_detail', pk=kit.id)
+    else:
+        form = ProductKitForm()
+    
+    return render(request, 'core/kit/kit_form.html', {'form': form, 'title': 'Nuevo Kit'})
+
+@login_required(login_url='login')
+def kit_detail(request, pk):
+    kit = get_object_or_404(ProductKit, pk=pk, company=request.user.company)
+    items = kit.items.all()
+    
+    return render(request, 'core/kit/kit_detail.html', {
+        'kit': kit,
+        'items': items,
+        'title': f'Kit: {kit.name}'
+    })
+
+@login_required(login_url='login')
+def kit_edit(request, pk):
+    kit = get_object_or_404(ProductKit, pk=pk, company=request.user.company)
+    
+    if request.method == 'POST':
+        form = ProductKitForm(request.POST, instance=kit)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Kit actualizado correctamente.')
+            return redirect('kit_detail', pk=kit.id)
+    else:
+        form = ProductKitForm(instance=kit)
+    
+    return render(request, 'core/kit/kit_form.html', {'form': form, 'kit': kit, 'title': 'Editar Kit'})
+
+@login_required(login_url='login')
+def kit_delete(request, pk):
+    if request.method != 'POST':
+        messages.error(request, 'Método no permitido.')
+        return redirect('kit_list')
+
+    kit = get_object_or_404(ProductKit, pk=pk, company=request.user.company)
+    kit.is_active = not kit.is_active
+    kit.save()
+
+    if kit.is_active:
+        messages.success(request, 'Kit activado correctamente.')
+    else:
+        messages.success(request, 'Kit desactivado correctamente.')
+
+    return redirect('kit_list')
+
+@login_required(login_url='login')
+def kit_add_item(request, pk):
+    kit = get_object_or_404(ProductKit, pk=pk, company=request.user.company)
+            
+    if request.method == 'POST':
+        form = ProductKitItemForm(request.POST)
+        if form.is_valid():
+            item = form.save(commit=False)
+
+            # VALIDACIÓN: el producto debe tener precio de venta > 0 antes de añadirse al kit
+            producto = item.producto
+            # Intentar campos comunes: 'precio' o 'latest_price'
+            price = getattr(producto, 'precio', None)
+            if price is None:
+                price = getattr(producto, 'latest_price', None)
+
+            try:
+                price_value = float(price) if price is not None else 0.0
+            except (TypeError, ValueError):
+                price_value = 0.0
+
+            if price_value <= 0.0:
+                # Añadir error al formulario y volver a renderizar para que el usuario corrija
+                form.add_error('producto', 'El producto debe tener un precio de venta válido mayor a 0 antes de añadirlo al kit.')
+                return render(request, 'core/kit/kit_item_form.html', {
+                    'form': form,
+                    'kit': kit,
+                    'title': f'Agregar producto a {kit.name}'
+                })
+
+            item.kit = kit
+            item.save()
+            messages.success(request, 'Producto agregado al kit.')
+            return redirect('kit_detail', pk=kit.id)
+    else:
+        form = ProductKitItemForm()
+    
+    return render(request, 'core/kit/kit_item_form.html', {
+        'form': form,
+        'kit': kit,
+        'title': f'Agregar producto a {kit.name}'
+    })
+
+@login_required(login_url='login')
+def kit_remove_item(request, pk, item_id):
+    kit = get_object_or_404(ProductKit, pk=pk, company=request.user.company)
+    item = get_object_or_404(ProductKitItem, pk=item_id, kit=kit)
+    item.delete()
+    messages.success(request, 'Producto removido del kit.')
+    return redirect('kit_detail', pk=kit.id)
+
+# Para obtener kit items via AJAX en proforma
+def get_kit_items(request, kit_id):
+    """API para obtener items de un kit"""
+    kit = get_object_or_404(ProductKit, pk=kit_id)
+    items = kit.items.all().values(
+        'id', 
+        'producto__id', 
+        'producto__nombre', 
+        'producto__descripcion',
+        'cantidad', 
+        'producto__precio'
+    )
+    return JsonResponse({'items': list(items)})

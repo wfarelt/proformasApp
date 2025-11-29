@@ -1,0 +1,139 @@
+{% extends 'core/index.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="card mt-3">
+    <div class="card-header">
+        <div class="row">
+            <div class="col-md-8">
+                <h2>{{ kit.name }}</h2>
+                {% if kit.description %}
+                    <p class="text-muted">{{ kit.description }}</p>
+                {% endif %}
+            </div>
+            <div class="col-md-4 text-right">
+                {% if kit.is_active %}
+                    <span class="badge badge-success badge-lg">Activo</span>
+                {% else %}
+                    <span class="badge badge-danger badge-lg">Inactivo</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        <!-- Información del Kit -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h5>Información</h5>
+                <table class="table table-sm">
+                    <tr>
+                        <th>ID:</th>
+                        <td>{{ kit.id }}</td>
+                    </tr>
+                    <tr>
+                        <th>Creado por:</th>
+                        <td>{{ kit.user.name }}</td>
+                    </tr>
+                    <tr>
+                        <th>Fecha de creación:</th>
+                        <td>{{ kit.created_at|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Última actualización:</th>
+                        <td>{{ kit.updated_at|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h5>Resumen</h5>
+                <table class="table table-sm">
+                    <tr>
+                        <th>Total de productos:</th>
+                        <td>
+                            <span class="badge badge-info badge-lg">{{ kit.get_items_count }}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Empresa:</th>
+                        <td>{{ kit.company.name }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <hr>
+        
+        <!-- Productos del Kit -->
+        <h5>Productos incluidos en el kit</h5>
+        
+        {% if items %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover table-sm">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Producto</th>
+                            <th>Descripción</th>
+                            <th>Cantidad</th>
+                            <th>Precio unitario</th>
+                            <th>Subtotal</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                            <tr>
+                                <td><strong>{{ item.producto.nombre }}</strong></td>
+                                <td>
+                                    {% if item.producto.descripcion %}
+                                        {{ item.producto.descripcion|truncatewords:5 }}
+                                    {% else %}
+                                        <span class="text-muted">Sin descripción</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge badge-primary">{{ item.cantidad }}</span>
+                                </td>
+                                <td>${{ item.producto.precio|floatformat:2 }}</td>
+                                <td><strong>${{ item.get_subtotal|floatformat:2 }}</strong></td>
+                                <td class="text-center">
+                                    <a href="{% url 'kit_remove_item' kit.id item.id %}" 
+                                       class="btn btn-danger btn-sm"
+                                       onclick="return confirm('¿Estás seguro de que deseas eliminar este producto del kit?');"
+                                       title="Eliminar producto">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-info-circle"></i> Este kit no tiene productos aún.
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="card-footer">
+        <div class="row">
+            <div class="col-md-6">
+                <a href="{% url 'kit_add_item' kit.id %}" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Agregar producto
+                </a>
+            </div>
+            <div class="col-md-6 text-right">
+                <a href="{% url 'kit_edit' kit.id %}" class="btn btn-warning">
+                    <i class="fas fa-edit"></i> Editar kit
+                </a>                
+                <a href="{% url 'kit_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Volver a lista
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

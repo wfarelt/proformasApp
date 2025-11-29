@@ -1,0 +1,170 @@
+{% extends 'core/index.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+{% load static %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'plugins/select2/css/select2.min.css' %}">
+<link rel="stylesheet" href="{% static 'plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="card mt-3">
+    <div class="card-header">
+        <h2>{{ title }}</h2>
+        <p class="text-muted">Kit: <strong>{{ kit.name }}</strong></p>
+    </div>
+    
+    <div class="card-body">
+        <form method="post" id="kit-item-form">
+            {% csrf_token %}
+            
+            <!-- Producto -->
+            <div class="form-group">
+                <label for="{{ form.producto.id_for_label }}">{{ form.producto.label }}</label>
+                {{ form.producto }}
+                {% if form.producto.errors %}
+                    <div class="alert alert-danger mt-2">
+                        {% for error in form.producto.errors %}
+                            <small>{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Cantidad -->
+            <div class="form-group">
+                <label for="{{ form.cantidad.id_for_label }}">{{ form.cantidad.label }}</label>
+                {{ form.cantidad }}
+                {% if form.cantidad.errors %}
+                    <div class="alert alert-danger mt-2">
+                        {% for error in form.cantidad.errors %}
+                            <small>{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Preview del producto seleccionado -->
+            <div id="product-preview" class="alert alert-info d-none">
+                <h6>Información del producto:</h6>
+                <table class="table table-sm mb-0">
+                    <tr>
+                        <th>Código:</th>
+                        <td id="preview-codigo">-</td>
+                    </tr>
+                    <tr>
+                        <th>Descripción:</th>
+                        <td id="preview-descripcion">-</td>
+                    </tr>
+                    <tr>
+                        <th>Marca:</th>
+                        <td id="preview-marca">-</td>
+                    </tr>
+                    <tr>
+                        <th>Precio:</th>
+                        <td id="preview-precio">-</td>
+                    </tr>
+                    <tr>
+                        <th>Stock:</th>
+                        <td id="preview-stock">-</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Botones -->
+            <div class="form-group mt-4">
+                <button type="submit" class="btn btn-success btn-lg">
+                    <i class="fas fa-plus"></i> Agregar producto
+                </button>
+                <a href="{% url 'kit_detail' kit.id %}" class="btn btn-secondary btn-lg">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugins/select2/js/select2.min.js' %}"></script>
+
+<script>
+    $(document).ready(function() {
+        // Inicializar Select2 para productos
+        $('#{{ form.producto.id_for_label }}').select2({
+            placeholder: "Selecciona un producto",
+            allowClear: true,
+            theme: "bootstrap4",
+            width: "100%",
+            ajax: {
+                url: '/inv/api/productos/',
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return {
+                        q: params.term
+                    };
+                },
+                processResults: function(data) {
+                    return {
+                        results: data.results.map(function(p) {
+                            return {
+                                id: p.id,
+                                text: p.nombre + ' | ' + p.description,
+                                data: p
+                            };
+                        })
+                    };
+                },
+                cache: true
+            }
+        });
+
+        // Mostrar preview cuando se selecciona un producto
+        $('#{{ form.producto.id_for_label }}').on('select2:select', function(e) {
+            const data = e.params.data.data;
+            
+            document.getElementById('preview-codigo').textContent = data.nombre || '-';
+            document.getElementById('preview-descripcion').textContent = data.description || '-';
+            document.getElementById('preview-marca').textContent = data.brand__name || '-';
+            document.getElementById('preview-precio').textContent = '$' + parseFloat(data.precio).toFixed(2);
+            document.getElementById('preview-stock').textContent = data.stock || '0';
+            
+            // Mostrar el preview
+            document.getElementById('product-preview').classList.remove('d-none');
+        });
+
+        // Ocultar preview cuando se limpia la selección
+        $('#{{ form.producto.id_for_label }}').on('select2:clear', function() {
+            document.getElementById('product-preview').classList.add('d-none');
+        });
+
+        // Enfoque automático en el input de búsqueda
+        $('#{{ form.producto.id_for_label }}').on('select2:open', function() {
+            setTimeout(() => {
+                document.querySelector('.select2-search__field').focus();
+            }, 100);
+        });
+
+        // Validación del formulario
+        $('#kit-item-form').submit(function(e) {
+            const producto = $('#{{ form.producto.id_for_label }}').val();
+            const cantidad = $('#{{ form.cantidad.id_for_label }}').val();
+
+            if (!producto) {
+                e.preventDefault();
+                alert('Por favor selecciona un producto');
+                return false;
+            }
+
+            if (!cantidad || parseInt(cantidad) < 1) {
+                e.preventDefault();
+                alert('Por favor ingresa una cantidad válida (mayor a 0)');
+                return false;
+            }
+        });
+    });
+</script>
+{% endblock %}

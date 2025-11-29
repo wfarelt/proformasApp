@@ -58,6 +58,14 @@ urlpatterns = [
     path('brands/', BrandListView.as_view(), name='brand_list'),
     path('brands/new/', brand_create, name='brand_create'),
     path('brands/edit/<int:pk>/', brand_update, name='brand_update'),
-    path('brands/status/<int:pk>/', brand_status, name='brand_status'),
-    
+    path('brands/status/<int:pk>/', brand_status, name='brand_status'),   
+    #product kits
+    path('kits/', ProductKitListView.as_view(), name='kit_list'),
+    path('kits/new/', kit_create, name='kit_create'),
+    path('kits/<int:pk>/', kit_detail, name='kit_detail'),
+    path('kits/<int:pk>/edit/', kit_edit, name='kit_edit'),
+    path('kits/<int:pk>/delete/', kit_delete, name='kit_delete'),
+    path('kits/<int:pk>/add-item/', kit_add_item, name='kit_add_item'),
+    path('kits/<int:pk>/remove-item/<int:item_id>/', kit_remove_item, name='kit_remove_item'),
+    path('api/kits/<int:kit_id>/items/', get_kit_items, name='get_kit_items'),
 ]

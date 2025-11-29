@@ -216,3 +216,45 @@ class Supplier(models.Model):
 
     def __str__(self):
         return self.name
+
+# ...existing code...
+
+# KIT DE PRODUCTOS
+class ProductKit(models.Model):
+    name = models.CharField(max_length=255, verbose_name="Nombre del Kit")
+    description = models.TextField(blank=True, null=True, verbose_name="Descripción")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="product_kits")
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="product_kits")
+    
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Kit de Productos"
+        verbose_name_plural = "Kits de Productos"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return self.name
+    
+    def get_items_count(self):
+        """Retorna la cantidad de productos en el kit"""
+        return self.items.count()
+
+
+class ProductKitItem(models.Model):
+    kit = models.ForeignKey(ProductKit, on_delete=models.CASCADE, related_name="items")
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
+    cantidad = models.PositiveIntegerField(default=1)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Ítem del Kit"
+        verbose_name_plural = "Ítems del Kit"
+        unique_together = ('kit', 'producto')
+    
+    def __str__(self):
+        return f"{self.cantidad}x {self.producto.nombre}"
+
