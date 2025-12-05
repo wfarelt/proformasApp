@@ -650,7 +650,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 for (const cb of checked) {
                     await sendItem(cb);
                 }
-                location.reload();
+                window.location.href = `/proforma/edit/${proformaId}`;
             } catch (e) {
                 console.error('Error al agregar items del kit:', e);
                 alert('Ocurrió un error al agregar los productos seleccionados. Revisa la consola y la pestaña Network.');

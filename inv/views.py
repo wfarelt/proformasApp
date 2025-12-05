@@ -103,13 +103,24 @@ def buscar_productos(request):
     }
     return JsonResponse(data)
 
+@login_required
 def reporte_inventario(request):
-    productos = Producto.objects.filter(stock__gt=0).order_by('location')  # Solo productos con stock > 0
-    return render(request, "inv/reports/reporte_inventario.html", {
+    # Solo productos con stock > 0
+    productos = Producto.objects.filter(stock__gt=0).order_by('location')  
+    
+    # Sumar costos y precios totales
+    total_cost = sum(p.cost * p.stock for p in productos if p.cost)
+    total_price = sum(p.precio * p.stock for p in productos if p.precio)
+    
+    context = {
         "title": "Reporte de Inventario",
-        "productos": productos
-    })
-
+        "productos": productos,
+        "total_cost": total_cost,
+        "total_price": total_price,
+    }
+   
+    return render(request, "inv/reports/reporte_inventario.html", context)
+    
 def proforma_report(request):
     proformas = Proforma.objects.none()
     total_general = 0
@@ -637,7 +648,6 @@ class CreateMovementView(View):
             return JsonResponse({'error': str(ve)}, status=400)
         except Exception as e:
             return JsonResponse({'error': 'Ocurrió un error inesperado.', 'detalle': str(e)}, status=500)
-
 
 
 # PRE-INVENTARIO

@@ -10,7 +10,34 @@
 {% block content %}
 <div class="card">
     <div class="card-header">
-        <h2 class="text-center">Reporte de Inventario</h2>
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <!-- Título -->
+        <div class="card shadow-sm px-4 py-3" style="border-radius: 12px; min-width: 250px;">
+            <h2 class="text-center m-0" style="font-weight: 600;">
+                📦 Reporte de Inventario
+            </h2>
+        </div>
+
+        <!-- Total Costo -->
+        <div class="card shadow-sm text-center px-4 py-3" style="border-radius: 12px; min-width: 180px;">
+            <p class="m-0" style="font-size: 0.9rem; color: #555;">Total Costo</p>
+            <p class="summary-number m-0" style="font-size: 2rem; font-weight: bold;">
+                ${{ total_cost|floatformat:2 }}
+            </p>
+        </div>
+
+        <!-- Total Precio -->
+        <div class="card shadow-sm text-center px-4 py-3" style="border-radius: 12px; min-width: 180px;">
+            <p class="m-0" style="font-size: 0.9rem; color: #555;">Total Precio</p>
+            <p class="summary-number m-0" style="font-size: 2rem; font-weight: bold;">
+                ${{ total_price|floatformat:2 }}
+            </p>
+        </div>
+
+    </div>
+        
     </div>
     <div class="card-body">
         <div class="table table-responsive table-sm">
@@ -22,7 +49,8 @@
                         <th>Descripcion</th>
                         <th>Marca</th>
                         <th>Stock</th>
-                        <th class="text-right">Costo $</th>
+                        <th class="text-right">Costo($)</th>
+                        <th class="text-right">Precio($)</th>
                         <th class="text-center">Ubicación</th>
                     </tr>
                 </thead>
@@ -35,6 +63,7 @@
                         <td class="text-center">{{ producto.brand.nombre|default:"N/A" }}</td>
                         <td class="text-right">{{ producto.stock }}</td>
                         <td class="text-right">{{ producto.cost|floatformat:2 }}</td>
+                        <td class="text-right">{{ producto.precio|floatformat:2 }}</td>
                         <td class="text-center">{{ producto.location|default:"-" }}</td>
                     </tr>
                     {% empty %}
@@ -42,6 +71,13 @@
                         <td colspan="6" class="text-center">No hay productos con stock disponible.</td>
                     </tr>
                     {% endfor %}
+                    <tr>
+                        <td colspan="4" class="text-right font-weight-bold">Totales:</td>
+                        <td class="text-right font-weight-bold">{{ productos|length }}</td>
+                        <td class="text-right font-weight-bold">{{ total_cost|floatformat:2 }}</td>
+                        <td class="text-right font-weight-bold">{{ total_price|floatformat:2 }}</td>
+                        <td> -- </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
