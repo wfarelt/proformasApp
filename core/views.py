@@ -39,6 +39,8 @@ from django.utils.dateparse import parse_date
 
 from django.db.models import Q
 
+from .services.price_evaluation_service import PriceEvaluationService
+
 # Create your views here.
 
 # HOME
@@ -82,8 +84,14 @@ def edit_profile(request):
 @login_required(login_url='login')
 def product_detail(request, id):
     producto = Producto.objects.get(id=id)
+    price_history = producto.price_history.all().order_by('-created_at')
+    
     title = 'Detalle de producto'
-    context = {'producto': producto, 'title': title}
+    context = {
+        'producto': producto, 
+        'title': title,
+        'price_history': price_history
+    }
     return render(request, 'core/product/product_detail.html', context)
 
 @login_required(login_url='login')
@@ -103,14 +111,42 @@ def producto_new(request):
 def product_edit(request, id):
     title = 'Editar producto'
     producto = get_object_or_404(Producto, pk=id)
+    is_admin_group = request.user.groups.filter(name='Administrador').exists()
+    old_price = producto.precio 
+
     if request.method == 'POST':
         form = ProductoForm(request.POST, instance=producto)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Producto actualizado correctamente.')
+        if is_admin_group:
+            if form.is_valid():
+                
+                producto = form.save(commit=False)
+                
+                if 'precio' in form.changed_data:
+                    
+                    new_price = form.cleaned_data['precio']
+
+                    PriceEvaluationService.propose_new_price(
+                        product=producto,
+                        old_price=old_price,
+                        new_price=new_price,
+                        cost_reference=producto.cost,
+                        user=request.user,
+                        reason="Edición manual por administrador",
+                        change_type='MANUAL'
+                    )
+
+                    # Mantener precio anterior hasta aprobación
+                    producto.precio = old_price
+                
+                producto.save()    
+                messages.success(request, 'Producto actualizado correctamente.')
+                return redirect('product_list')
+        else:
+            messages.error(request, 'No tienes permisos para editar este producto.')
             return redirect('product_list')
     else:
         form = ProductoForm(instance=producto)
+    
     return render(request, 'core/product/producto_new.html', {'form': form, 'title': title})
 
 class ProductListView(LoginRequiredMixin, ListView):   
@@ -137,6 +173,29 @@ class ProductListView(LoginRequiredMixin, ListView):
                     Q(nombre__icontains=palabra) | Q(descripcion__icontains=palabra)
                 )
         return object_list
+
+from django.contrib.auth.decorators import user_passes_test, login_required
+from django.shortcuts import get_object_or_404, redirect
+from core.models import ProductPriceHistory
+from core.services.price_approval_service import PriceApprovalService
+from django.contrib import messages
+
+def is_admin(user):
+    return user.is_superuser  # o cualquier lógica de tu rol admin
+
+@login_required(login_url='login')
+@user_passes_test(is_admin)
+def approve_price(request, ph_id):
+    ph = get_object_or_404(ProductPriceHistory, id=ph_id)
+
+    try:
+        PriceApprovalService.approve(ph, approved_by=request.user)
+        messages.success(request, f"Precio para {ph.product.nombre} aprobado correctamente.")
+    except ValueError as e:
+        messages.error(request, str(e))
+
+    return redirect('product_detail', id=ph.product.id)
+
 
 from django.contrib.auth import get_user_model
 # PROFORMA

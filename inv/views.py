@@ -34,6 +34,10 @@ from django.http import HttpResponse
 from weasyprint import HTML
 from io import BytesIO
 
+from core.models import User
+from core.services.purchase_price_service import create_price_history_from_purchase
+
+
 # INGRESOS
 
 @login_required       
@@ -199,42 +203,48 @@ def create_purchase(request):
         
     if request.method == 'POST':
         form = PurchaseForm(request.POST)
-        formset = PurchaseDetailFormSet(request.POST)
 
-        if form.is_valid() and formset.is_valid():
-            with transaction.atomic():
-                # Crear la compra sin guardar aún
-                purchase = form.save(commit=False)
-                purchase.user = request.user
-                #purchase.date = now()
-                purchase.save()
+        # Primero validar el formulario principal para construir la instancia
+        if form.is_valid():
+            purchase = form.save(commit=False)
+            purchase.user = request.user
 
-                # Guardar detalles de la compra
-                formset.instance = purchase
-                formset.save()
+            # Asociar el formset a la instancia (aunque no esté guardada aún)
+            formset = PurchaseDetailFormSet(request.POST, instance=purchase)
 
-                # Calcular el total de la compra
-                total = 0
-                for f in formset.forms:
-                    if f.cleaned_data and not f.cleaned_data.get('DELETE', False):
-                        qty = f.cleaned_data.get('quantity', 0)
-                        price = f.cleaned_data.get('unit_price', 0)
-                        total += qty * price
-                
-                purchase.total_amount = total
-                purchase.save()
+            if formset.is_valid():
+                with transaction.atomic():
+                    # Guardar purchase y detalles
+                    purchase.save()
+                    formset.instance = purchase
+                    formset.save()
 
-                messages.success(request, "Compra registrada correctamente.")
+                    # Calcular el total de la compra
+                    total = 0
+                    for f in formset.forms:
+                        if f.cleaned_data and not f.cleaned_data.get('DELETE', False):
+                            qty = f.cleaned_data.get('quantity', 0)
+                            price = f.cleaned_data.get('unit_price', 0)
+                            total += qty * price
 
-                # Redireccionar si está confirmada
-                if purchase.status == 'confirmed':
-                    create_purchase_movement(purchase)
-                    messages.success(request, "Compra confirmada correctamente.")
-                    return redirect('purchase_list')
-                else:
-                    return redirect('update_purchase', pk=purchase.pk)
+                    purchase.total_amount = total
+                    purchase.save()
+
+                    messages.success(request, "Compra registrada correctamente.")
+
+                    if purchase.status == 'confirmed':
+                        create_purchase_movement(purchase)
+                        create_price_history_from_purchase(purchase, request.user)
+                        messages.success(request, "Compra confirmada correctamente.")
+                        return redirect('purchase_list')
+                    else:
+                        return redirect('update_purchase', pk=purchase.pk)
+            else:
+                # formset inválido: renderizar con errores
+                messages.error(request, "Error en los detalles de la compra.")
         else:
-            messages.error(request, "Error al registrar la compra.")
+            # form inválido: para renderizar la página con los datos POST
+            formset = PurchaseDetailFormSet(request.POST)
     else:
         form = PurchaseForm()
         formset = PurchaseDetailFormSet()
@@ -278,6 +288,10 @@ def update_purchase(request, pk):
                 if purchase.status == 'confirmed':
                     # Redirigir a la lista de compras
                     create_purchase_movement(purchase)
+                    
+                    # Generar historial de precios PENDING
+                    create_price_history_from_purchase(purchase, request.user)
+                    
                     messages.success(request, "Compra confirmada y actualizada correctamente.")
                     return redirect('purchase_list')  
                 else:   
@@ -285,7 +299,22 @@ def update_purchase(request, pk):
                     messages.success(request, "Compra actualizada correctamente.")
                     return redirect('update_purchase', pk=purchase.pk)
         else:
-            messages.error(request, "Error al actualizar la compra. Por favor, revise los datos.")
+            # Agregar errores del formulario principal
+            for field, errors in form.errors.items():
+                for error in errors:
+                    field_label = form.fields[field].label if field in form.fields else field
+                    messages.error(request, f"{field_label}: {error}")
+            
+            # Agregar errores del formset
+            for i, formset_error in enumerate(formset.errors):
+                if formset_error:
+                    for field, errors in formset_error.items():
+                        for error in errors:
+                            messages.error(request, f"Producto {i+1} - {field}: {error}")
+            
+            # Mensaje genérico al final
+            if form.errors or formset.errors:
+                messages.error(request, "Por favor, corrija los errores señalados.")
     else:
         form = PurchaseForm(instance=purchase)
         formset = PurchaseDetailFormSet(instance=purchase)
@@ -395,7 +424,7 @@ def create_purchase_movement(purchase):
         detail.product.cost = detail.unit_price
         
         # Actualizar precio de venta del producto
-        detail.product.precio = detail.sale_price
+        # detail.product.precio = detail.sale_price
         
         detail.product.save()
         

@@ -44,4 +44,66 @@
         </div>
     </div>
 </div>
+
+<div class="card card-body mt-4">
+    <h2>Historial de Precios</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Precio Anterior</th>
+            <th>Precio Nuevo</th>
+            <th>Cost</th>
+            <th>Margen %</th>
+            <th>Estado</th>
+            <th>Creado por</th>
+            <th>Aprobado por</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ph in price_history %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ ph.created_at|date:"d/m/Y H:i" }}</td>
+            <td>{{ ph.get_change_type_display }}</td>
+            <td>{{ ph.old_price }}</td>
+            <td>{{ ph.new_price }}</td>
+            <td>{{ ph.cost_reference }}</td>
+            <td>{{ ph.margin_percent }}</td>
+            <td>
+                {% if ph.status == 'APPROVED' %}
+                    <span class="badge badge-success">{{ ph.get_status_display }}</span>
+                {% elif ph.status == 'PENDING' %}
+                    <span class="badge badge-warning">{{ ph.get_status_display }}</span>
+                {% else %}
+                    <span class="badge badge-danger">{{ ph.get_status_display }}</span>
+                {% endif %}
+            </td>
+            <td>{{ ph.created_by.name }}</td>
+            <td>
+                {% if ph.approved_by %}
+                    {{ ph.approved_by.name }}
+                {% else %}
+                    N/A
+                {% endif %}
+            </td>
+            <td>
+                {% if ph.status == 'PENDING' and request.user.is_superuser %}
+                <a href="{% url 'approve_price' ph.id %}" class="btn btn-success btn-sm">Aprobar</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="10">No hay historial de precios.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+
 {% endblock %}

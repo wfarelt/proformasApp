@@ -26,7 +26,7 @@
             <div class="card-body">
                 <div class="row">
                     {% for field in form %}
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group">
                             <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                             {{ field }}
@@ -154,6 +154,68 @@
             $(document).on('select2:open', () => {
                 document.querySelector('.select2-container--open .select2-search__field').focus();
             });
+        });
+        
+        // Funciones para calcular precio de venta (35%) y subtotales/total
+        function parseFloatOrZero(v) {
+            var n = parseFloat(String(v).replace(/,/g, ''));
+            return isNaN(n) ? 0 : n;
+        }
+
+        // unitChanged: true when the unit price was edited (we may auto-calc sale_price)
+        function updateRow($row, unitChanged) {
+            var unit = parseFloatOrZero($row.find('.unit-price').val());
+            var qty = parseFloatOrZero($row.find('.quantity').val());
+
+            // Solo auto-calcular sale_price si la edición vino del unit price
+            if (unitChanged) {
+                var $saleInput = $row.find('.sale-price');
+                var saleCurrent = $saleInput.val();
+                var autoAttr = $saleInput.attr('data-auto-calculated');
+
+                // Si está vacío o fue auto-calculado previamente (no manual), recalculamos
+                if (!saleCurrent || autoAttr !== 'false') {
+                    var sale = +(unit * 1.35).toFixed(2);
+                    $saleInput.val(sale);
+                    $saleInput.attr('data-auto-calculated', 'true');
+                }
+            }
+
+            var subtotal = +(unit * qty || 0).toFixed(2);
+            $row.find('.subtotal').text(subtotal.toFixed(2));
+        }
+
+        function updateTotal() {
+            var total = 0;
+            $('table tbody tr').each(function () {
+                var st = parseFloatOrZero($(this).find('.subtotal').text());
+                total += st;
+            });
+            $('.total').text(total.toFixed(2));
+        }
+
+        // Cuando el usuario edita manualmente el precio de venta, marcamos para no sobreescribir
+        $(document).on('input change', '.sale-price', function () {
+            $(this).attr('data-auto-calculated', 'false');
+        });
+
+        // Escucha cambios separados: si se modifica unit-price recalculamos sale_price (si corresponde)
+        $(document).on('input change', '.unit-price', function () {
+            var $row = $(this).closest('tr');
+            updateRow($row, true);
+            updateTotal();
+        });
+
+        // Si cambia la cantidad, solo recalculamos subtotal/total, sin tocar sale_price
+        $(document).on('input change', '.quantity', function () {
+            var $row = $(this).closest('tr');
+            updateRow($row, false);
+            updateTotal();
+        });
+
+        // Al cargar la página solo recalculamos el total (no el sale_price)
+        $(document).ready(function () {
+            updateTotal();
         });
     </script>
     {% endblock %}

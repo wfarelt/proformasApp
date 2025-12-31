@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from django.utils import timezone
 
 from urllib.parse import quote
@@ -217,8 +218,6 @@ class Supplier(models.Model):
     def __str__(self):
         return self.name
 
-# ...existing code...
-
 # KIT DE PRODUCTOS
 class ProductKit(models.Model):
     name = models.CharField(max_length=255, verbose_name="Nombre del Kit")
@@ -242,7 +241,6 @@ class ProductKit(models.Model):
         """Retorna la cantidad de productos en el kit"""
         return self.items.count()
 
-
 class ProductKitItem(models.Model):
     kit = models.ForeignKey(ProductKit, on_delete=models.CASCADE, related_name="items")
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
@@ -257,4 +255,89 @@ class ProductKitItem(models.Model):
     
     def __str__(self):
         return f"{self.cantidad}x {self.producto.nombre}"
+    
+# HISTORIAL DE CAMBIOS DE PRECIO
+class ProductPriceHistory(models.Model):
+
+    CHANGE_TYPES = (
+        ('INITIAL', 'Initial'),
+        ('PURCHASE', 'Purchase'),
+        ('MANUAL', 'Manual'),
+        ('ADJUSTMENT', 'Adjustment'),
+        ('DISCOUNT', 'Discount'),
+        ('CORRECTION', 'Correction'),
+    )
+
+    STATUS_CHOICES = (
+        ('PENDING', 'Pending'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+        ('EXPIRED', 'Expired'),
+    )
+
+    product = models.ForeignKey(
+        'core.Producto',  # referencia string, evita circular import
+        on_delete=models.PROTECT,
+        related_name='price_history'
+    )
+
+    purchase = models.ForeignKey(
+        'inv.Purchase',  # referencia string a Purchase en INV
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    old_price = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
+
+    new_price = models.DecimalField(
+        max_digits=10, decimal_places=2
+    )
+
+    cost_reference = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
+
+    margin_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )
+
+    change_type = models.CharField(
+        max_length=20, choices=CHANGE_TYPES
+    )
+
+    reason = models.TextField()
+
+    status = models.CharField(
+        max_length=10, choices=STATUS_CHOICES, default='PENDING'
+    )
+
+    valid_from = models.DateTimeField(null=True, blank=True)
+    valid_to = models.DateTimeField(null=True, blank=True)
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='created_price_changes'
+    )
+
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='approved_price_changes'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Historial de Precio'
+        verbose_name_plural = 'Historial de Precios'
+
+    def __str__(self):
+        return f"{self.product.nombre} - {self.new_price} ({self.status})"
 
