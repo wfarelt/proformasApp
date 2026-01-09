@@ -269,10 +269,10 @@ class ProductPriceHistory(models.Model):
     )
 
     STATUS_CHOICES = (
-        ('PENDING', 'Pending'),
-        ('APPROVED', 'Approved'),
-        ('REJECTED', 'Rejected'),
-        ('EXPIRED', 'Expired'),
+        ('PENDING', 'Pendiente'),
+        ('APPROVED', 'Aprobado'),
+        ('REJECTED', 'Rechazado'),
+        ('EXPIRED', 'Expirado'),
     )
 
     product = models.ForeignKey(

@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   {% load static %}
+  {% load core_tags %}
   <title>
     {% block title %}
     Sistema de Inventario
@@ -333,10 +334,24 @@
 {% block control_sidebar %}
   <!-- Control Sidebar -->
   <aside class="control-sidebar control-sidebar-dark">
-    <!-- Control sidebar content goes here -->
     <div class="p-3">
-      <h5>Title</h5>
-      <p>Sidebar content</p>
+      <h5>Precios pendientes</h5>
+      <ul class="list-unstyled">
+        {% if user.is_authenticated %}
+          {% pending_price_history as pending %}
+          {% if pending %}
+            {% for ph in pending %}
+              <li>
+                <a href="{% url 'product_detail' ph.product.id %}">{{ ph.product.nombre }}</a>
+              </li>
+            {% endfor %}
+          {% else %}
+            <li>No hay precios pendientes.</li>
+          {% endif %}
+        {% else %}
+          <li>Inicia sesión para ver notificaciones.</li>
+        {% endif %}
+      </ul>
     </div>
   </aside>
   <!-- /.control-sidebar -->

@@ -22,6 +22,7 @@ urlpatterns = [
     path('producto/edit/<int:id>/', product_edit, name='product_edit'),
     path('productos/', ProductListView.as_view(), name='product_list'),
     path('product/price/approve/<int:ph_id>/', approve_price, name='approve_price'),
+    path('product/price/reject/<int:ph_id>/', reject_price, name='reject_price'),
     
 
     #proformas

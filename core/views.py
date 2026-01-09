@@ -181,7 +181,11 @@ from core.services.price_approval_service import PriceApprovalService
 from django.contrib import messages
 
 def is_admin(user):
-    return user.is_superuser  # o cualquier lógica de tu rol admin
+    # Permitir tanto superusers como usuarios en el grupo 'Administrador'
+    try:
+        return user.is_superuser or user.groups.filter(name='Administrador').exists()
+    except Exception:
+        return False
 
 @login_required(login_url='login')
 @user_passes_test(is_admin)
@@ -195,6 +199,21 @@ def approve_price(request, ph_id):
         messages.error(request, str(e))
 
     return redirect('product_detail', id=ph.product.id)
+
+#REJECTED
+@login_required(login_url='login')
+@user_passes_test(is_admin)
+def reject_price(request, ph_id):
+    ph = get_object_or_404(ProductPriceHistory, id=ph_id)
+    try:
+        PriceApprovalService.reject(ph, rejected_by=request.user)
+        messages.success(request, f"Precio para {ph.product.nombre} rechazado correctamente.")
+    except ValueError as e:
+        messages.error(request, str(e))
+    
+    return redirect('product_detail', id=ph.product.id)
+
+
 
 
 from django.contrib.auth import get_user_model

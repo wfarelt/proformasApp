@@ -23,5 +23,6 @@ def create_price_history_from_purchase(purchase, user):
             user=user,
             reason=f"Generated from Purchase #{purchase.id}",
             cost_reference=cost_reference,
-            change_type='PURCHASE'
+            change_type='PURCHASE',
+            auto_approve_on_increase=True
         )

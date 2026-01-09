@@ -40,3 +40,18 @@ class PriceApprovalService:
         product.save()
 
         return price_history
+
+    @staticmethod
+    def reject(price_history, rejected_by):
+        """
+        Rechaza un ProductPriceHistory pendiente.
+        """
+        if price_history.status != 'PENDING':
+            raise ValueError('Solo se pueden rechazar precios con estado PENDING')
+
+        price_history.status = 'REJECTED'
+        price_history.approved_by = rejected_by
+        price_history.valid_from = None
+        price_history.save()
+
+        return price_history

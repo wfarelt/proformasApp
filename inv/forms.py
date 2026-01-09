@@ -31,6 +31,7 @@ class PurchaseForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Optimizar la carga de proveedores con select_related
         self.fields['supplier'].queryset = Supplier.objects.all().order_by('name')
+        self.fields['invoice_number'].required = False
         
 class PurchaseDetailForm(forms.ModelForm):    
     class Meta:

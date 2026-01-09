@@ -78,8 +78,10 @@
                     <span class="badge badge-success">{{ ph.get_status_display }}</span>
                 {% elif ph.status == 'PENDING' %}
                     <span class="badge badge-warning">{{ ph.get_status_display }}</span>
-                {% else %}
+                {% elif ph.status == 'REJECTED' %}
                     <span class="badge badge-danger">{{ ph.get_status_display }}</span>
+                {% elif ph.status == 'EXPIRED' %}
+                    <span class="badge badge-secondary">{{ ph.get_status_display }}</span>
                 {% endif %}
             </td>
             <td>{{ ph.created_by.name }}</td>
@@ -91,8 +93,10 @@
                 {% endif %}
             </td>
             <td>
-                {% if ph.status == 'PENDING' and request.user.is_superuser %}
+                {% if ph.status == 'PENDING' and user.is_admin %}
                 <a href="{% url 'approve_price' ph.id %}" class="btn btn-success btn-sm">Aprobar</a>
+                <a href="{% url 'reject_price' ph.id %}" class="btn btn-danger btn-sm">Rechazar</a>
+                {% else %}
                 {% endif %}
             </td>
         </tr>
