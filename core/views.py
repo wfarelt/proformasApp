@@ -1055,3 +1055,59 @@ def get_kit_items(request, kit_id):
         'producto__precio'
     )
     return JsonResponse({'items': list(items)})
+
+
+from core.services.auto_price_service import AutoPriceService
+
+@login_required(login_url='login')
+def generate_prices_view(request):
+    """Genera precios automáticos para productos sin precio.
+    
+    Parámetros GET:
+    - margin: Margen de ganancia (ej: 0.35 = 35%, default 0.35)
+    - auto_approve: '1' o 'true' para aprobar automáticamente
+    - json: '1' o 'true' para devolver JSON en lugar de redireccionar
+    """
+    try:
+        # Obtener parámetros
+        margin_str = request.GET.get('margin', '0.35')
+        auto_approve = request.GET.get('auto_approve', '1') in ['1', 'true', 'on']
+        return_json = request.GET.get('json', '0') in ['1', 'true', 'on']
+        
+        # Validar margin
+        try:
+            margin = Decimal(str(margin_str))
+            if margin < 0 or margin > 5:
+                raise ValueError("El margen debe estar entre 0 y 5 (0% a 500%)")
+        except (ValueError, TypeError):
+            raise ValueError(f"Margen inválido: {margin_str}")
+        
+        # Ejecutar servicio
+        result = AutoPriceService.generate_missing_prices(
+            margin=margin,
+            auto_approve=auto_approve,
+            user=request.user
+        )
+        
+        # Preparar resumen
+        summary = f"Procesados: {result['total']} | Actualizados: {result['updated']}"
+        if result['failed'] > 0:
+            summary += f" | Errores: {result['failed']}"
+        
+        messages.success(request, summary)
+        
+        # Retornar JSON o redirigir
+        if return_json:
+            return JsonResponse(result)
+        else:
+            return redirect('product_list')
+            
+    except Exception as e:
+        error_msg = f"Error al generar precios: {str(e)}"
+        messages.error(request, error_msg)
+        if request.GET.get('json') in ['1', 'true', 'on']:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            }, status=400)
+        return redirect('product_list')

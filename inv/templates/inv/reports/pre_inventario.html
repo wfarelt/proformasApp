@@ -40,7 +40,7 @@
               </select>
             </div>
 
-            <div class="col-md-6 mb-2">
+            <div class="col-md-4 mb-2">
               <input type="text" name="q" class="form-control" placeholder="{{ placeholder }}" value="{{ query }}">
             </div>                      
 
@@ -53,6 +53,12 @@
             <div class="col-md-2 mb-2">
               <button type="submit" class="btn btn-primary w-100">
                   <i class="fas fa-search"></i> Buscar
+              </button>
+            </div>
+
+            <div class="col-md-2 mb-2">
+              <button type="button" class="btn btn-success w-100" data-toggle="modal" data-target="#generatePricesModal" title="Generar precios automáticos">
+                  <i class="fas fa-magic"></i> Generar
               </button>
             </div>
 
@@ -154,4 +160,104 @@
     {% endif %}
   </div>
 </div>
+
+<!-- Modal para Generar Precios -->
+<div class="modal fade" id="generatePricesModal" tabindex="-1" role="dialog" aria-labelledby="generatePricesLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="generatePricesLabel">Generar Precios Automáticos</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted">Esto generará precios para productos con:</p>
+        <ul class="text-muted small">
+          <li>Stock &gt; 0</li>
+          <li>Costo &gt; 0</li>
+          <li>Precio vacío o 0</li>
+        </ul>
+        
+        <form id="generatePricesForm">
+          <div class="form-group">
+            <label for="marginInput">Margen de Ganancia (%)</label>
+            <input type="number" class="form-control" id="marginInput" name="margin" value="35" step="0.1" min="0" max="500" required>
+            <small class="form-text text-muted">Ej: 35 = 35% de margen</small>
+          </div>
+          
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="autoApproveCheck" name="auto_approve" checked>
+            <label class="form-check-label" for="autoApproveCheck">
+              Aprobar automáticamente
+            </label>
+            <small class="form-text text-muted d-block">Los precios se aplicarán inmediatamente sin necesidad de aprobación</small>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-success" id="confirmGeneratePrices">
+          <i class="fas fa-check"></i> Generar Precios
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const confirmBtn = document.getElementById('confirmGeneratePrices');
+  const marginInput = document.getElementById('marginInput');
+  const autoApproveCheck = document.getElementById('autoApproveCheck');
+  const modal = document.getElementById('generatePricesModal');
+  
+  if (!confirmBtn) {
+    console.error('Button not found');
+    return;
+  }
+  
+  confirmBtn.addEventListener('click', function() {
+    const margin = marginInput.value / 100;  // Convertir % a decimal
+    const autoApprove = autoApproveCheck.checked ? '1' : '0';
+    
+    // Deshabilitar botón y mostrar loading
+    const originalText = confirmBtn.innerHTML;
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+    
+    // Construir URL
+    const urlBase = '{% url "generate_prices" %}';
+    const url = urlBase + '?margin=' + margin + '&auto_approve=' + autoApprove + '&json=1';
+    
+    // Llamar a la vista con AJAX
+    fetch(url, {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === 'success') {
+        // Mostrar resultado
+        const message = `✓ Procesados: ${data.total}\n| Actualizados: ${data.updated}${data.failed > 0 ? `\n| Errores: ${data.failed}` : ''}`;
+        alert(message);
+        
+        // Recargar la página
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        alert('Error: ' + (data.message || 'Error desconocido'));
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error al generar precios: ' + error.message);
+    })
+    .finally(() => {
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = originalText;
+    });
+  });
+});
+</script>
 {% endblock %}

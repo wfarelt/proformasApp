@@ -71,4 +71,7 @@ urlpatterns = [
     path('kits/<int:pk>/add-item/', kit_add_item, name='kit_add_item'),
     path('kits/<int:pk>/remove-item/<int:item_id>/', kit_remove_item, name='kit_remove_item'),
     path('api/kits/<int:kit_id>/items/', get_kit_items, name='get_kit_items'),
+    
+    # Generador de precios
+    path('generate-prices/', generate_prices_view, name='generate_prices'),
 ]

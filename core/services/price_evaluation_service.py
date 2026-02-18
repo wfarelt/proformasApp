@@ -13,11 +13,7 @@ class PriceEvaluationService:
         if cost_reference is not None and cost_reference > 0:
             margin_percent = ((new_price - cost_reference) / cost_reference) * 100
 
-        # Determinar estado según condición
-        status = 'PENDING'
-        if auto_approve_on_increase and new_price > old_price:
-            status = 'APPROVED'
-        
+        # Siempre crear como PENDING
         ph = ProductPriceHistory.objects.create(
             product=product,
             old_price=old_price,
@@ -30,8 +26,8 @@ class PriceEvaluationService:
             created_by=user
         )
 
-        # Si fue aprobado automáticamente, actualizar producto
-        if status == 'APPROVED':
+        # Si auto_approve, aprobar automáticamente
+        if auto_approve_on_increase and new_price > old_price:
             from .price_approval_service import PriceApprovalService
             PriceApprovalService.approve(ph, user)
 
