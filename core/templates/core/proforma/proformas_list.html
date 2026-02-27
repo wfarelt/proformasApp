@@ -11,7 +11,15 @@
                 Proforma <i class="fas fa-plus"></i>
             </a>
             <form method="get" class="form-inline mb-2">
-
+                <!-- FILTRO POR FECHA INICIO Y FIN -->
+                <div class="input-group mr-2">
+                    <input type="date" name="fecha_inicio" class="form-control" 
+                        value="{{ request.GET.fecha_inicio }}">
+                    <div class="input-group-text">a</div>
+                    <input type="date" name="fecha_fin" class="form-control" 
+                        value="{{ request.GET.fecha_fin }}">
+                </div>
+                
                 <!-- FILTRO POR TIPO DE BÚSQUEDA -->
                 <select name="tipo_busqueda" class="form-control mr-2">
                     <option value="id" {% if request.GET.tipo_busqueda == "id" %}selected{% endif %}>ID</option>
@@ -74,7 +82,7 @@
                     {% for proforma in proformas %}
                         <tr>
                             <td>{{ proforma.id }}</td>
-                            <td>{{ proforma.fecha|date:"d/m/Y" }}</td>
+                            <td>{{ proforma.fecha|date:"d/m/Y - H:i" }}</td>
                             <td>{{ proforma.usuario.name }}</td>
                             <td>{{ proforma.cliente.id }}</td>
                             <td>{{ proforma.cliente }}</td>
@@ -136,7 +144,7 @@
             <!-- Botón Anterior -->
             {% if page_obj.has_previous %}
             <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tipo_busqueda %}&tipo_busqueda={{ request.GET.tipo_busqueda }}{% endif %}{% if request.GET.usuario %}&usuario={{ request.GET.usuario }}{% endif %}">Anterior</a>
+                <a class="page-link" href="?page={{ num }}{% if query_params %}&{{ query_params }}{% endif %}">Anterior</a>
             </li>
             {% else %}
             <li class="page-item disabled"><span class="page-link">Anterior</span></li>
@@ -145,7 +153,7 @@
             <!-- Mostrar primera página -->
             {% if page_obj.number > 3 %}
             <li class="page-item">
-                <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tipo_busqueda %}&tipo_busqueda={{ request.GET.tipo_busqueda }}{% endif %}{% if request.GET.usuario %}&usuario={{ request.GET.usuario }}{% endif %}">1</a>
+                <a class="page-link" href="?page={{ num }}{% if query_params %}&{{ query_params }}{% endif %}">1</a>
             </li>
             {% if page_obj.number > 4 %}
             <li class="page-item disabled"><span class="page-link">…</span></li>
@@ -159,7 +167,7 @@
                     <li class="page-item active"><span class="page-link">{{ num }}</span></li>
                 {% else %}
                     <li class="page-item">
-                    <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tipo_busqueda %}&tipo_busqueda={{ request.GET.tipo_busqueda }}{% endif %}{% if request.GET.usuario %}&usuario={{ request.GET.usuario }}{% endif %}">{{ num }}</a>
+                    <a class="page-link" href="?page={{ num }}{% if query_params %}&{{ query_params }}{% endif %}">{{ num }}</a>
                     </li>
                 {% endif %}
                 {% endif %}
@@ -171,14 +179,14 @@
                 <li class="page-item disabled"><span class="page-link">…</span></li>
                 {% endif %}
                 <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tipo_busqueda %}&tipo_busqueda={{ request.GET.tipo_busqueda }}{% endif %}{% if request.GET.usuario %}&usuario={{ request.GET.usuario }}{% endif %}">{{ page_obj.paginator.num_pages }}</a>
+                <a class="page-link" href="?page={{ num }}{% if query_params %}&{{ query_params }}{% endif %}">{{ page_obj.paginator.num_pages }}</a>
                 </li>
             {% endif %}
 
             <!-- Botón Siguiente -->
             {% if page_obj.has_next %}
             <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.tipo_busqueda %}&tipo_busqueda={{ request.GET.tipo_busqueda }}{% endif %}{% if request.GET.usuario %}&usuario={{ request.GET.usuario }}{% endif %}">Siguiente</a>
+                <a class="page-link" href="?page={{ num }}{% if query_params %}&{{ query_params }}{% endif %}">Siguiente</a>
             </li>
             {% else %}
             <li class="page-item disabled"><span class="page-link">Siguiente</span></li>

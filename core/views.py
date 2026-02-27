@@ -217,6 +217,9 @@ def reject_price(request, ph_id):
 
 
 from django.contrib.auth import get_user_model
+from datetime import datetime
+from django.utils.timezone import make_aware
+
 # PROFORMA
 class ProformaListView(ListView):
     model = Proforma
@@ -228,29 +231,75 @@ class ProformaListView(ListView):
     def get_queryset(self):
         query = self.request.GET.get('q')
         tipo = self.request.GET.get('tipo_busqueda', 'id')
+        fecha_inicio = self.request.GET.get('fecha_inicio')
+        fecha_fin = self.request.GET.get('fecha_fin')
+
         qs = Proforma.objects.order_by('-fecha')
         
+        # 🔹 FILTRO POR USUARIO
         usuario_id = self.request.GET.get("usuario")
         if usuario_id:
             qs = qs.filter(usuario__id=usuario_id)
-            
+
+        # 🔹 FILTRO POR RANGO DE FECHAS
+        fecha_inicio_obj = None
+        fecha_fin_obj = None
+
+        # Convertir fecha_inicio
+        if fecha_inicio:
+            try:
+                fecha_inicio_obj = datetime.strptime(fecha_inicio, "%Y-%m-%d").date()
+            except ValueError:
+                messages.error(self.request, "Fecha inicio inválida.")
+
+        # Convertir fecha_fin
+        if fecha_fin:
+            try:
+                fecha_fin_obj = datetime.strptime(fecha_fin, "%Y-%m-%d").date()
+            except ValueError:
+                messages.error(self.request, "Fecha fin inválida.")
+
+        # Validar rango solo si ambas existen
+        if fecha_inicio_obj and fecha_fin_obj:
+            if fecha_inicio_obj > fecha_fin_obj:
+                messages.error(self.request, "La fecha inicio no puede ser mayor a la fecha fin.")
+            else:
+                qs = qs.filter(fecha__date__range=(fecha_inicio_obj, fecha_fin_obj))
+
+        # Si solo viene una de las dos
+        elif fecha_inicio_obj:
+            qs = qs.filter(fecha__date__gte=fecha_inicio_obj)
+
+        elif fecha_fin_obj:
+            qs = qs.filter(fecha__date__lte=fecha_fin_obj)
+
+        # 🔹 FILTRO POR BÚSQUEDA
         if query:
             if tipo == 'id':
-                qs = qs.filter(id=query)
+                if query.isdigit():
+                    qs = qs.filter(id=int(query))
+                else:
+                    messages.error(self.request, 'El ID debe ser un número entero.')
+
             elif tipo == 'cliente':
                 qs = qs.filter(cliente__name__icontains=query)
+
             elif tipo == 'producto':
                 qs = qs.filter(detalles__producto__nombre__icontains=query)
+
         return qs.distinct()
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        User = get_user_model()  
-        # 👈 Lista de usuarios menos superadmin
+        User = get_user_model()
         context["usuarios"] = User.objects.filter(is_superuser=False)
-        context["usuario_seleccionado"] = self.request.GET.get("usuario")  # Opcional
-        
+
+        # 🔹 Copiar parámetros GET sin page
+        query_params = self.request.GET.copy()
+        query_params.pop('page', None)
+        context["query_params"] = query_params.urlencode()
+
         return context
 
 def _get_proforma_context(proforma, request):
