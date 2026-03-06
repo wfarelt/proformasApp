@@ -329,7 +329,12 @@ def _get_proforma_context(proforma, request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    kits = ProductKit.objects.filter(company=request.user.company, is_active=True)
+    # Solo obtener kits si la empresa tiene habilitado el uso de kits
+    kits = ProductKit.objects.none()
+    enable_kits = False
+    if request.user.company and request.user.company.enable_product_kits:
+        kits = ProductKit.objects.filter(company=request.user.company, is_active=True)
+        enable_kits = True
 
     return {
         'proforma': proforma,
@@ -338,6 +343,7 @@ def _get_proforma_context(proforma, request):
         'page_obj': page_obj,
         'tipo_busqueda': tipo_busqueda,
         'kits': kits,
+        'enable_kits': enable_kits,
     }
 
 @login_required(login_url='login')

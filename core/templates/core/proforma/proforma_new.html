@@ -70,6 +70,7 @@
   <div class="card-body">
 
     <!-- Busqueda de kits -->
+    {% if enable_kits %}
     <div class="kit-selector mb-3">
         <div class="input-group input-group-sm">
             <select id="kit-select" class="form-control">
@@ -115,6 +116,7 @@
         </div>
     </div>
     <hr>
+    {% endif %}
 
     <!-- Busqueda de productos -->
     <div class="productos">
@@ -519,6 +521,7 @@
   });
 </script>
 
+{% if enable_kits %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     // Debug: confirmar que proforma está presente
@@ -659,6 +662,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
+{% endif %}
 
 
 

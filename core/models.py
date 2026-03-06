@@ -32,6 +32,11 @@ class Company(models.Model):
         default='USD',
         verbose_name='Moneda'
     )  # Moneda predeterminada
+    enable_product_kits = models.BooleanField(
+        default=True, 
+        verbose_name='Habilitar Kits de Productos',
+        help_text='Permite usar kits de productos en las proformas'
+    )  # Habilitar kits de productos
     is_active = models.BooleanField(default=True)  # Estado activo/inactivo
     created_at = models.DateTimeField(auto_now_add=True)  # Fecha de creación
     updated_at = models.DateTimeField(auto_now=True)  # Última actualización

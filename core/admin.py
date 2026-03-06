@@ -33,7 +33,26 @@ admin.site.index_title = 'Administración'
 
 admin.site.register(User, UserAdmin)
 
-admin.site.register(Company)
+class CompanyAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'tax_id', 'email', 'city', 'currency', 'enable_product_kits', 'is_active')
+    list_filter = ('is_active', 'enable_product_kits', 'currency')
+    search_fields = ('name', 'tax_id', 'email')
+    fieldsets = (
+        ('Información Básica', {
+            'fields': ('name', 'logo', 'tax_id', 'email', 'phone')
+        }),
+        ('Ubicación', {
+            'fields': ('address', 'city')
+        }),
+        ('Configuración', {
+            'fields': ('currency', 'enable_product_kits', 'website', 'industry', 'established_date')
+        }),
+        ('Estado', {
+            'fields': ('is_active',)
+        }),
+    )
+
+admin.site.register(Company, CompanyAdmin)
 
 admin.site.register(Proforma)
 
