@@ -1,4 +1,5 @@
 {% extends 'core/list.html' %}
+{% load core_tags %}
 
 {% block columns %}                
 <th>Id</th>
@@ -23,6 +24,11 @@
 </th>
 <th class="text-right">Stock</th>
 <th class="text-center">Ubicación</th>
+{% if show_custom_attributes %}
+    {% for col in custom_attribute_columns %}
+<th class="text-center">{{ col.label }}</th>
+    {% endfor %}
+{% endif %}
 <th class="text-center" style="width: 10%;">Acciones</th>
 
 {% endblock columns %}
@@ -39,6 +45,11 @@
     <td class="text-center">{{ obj.location }}</td>
 {% else %}
     <td class="text-center">-</td>
+{% endif %}
+{% if show_custom_attributes %}
+    {% for col in custom_attribute_columns %}
+        <td class="text-center">{{ obj.custom_attributes|get_dict_item:col.key|default_if_none:"-"|default:"-" }}</td>
+    {% endfor %}
 {% endif %}
 {% endblock rows %}
 

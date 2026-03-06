@@ -1,0 +1,26 @@
+<!-- Template para mostrar atributos personalizados de productos -->
+{% if attributes %}
+    <div class="custom-attributes-section">
+        <h6 class="mb-3">Atributos Personalizados</h6>
+        <div class="table-responsive">
+            <table class="table table-sm table-borderless">
+                <tbody>
+                    {% for attr in attributes %}
+                        <tr>
+                            <td class="fw-bold" style="width: 30%;">{{ attr.label }}:</td>
+                            <td>
+                                {% if attr.value %}
+                                    <span class="badge bg-info">{{ attr.value }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% else %}
+    <p class="text-muted small">Sin atributos personalizados</p>
+{% endif %}

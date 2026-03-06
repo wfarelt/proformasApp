@@ -1,123 +1,447 @@
 {% extends 'core/index.html' %}
 
 {% block title %}Proforma{% endblock %}
-{% load static %}
+{% load static core_tags %}
 
 
 {% block style %}
+<style>
+    .proforma-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 25px;
+        border-radius: 8px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .proforma-title {
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 15px;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .info-section {
+        background: white;
+        padding: 20px;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .info-section h5 {
+        color: #667eea;
+        font-weight: bold;
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #333;
+        min-width: 120px;
+    }
+
+    .info-value {
+        color: #666;
+        text-align: right;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: bold;
+    }
+
+    .detail-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        overflow: hidden;
+        margin-bottom: 30px;
+    }
+
+    .detail-header {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .detail-header h5 {
+        margin: 0;
+        color: #333;
+        font-weight: bold;
+        font-size: 18px;
+    }
+
+    .detail-body {
+        padding: 0;
+    }
+
+    .table-scroll {
+        overflow-x: auto;
+    }
+
+    .table {
+        margin-bottom: 0;
+        border-collapse: collapse;
+    }
+
+    .table thead {
+        background-color: #f8f9fa;
+        border-top: 2px solid #dee2e6;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .table thead th {
+        padding: 12px;
+        font-weight: 600;
+        color: #333;
+        border: 1px solid #dee2e6;
+        white-space: nowrap;
+        font-size: 13px;
+    }
+
+    .table tbody td {
+        padding: 12px;
+        border: 1px solid #dee2e6;
+        vertical-align: middle;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f9f9f9;
+    }
+
+    .table tbody tr:nth-child(even) {
+        background-color: #fafafa;
+    }
+
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+
+    .totals-row {
+        background-color: #f8f9fa;
+        font-weight: bold;
+    }
+
+    .totals-row td {
+        padding: 15px 12px;
+        border-top: 2px solid #dee2e6;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .total-label {
+        color: #333;
+        font-size: 14px;
+    }
+
+    .total-value {
+        color: #667eea;
+        font-size: 16px;
+    }
+
+    .total-neto {
+        color: #28a745;
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-print {
+        background-color: #667eea;
+        color: white;
+        border: none;
+    }
+
+    .btn-print:hover {
+        background-color: #764ba2;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-back {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        text-decoration: none;
+    }
+
+    .btn-back:hover {
+        background-color: #c82333;
+        text-decoration: none;
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+    }
+
+    /* Print Styles */
+    @media print {
+        body {
+            background: white;
+        }
+        
+        .proforma-header {
+            background: white;
+            color: #000;
+            border: 2px solid #333;
+            box-shadow: none;
+        }
+
+        .proforma-title {
+            color: #000;
+        }
+
+        .info-section {
+            box-shadow: none;
+            border: 1px solid #ddd;
+        }
+
+        .detail-card {
+            box-shadow: none;
+            border: 1px solid #ddd;
+        }
+
+        .btn, .action-buttons {
+            display: none !important;
+        }
+
+        .table {
+            page-break-inside: avoid;
+        }
+
+        thead {
+            display: table-header-group;
+        }
+    }
+</style>
 {% endblock style %}
 
 {% block content %}
-    <div class="row pt-3">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Datos de la proforma</h3>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <strong>Proforma: {{ proforma.id }} <br></strong>
-                            Cliente: {{ proforma.cliente }} <br>
-                            Nit: {{ proforma.cliente.nit }} <br>
-                        </div>
-                        <div class="col-md-6">
-                            Fecha: {{ proforma.fecha|date:"d/m/Y" }} <br>
-                            Vendedor: {{ proforma.usuario.name }} <br>                            
-                            {% if proforma.estado == 'EJECUTADO' %}
-                                <span class="badge badge-success">Ejecutada</span>
-                            {% elif proforma.estado == 'PENDIENTE' %}
-                                <span class="badge badge-warning">Pendiente</span>
-                            {% elif proforma.estado == 'ANULADO' %}
-                                <span class="badge badge-danger">Anulada</span>
-                            {% else %}
-                                <span class="badge badge-secondary">Desconocido</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div class="proforma-header">
+        <div class="proforma-title">
+            <i class="fas fa-file-invoice"></i> Proforma #{{ proforma.id }}
         </div>
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Detalle de la proforma</h3>
-                </div>
-                <div class="card-body">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <td>#</td>
-                                <th>Código</th>
-                                <th>Producto</th>
-                                <th class="text-center">Cantidad</th>
-                                <th class="text-right">
-                                    Precio
-                                    {% if user.company.currency == 'BOB' %}
-                                        (Bs)
-                                    {% elif user.company.currency == 'USD' %}
-                                        ($)
-                                    {% endif %}
-                                </th>
-                                <th class="text-right">
-                                    Subtotal
-                                    {% if user.company.currency == 'BOB' %}
-                                        (Bs)
-                                    {% elif user.company.currency == 'USD' %}
-                                        ($)
-                                    {% endif %}
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for detalle in detalles %}
-                                <tr>
-                                    <td>{{ forloop.counter }}</td>
-                                    <td>{{ detalle.producto.nombre }}</td>
-                                    <td>{{ detalle.producto.descripcion }}</td>
-                                    <td class="text-center">{{ detalle.cantidad }}</td>
-                                    <td class="text-right">{{ detalle.precio_venta }}</td>
-                                    <td class="text-right">{{ detalle.subtotal }}</td>
-                                </tr>
-                                
-                            {% empty %}
-                                <tr>
-                                    <td colspan="4">No se encontraron detalles.</td>
-                                </tr>
-                            {% endfor %}
-                            <tr>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td class="text-right" >
-                                    Total: &nbsp;&nbsp;  {{ proforma.total }}
-                                    <br>
-                                    Descuento:&nbsp;&nbsp;&nbsp;&nbsp; -{{ proforma.total_descuento|floatformat:2 }}
-                                    <br>
-                                    ----
-                                    <br>
-                                    <strong>
-                                        Total_Neto:
-                                        {% if user.company.currency == 'BOB' %}
-                                            (Bs)
-                                        {% elif user.company.currency == 'USD' %}
-                                            ($)
-                                        {% endif %} 
-                                        {{ proforma.total_neto|floatformat:2 }}</strong>                                    
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 16px;">
+            <div>
+                <strong>Empresa:</strong> {{ user.company.name }}<br>
+                <strong>Generado por:</strong> {{ proforma.usuario.name }}
+            </div>
+            <div style="text-align: right;">
+                <strong>Fecha:</strong> {{ proforma.fecha|date:"d/m/Y" }}<br>
+                <strong>Hora:</strong> {{ proforma.fecha|time:"H:i" }}
             </div>
         </div>
     </div>
-    <a href="{% url 'proforma_list' %}" class="btn btn-danger btn-sm mb-3"><span class="fa fa-arrow-left"></span> Volver</a>
+
+    <div class="info-grid">
+        <div class="info-section">
+            <h5><i class="fas fa-user"></i> Información del Cliente</h5>
+            <div class="info-row">
+                <span class="info-label">Cliente:</span>
+                <span class="info-value"><strong>{{ proforma.cliente }}</strong></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">NIT:</span>
+                <span class="info-value">{{ proforma.cliente.nit }}</span>
+            </div>
+            {% if proforma.cliente.city %}
+                <div class="info-row">
+                    <span class="info-label">Ciudad:</span>
+                    <span class="info-value">{{ proforma.cliente.city }}</span>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="info-section">
+            <h5><i class="fas fa-info-circle"></i> Estado de la Proforma</h5>
+            <div class="info-row">
+                <span class="info-label">Estado:</span>
+                <span class="info-value">
+                    {% if proforma.estado == 'EJECUTADO' %}
+                        <span class="badge badge-success">Ejecutada</span>
+                    {% elif proforma.estado == 'PENDIENTE' %}
+                        <span class="badge badge-warning">Pendiente</span>
+                    {% elif proforma.estado == 'ANULADO' %}
+                        <span class="badge badge-danger">Anulada</span>
+                    {% else %}
+                        <span class="badge badge-secondary">Desconocido</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="detail-card">
+        <div class="detail-header">
+            <h5><i class="fas fa-table"></i> Detalle de Productos</h5>
+        </div>
+        <div class="detail-body">
+            <div class="table-scroll">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">#</th>
+                            <th>Código</th>
+                            <th>Producto</th>
+                            {% for col in custom_attribute_columns %}
+                                <th>{{ col.label }}</th>
+                            {% endfor %}
+                            <th class="text-center" style="width: 100px;">Cantidad</th>
+                            <th class="text-right" style="width: 120px;">
+                                Precio
+                                {% if user.company.currency == 'BOB' %}
+                                    (Bs)
+                                {% elif user.company.currency == 'USD' %}
+                                    ($)
+                                {% endif %}
+                            </th>
+                            <th class="text-right" style="width: 120px;">
+                                Subtotal
+                                {% if user.company.currency == 'BOB' %}
+                                    (Bs)
+                                {% elif user.company.currency == 'USD' %}
+                                    ($)
+                                {% endif %}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for detalle in detalles %}
+                            <tr>
+                                <td class="text-center">{{ forloop.counter }}</td>
+                                <td>{{ detalle.producto.nombre }}</td>
+                                <td>{{ detalle.producto.descripcion }}</td>
+                                {% for col in custom_attribute_columns %}
+                                    <td>{{ detalle.producto.custom_attributes|get_dict_item:col.key|default_if_none:"-"|default:"-" }}</td>
+                                {% endfor %}
+                                <td class="text-center">{{ detalle.cantidad }}</td>
+                                <td class="text-right">{{ detalle.precio_venta|floatformat:2 }}</td>
+                                <td class="text-right">{{ detalle.subtotal|floatformat:2 }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center" style="padding: 30px;">
+                                    <em>No se encontraron detalles en esta proforma.</em>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="detail-card">
+        <div class="detail-body">
+            <table class="table" style="margin-bottom: 0;">
+                <tbody>
+                    <tr class="totals-row">
+                        <td colspan="{{ detail_total_blank_colspan }}" style="text-align: right; padding-right: 20px;">
+                            <div style="margin-bottom: 10px;">
+                                <span class="total-label">Subtotal:</span>
+                                <span class="total-value">{{ proforma.total|floatformat:2 }}</span>
+                            </div>
+                            
+                            {% if proforma.total_descuento > 0 %}
+                                <div style="margin-bottom: 10px;">
+                                    <span class="total-label">Descuento:</span>
+                                    <span style="color: #dc3545; font-size: 16px;">-{{ proforma.total_descuento|floatformat:2 }}</span>
+                                </div>
+                            {% endif %}
+                            
+                            <div style="border-top: 2px solid #667eea; padding-top: 10px; margin-top: 10px;">
+                                <span class="total-label" style="font-size: 16px;">TOTAL NETO:</span>
+                                <span class="total-neto">
+                                    {{ proforma.total_neto|floatformat:2 }}
+                                    {% if user.company.currency == 'BOB' %}
+                                        Bs.
+                                    {% elif user.company.currency == 'USD' %}
+                                        USD
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="action-buttons">
+        <button onclick="window.print()" class="btn btn-print">
+            <i class="fas fa-print"></i> Imprimir Proforma
+        </button>
+        <a href="{% url 'proforma_edit' proforma.id %}" class="btn btn-warning">
+            <i class="fas fa-edit"></i> Editar Proforma
+        </a>
+        <a href="{% url 'proforma_list' %}" class="btn btn-back">
+            <i class="fas fa-arrow-left"></i> Volver a Lista
+        </a>
+    </div>
 
 {% endblock content %}
 
 {% block script %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Mejora de la función de impresión
+        const printButton = document.querySelector('.btn-print');
+        if (printButton) {
+            printButton.addEventListener('click', function() {
+                // Agregar una pequeña animación visual
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparando...';
+                this.disabled = true;
+                
+                setTimeout(function() {
+                    window.print();
+                    printButton.innerHTML = '<i class="fas fa-print"></i> Imprimir Proforma';
+                    printButton.disabled = false;
+                }, 300);
+            });
+        }
+
+        // Configurar comportamiento de impresora
+        window.addEventListener('beforeprint', function() {
+            console.log('Preparando documento para impresión...');
+        });
+
+        window.addEventListener('afterprint', function() {
+            console.log('Impresión completada.');
+        });
+    });
+</script>
 {% endblock script %}
 

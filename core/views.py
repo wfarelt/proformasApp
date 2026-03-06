@@ -40,6 +40,7 @@ from django.utils.dateparse import parse_date
 from django.db.models import Q
 
 from .services.price_evaluation_service import PriceEvaluationService
+from .custom_attributes import ProductCustomAttributes
 
 # Create your views here.
 
@@ -85,20 +86,23 @@ def edit_profile(request):
 def product_detail(request, id):
     producto = Producto.objects.get(id=id)
     price_history = producto.price_history.all().order_by('-created_at')
+    company_config = (request.user.company.product_custom_fields_config if request.user.company else {}) or {}
+    custom_attributes_display = ProductCustomAttributes.build_display_values(company_config, producto.custom_attributes or {})
     
     title = 'Detalle de producto'
     context = {
         'producto': producto, 
         'title': title,
-        'price_history': price_history
+        'price_history': price_history,
+        'custom_attributes_display': custom_attributes_display,
     }
     return render(request, 'core/product/product_detail.html', context)
 
 @login_required(login_url='login')
 def producto_new(request):
-    form = ProductoForm()
+    form = ProductoForm(company=request.user.company)
     if request.method == 'POST':
-        form = ProductoForm(request.POST)
+        form = ProductoForm(request.POST, company=request.user.company)
         if form.is_valid():
             form.save()
             messages.success(request, 'Producto creado correctamente.')
@@ -115,7 +119,7 @@ def product_edit(request, id):
     old_price = producto.precio 
 
     if request.method == 'POST':
-        form = ProductoForm(request.POST, instance=producto)
+        form = ProductoForm(request.POST, instance=producto, company=request.user.company)
         if is_admin_group:
             if form.is_valid():
                 
@@ -145,7 +149,7 @@ def product_edit(request, id):
             messages.error(request, 'No tienes permisos para editar este producto.')
             return redirect('product_list')
     else:
-        form = ProductoForm(instance=producto)
+        form = ProductoForm(instance=producto, company=request.user.company)
     
     return render(request, 'core/product/producto_new.html', {'form': form, 'title': title})
 
@@ -161,6 +165,18 @@ class ProductListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['title'] = 'productos'
         context['placeholder'] = 'Buscar por codigo o descripción'
+        custom_config = {}
+        if self.request.user.company:
+            custom_config = self.request.user.company.product_custom_fields_config or {}
+
+        context['show_custom_attributes'] = bool(custom_config)
+        context['custom_attribute_columns'] = [
+            {
+                'key': key,
+                'label': field_cfg.get('label', key.replace('_', ' ').title()) if isinstance(field_cfg, dict) else key,
+            }
+            for key, field_cfg in custom_config.items()
+        ]
         return context
        
     def get_queryset(self):
@@ -595,12 +611,28 @@ def proforma_view(request, id):
     total_descuento = proforma.discount_percentage * proforma.total / 100
     total_neto = proforma.total - total_descuento
     literal = numero_a_literal(total_neto)
+
+    custom_config = {}
+    if proforma.company:
+        custom_config = proforma.company.product_custom_fields_config or {}
+
+    custom_attribute_columns = [
+        {
+            'key': key,
+            'label': field_cfg.get('label', key.replace('_', ' ').title()) if isinstance(field_cfg, dict) else key,
+        }
+        for key, field_cfg in custom_config.items()
+    ]
+
     context = {
         'proforma': proforma,
         'detalles': detalles,
         'total_descuento': total_descuento,
         'total_con_descuento': total_neto,
-        'literal': literal
+        'literal': literal,
+        'custom_attribute_columns': custom_attribute_columns,
+        'detail_table_colspan': 6 + len(custom_attribute_columns),
+        'detail_total_blank_colspan': 5 + len(custom_attribute_columns),
     }
     return render(request, 'core/proforma/proforma_view.html', context)
 

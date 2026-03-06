@@ -31,6 +31,23 @@
                     {{ producto.precio }}</span></p>
                 <p class="mb-2"><strong>Stock:</strong> <span class="badge badge-info">{{ producto.stock }}</span></p>
                 <p class="mb-2"><strong>Ubicación:</strong> {{ producto.location|default:"No especificada" }}</p>
+
+                {% if custom_attributes_display %}
+                    <hr>
+                    <h5 class="mb-3">Atributos personalizados</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-borderless mb-0">
+                            <tbody>
+                                {% for attr in custom_attributes_display %}
+                                    <tr>
+                                        <td class="font-weight-bold" style="width: 35%;">{{ attr.label }}:</td>
+                                        <td>{% if attr.value %}{{ attr.value }}{% else %}-{% endif %}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
             </div>
             <div class="card-footer text-center">
                 <a href="{% url 'product_edit' producto.id %}" class="btn btn-warning btn-sm">

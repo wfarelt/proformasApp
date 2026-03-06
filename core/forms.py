@@ -1,5 +1,6 @@
 
 from django import forms
+from decimal import Decimal
 from django.contrib.auth.forms import PasswordChangeForm
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
@@ -127,8 +128,100 @@ class ProductoForm(forms.ModelForm):
         }
         
     def __init__(self, *args, **kwargs):
+        self.company = kwargs.pop('company', None)
         super(ProductoForm, self).__init__(*args, **kwargs)
         self.fields['brand'].queryset = Brand.objects.filter(status=True)
+
+        config = self._get_custom_config()
+        self.custom_field_names = []
+        for key, field_cfg in config.items():
+            field_name = f"custom__{key}"
+            self.custom_field_names.append(field_name)
+            self.fields[field_name] = self._build_dynamic_field(field_cfg)
+
+            initial_value = (self.instance.custom_attributes or {}).get(key) if self.instance and self.instance.pk else None
+            if initial_value is not None:
+                self.initial[field_name] = initial_value
+
+    def _get_custom_config(self):
+        if not self.company:
+            return {}
+        config = getattr(self.company, 'product_custom_fields_config', {}) or {}
+        return config if isinstance(config, dict) else {}
+
+    def _build_dynamic_field(self, field_cfg):
+        field_type = field_cfg.get('type', 'text')
+        label = field_cfg.get('label', 'Campo Personalizado')
+        required = field_cfg.get('required', False)
+
+        common_kwargs = {
+            'label': label,
+            'required': required,
+            'help_text': field_cfg.get('help_text', ''),
+        }
+
+        if field_type == 'number':
+            min_value = field_cfg.get('min')
+            max_value = field_cfg.get('max')
+            return forms.DecimalField(
+                min_value=Decimal(str(min_value)) if min_value is not None else None,
+                max_value=Decimal(str(max_value)) if max_value is not None else None,
+                widget=forms.NumberInput(attrs={'class': 'form-control'}),
+                **common_kwargs,
+            )
+
+        if field_type == 'date':
+            return forms.DateField(
+                widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+                **common_kwargs,
+            )
+
+        if field_type == 'boolean':
+            return forms.BooleanField(
+                required=False,
+                widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+                label=label,
+                help_text=field_cfg.get('help_text', ''),
+            )
+
+        if field_type == 'select':
+            options = field_cfg.get('options', [])
+            choices = [('', '---------')]
+            for option in options:
+                if isinstance(option, dict):
+                    choices.append((option.get('value', ''), option.get('label', option.get('value', ''))))
+                else:
+                    choices.append((option, option))
+            return forms.ChoiceField(
+                choices=choices,
+                widget=forms.Select(attrs={'class': 'form-control'}),
+                **common_kwargs,
+            )
+
+        return forms.CharField(
+            widget=forms.TextInput(attrs={'class': 'form-control'}),
+            **common_kwargs,
+        )
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        custom_attributes = dict(instance.custom_attributes or {})
+
+        for field_name in getattr(self, 'custom_field_names', []):
+            key = field_name.replace('custom__', '', 1)
+            value = self.cleaned_data.get(field_name)
+            if value in (None, ''):
+                custom_attributes.pop(key, None)
+                continue
+            if hasattr(value, 'isoformat'):
+                custom_attributes[key] = value.isoformat()
+            else:
+                custom_attributes[key] = str(value) if isinstance(value, Decimal) else value
+
+        instance.custom_attributes = custom_attributes
+        if commit:
+            instance.save()
+        return instance
 
 # CREAR UN FORMULARIO PARA CLIENTE
 class ClienteForm(forms.ModelForm):

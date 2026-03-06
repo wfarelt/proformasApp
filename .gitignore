@@ -13,6 +13,7 @@ core_backup.js
 db_backup.sqlite3
 media
 /backups/
+/manuals/
 
 # Ignore staticfiles
 /staticfiles/

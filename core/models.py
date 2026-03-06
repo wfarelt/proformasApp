@@ -37,6 +37,12 @@ class Company(models.Model):
         verbose_name='Habilitar Kits de Productos',
         help_text='Permite usar kits de productos en las proformas'
     )  # Habilitar kits de productos
+    product_custom_fields_config = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='Configuración de Campos Personalizados',
+        help_text='Define campos adicionales para productos. Ejemplo: {"color": {"type": "text", "label": "Color", "required": false}}'
+    )  # Configuración de campos personalizados por empresa
     is_active = models.BooleanField(default=True)  # Estado activo/inactivo
     created_at = models.DateTimeField(auto_now_add=True)  # Fecha de creación
     updated_at = models.DateTimeField(auto_now=True)  # Última actualización
@@ -127,6 +133,12 @@ class Producto(models.Model):
     latest_price = models.DecimalField(default=0, max_digits=10, decimal_places=2 )
     stock = models.PositiveIntegerField(default=0, blank=True, null=True)
     location = models.CharField(max_length=10, blank=True, null=True)
+    custom_attributes = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='Atributos Personalizados',
+        help_text='Almacena valores de campos personalizados definidos por la empresa'
+    )  # Atributos personalizados según configuración de la empresa
 
     def __str__(self):
         return self.nombre
@@ -139,6 +151,14 @@ class Producto(models.Model):
     # devolver precio de producto
     def get_precio(self):
         return self.precio
+    
+    def get_custom_attribute(self, key, default=None):
+        """Obtiene un atributo personalizado de forma segura"""
+        return self.custom_attributes.get(key, default)
+    
+    def set_custom_attribute(self, key, value):
+        """Establece un atributo personalizado"""
+        self.custom_attributes[key] = value
 
 # PROFORMA
 class Proforma(models.Model):

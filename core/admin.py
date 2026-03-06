@@ -47,6 +47,10 @@ class CompanyAdmin(admin.ModelAdmin):
         ('Configuración', {
             'fields': ('currency', 'enable_product_kits', 'website', 'industry', 'established_date')
         }),
+        ('Campos Personalizados para Productos', {
+            'fields': ('product_custom_fields_config',),
+            'description': 'Define campos adicionales para productos. Formato JSON. Ejemplo: {"color": {"type": "text", "label": "Color", "required": false}, "garantia": {"type": "number", "label": "Garantía (meses)", "required": true}}'
+        }),
         ('Estado', {
             'fields': ('is_active',)
         }),
