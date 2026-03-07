@@ -8,8 +8,11 @@ def create_initial_price_history(apps, schema_editor):
     PriceHistory = apps.get_model('core', 'ProductPriceHistory')
     User = apps.get_model('core', 'User')
 
-    # Elegir usuario numero dos como creador y aprobador
-    system_user = User.objects.get(pk=2)
+    # Evitar asumir IDs fijos en instalaciones nuevas.
+    system_user = User.objects.order_by('id').first()
+    if not system_user:
+        # Sin usuarios no se puede poblar created_by/approved_by; salimos sin error.
+        return
 
     for producto in Producto.objects.all():
         PriceHistory.objects.create(

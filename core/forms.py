@@ -14,16 +14,20 @@ class UserCreationForm(UserCreationForm):
     
     class Meta:
         model = User
-        fields = ['email', 'name', 'is_staff', 'is_superuser']
+        fields = ['username', 'email', 'name', 'company', 'is_staff', 'is_superuser']
         labels = {
+            'username': 'Usuario',
             'email': 'Correo',
             'name': 'Nombre',
+            'company': 'Empresa',
             'is_staff': 'Staff',
             'is_superuser': 'Superusuario',
         }
         widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
             'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'company': forms.Select(attrs={'class': 'form-control'}),
             'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_superuser': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
@@ -35,16 +39,20 @@ class UserChangeForm(UserChangeForm):
     
     class Meta:
         model = User
-        fields = ['email', 'name', 'is_staff', 'is_superuser']
+        fields = ['username', 'email', 'name', 'company', 'is_staff', 'is_superuser']
         labels = {
+            'username': 'Usuario',
             'email': 'Correo',
             'name': 'Nombre',
+            'company': 'Empresa',
             'is_staff': 'Staff',
             'is_superuser': 'Superusuario',
         }
         widgets = {
-            'email': forms.EmailInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
+            'username': forms.TextInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'company': forms.Select(attrs={'class': 'form-control'}),
             'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_superuser': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
@@ -277,6 +285,20 @@ class SupplierForm(forms.ModelForm):
         
 # FORMULARIO MARCA
 class BrandForm(forms.ModelForm):
+    def clean_name(self):
+        name = (self.cleaned_data.get('name') or '').strip()
+        if not name:
+            raise forms.ValidationError('El nombre de la marca es obligatorio.')
+
+        queryset = Brand.objects.filter(name__iexact=name)
+        if self.instance and self.instance.pk:
+            queryset = queryset.exclude(pk=self.instance.pk)
+
+        if queryset.exists():
+            raise forms.ValidationError('Ya existe una marca con ese nombre.')
+
+        return name
+
     class Meta:
         model = Brand
         fields = ['name', 'initials','description', 'status']

@@ -194,6 +194,7 @@ def purchase_list(request):
     }
     return render(request, 'inv/purchase/purchase_list.html', context)
 
+@login_required(login_url='login')
 def create_purchase(request):
         
     if request.method == 'POST':
@@ -249,6 +250,7 @@ def create_purchase(request):
         'formset': formset,
     })
 
+@login_required(login_url='login')
 def update_purchase(request, pk):
     purchase = get_object_or_404(Purchase, pk=pk)
     
@@ -364,6 +366,7 @@ def cancelled_purchase(request, pk):
         'purchase': purchase,
     })
 
+@login_required(login_url='login')
 def delete_purchase_detail(request, pk):
     purchase_detail = get_object_or_404(PurchaseDetail, pk=pk)
     if request.method == 'POST':
@@ -465,6 +468,7 @@ def movement_detail(request, pk):
         'movement_items': movement_items,
     })
     
+@login_required(login_url='login')
 def create_movement(request):
     if request.method == 'POST':
         form = MovementForm(request.POST)

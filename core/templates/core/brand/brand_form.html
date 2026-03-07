@@ -8,18 +8,33 @@
         <div class="card-header">
             <h3>{{ form.instance.id|yesno:"Editar Marca,Nueva Marca" }}</h3>
         </div>
-        <form method="post">
+        <form method="post" id="brand-form">
             {% csrf_token %}
             <div class="card-body">
                 {{ form.as_p }}        
             </div>
             <hr>
             <div class="card-footer text-center mb-3">
-                <button type="submit" class="btn btn-success">Guardar <i class="fa fa-save"></i></button>
+                <button type="submit" class="btn btn-success" id="brand-submit-btn">Guardar <i class="fa fa-save"></i></button>
                 <a href="{% url 'brand_list' %}" class="btn btn-danger">Cancelar <i class="fa fa-times"></i></a>
             </div>
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block script %}
+<script>
+    (function () {
+        const form = document.getElementById('brand-form');
+        const submitBtn = document.getElementById('brand-submit-btn');
+        if (!form || !submitBtn) return;
+
+        form.addEventListener('submit', function () {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Guardando...';
+        });
+    })();
+</script>
 {% endblock %}
 

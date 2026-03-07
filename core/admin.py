@@ -9,23 +9,42 @@ from .forms import UserCreationForm, UserChangeForm
 
 class UserAdmin(UserAdmin):
     finaly = (
-        (None, {'fields': ('email', 'password')}),
+        (None, {'fields': ('username', 'email', 'password')}),
         ('Información personal', {'fields': ('name', 'company')}),
         ('Permisos', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups')}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'name', 'company', 'password1', 'password2', 'is_active', 'is_staff', 'is_superuser')}
+            'fields': (
+                'username',
+                'email',
+                'name',
+                'company',
+                'password1',
+                'password2',
+                'is_active',
+                'is_staff',
+                'is_superuser',
+                'groups',
+            )}
          ),
     )
     form = UserChangeForm
     add_form = UserCreationForm
-    list_display = ('id','email', 'name', 'company', 'is_staff')
-    list_filter = ('is_staff', 'is_superuser', 'is_active')
+    list_display = ('id', 'username', 'email', 'name', 'company', 'is_staff', 'is_admin_display', 'groups_display')
+    list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups')
     fieldsets = finaly
-    search_fields = ('email', 'name', 'company')
+    search_fields = ('username', 'email', 'name', 'company__name')
     ordering = ('id',)
+
+    @admin.display(boolean=True, description='Es Admin')
+    def is_admin_display(self, obj):
+        return obj.is_admin
+
+    @admin.display(description='Grupos')
+    def groups_display(self, obj):
+        return ', '.join(obj.groups.values_list('name', flat=True)) or '-'
 
 admin.site.site_header = 'Sistema de Inventario'
 admin.site.site_title = 'Sistema de Inventario'

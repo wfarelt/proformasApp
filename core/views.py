@@ -361,6 +361,7 @@ def proforma_edit(request, id):
     context = _get_proforma_context(proforma, request)
     return render(request, 'core/proforma/proforma_new.html', context)
 
+@login_required(login_url='login')
 def proforma_add_client(request, id):
     context_title = 'Seleccionar cliente'
     proforma = Proforma.objects.get(id=id)
@@ -393,6 +394,7 @@ def proforma_add_client(request, id):
             
     return render(request, 'core/proforma/proforma_add_client.html', context)
 
+@login_required(login_url='login')
 def agregar_producto_a_detalle(request):
     # VALIR DATOS SI ES POST O GET
     if request.method == 'POST':
@@ -428,6 +430,7 @@ def agregar_producto_a_detalle(request):
     else:
         return render(request, 'core/home.html')
 
+@login_required(login_url='login')
 def eliminar_producto_a_detalle(request, id):
     detalle = Detalle.objects.get(id=id)
     proforma = detalle.proforma
@@ -436,6 +439,7 @@ def eliminar_producto_a_detalle(request, id):
     detalle.delete()
     return redirect(reverse_lazy('proforma_edit', args=[proforma.id]))
 
+@login_required(login_url='login')
 @transaction.atomic
 def editar_cantidad_detalle(request, detalle_id):
     if request.method != "POST":
@@ -513,6 +517,7 @@ def editar_cantidad_detalle(request, detalle_id):
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=400)
 
+@login_required(login_url='login')
 @transaction.atomic
 def cambiar_estado_proforma(request, id):
     proforma = Proforma.objects.get(id=id)
@@ -617,6 +622,7 @@ def proforma_view(request, id):
     }
     return render(request, 'core/proforma/proforma_view.html', context)
 
+@login_required(login_url='login')
 @transaction.atomic
 def anular_proforma(request, id):
     proforma = get_object_or_404(Proforma, id=id)
@@ -853,6 +859,11 @@ def brand_create(request):
     if request.method == 'POST':
         form = BrandForm(request.POST)
         if form.is_valid():
+            brand_name = form.cleaned_data['name']
+            if Brand.objects.filter(name__iexact=brand_name).exists():
+                messages.warning(request, f'La marca "{brand_name}" ya existe.')
+                return redirect('brand_list')
+
             form.save()
             messages.success(request, 'Marca creada correctamente.')
             return redirect('brand_list')
