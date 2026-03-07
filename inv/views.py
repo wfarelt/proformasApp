@@ -4,38 +4,33 @@ from django.contrib import messages
 from django.utils.timezone import now
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
-from django.forms import modelformset_factory
 from datetime import timedelta
 from django.db.models import Q
 from datetime import datetime
 from django.utils.timezone import make_aware
+from django.views import View
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from django.urls import reverse
 
-from core.models import Producto, Detalle, Proforma
+from core.models import Detalle, Proforma
 from .models import Producto, Purchase, PurchaseDetail, Movement, MovementItem
-from .forms import  PurchaseForm, PurchaseDetailFormSet, MovementForm, MovementItemFormSet
+from .forms import PurchaseForm, PurchaseDetailFormSet, MovementForm, MovementItemFormSet, InventoryUploadForm
 
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 
 # InventoryUploadForm
-import io
-import csv
 import openpyxl
-from .forms import InventoryUploadForm
-
-from django.utils.timezone import now
-from datetime import timedelta
 from django.db.models import Sum
-
-from django.http import JsonResponse
 
 from django.template.loader import render_to_string
 from django.http import HttpResponse
 from weasyprint import HTML
 from io import BytesIO
 
-from core.models import User
 from core.services.purchase_price_service import create_price_history_from_purchase
+import json
 
 
 # INGRESOS
@@ -563,7 +558,6 @@ def cargar_inventario_inicial(request):
             items_a_crear = []
             # Solo aceptar archivos .xlsx
             if nombre_archivo.endswith('.xlsx'):
-                import openpyxl
                 wb = openpyxl.load_workbook(archivo)
                 ws = wb.active
                 for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
@@ -582,7 +576,6 @@ def cargar_inventario_inicial(request):
                 errores.append("Solo se permiten archivos Excel (.xlsx).")
 
             if errores:
-                from django.contrib import messages
                 for error in errores:
                     messages.error(request, error)
                 return render(request, 'inv/movement/cargar_inventario.html', {'form': form})
@@ -609,23 +602,11 @@ def cargar_inventario_inicial(request):
                 if location is not None:
                     producto.location = location
                 producto.save()
-            from django.contrib import messages
             messages.success(request, "Inventario inicial cargado correctamente.")
             return redirect('movement_detail', movimiento.id)
     else:
         form = InventoryUploadForm()
     return render(request, 'inv/movement/cargar_inventario.html', {'form': form})
-
-import json
-from django.views import View
-from django.http import JsonResponse
-from django.db import transaction
-from django.utils.decorators import method_decorator
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
-from django.urls import reverse
-
-from .models import Movement, MovementItem, Producto
 
 @method_decorator(login_required, name='dispatch')
 @method_decorator(csrf_exempt, name='dispatch')  # ⚠️ solo si no usas CSRF token con JS

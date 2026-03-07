@@ -1,43 +1,34 @@
-from django.views.decorators.csrf import csrf_exempt
-from django.shortcuts import render
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.contrib import messages  # Importa el framework de mensajes
 from django.core.paginator import Paginator
-from django.views.generic import ListView, UpdateView, TemplateView
-from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand, Company, ProductKit
-from .forms import ProductoForm, ClienteForm, ProformaAddClientForm, SupplierForm, BrandForm, \
-                    CustomPasswordChangeForm, UserProfileForm
-
-from inv.models import Movement, MovementItem  # Asegúrate de importar tus modelos correctamente
+from django.views.generic import ListView
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import PasswordChangeView
+from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
-#reporte pdf
-#from django.http import HttpResponse
-#from django.template.loader import get_template
-#from weasyprint import HTML
+from django.db.models import Q
+from django.http import HttpResponse, JsonResponse
+from django.template.loader import render_to_string
+from django.utils import timezone
+from django.utils.timezone import make_aware
+
+from datetime import datetime
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
+import json
+import weasyprint
+from faker import Faker
 from nlt import numlet as nl
 
-from faker import Faker
+from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand, Company, ProductKit, ProductKitItem, ProductPriceHistory
+from .forms import ProductoForm, ClienteForm, ProformaAddClientForm, SupplierForm, BrandForm, \
+                    CustomPasswordChangeForm, UserProfileForm, ProductKitForm, ProductKitItemForm
+from .services.price_approval_service import PriceApprovalService
+from core.services.auto_price_service import AutoPriceService
 
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import PasswordChangeView
-from django.contrib.auth.forms import PasswordChangeForm
-from django.contrib.contenttypes.models import ContentType
-
-# PDF
-import weasyprint
-from django.http import HttpResponse
-from django.template.loader import render_to_string
-from decimal import Decimal, ROUND_HALF_UP
-from decimal import InvalidOperation
-
-from django.http import JsonResponse
-import json
-
-from django.utils.dateparse import parse_date
-
-from django.db.models import Q
+from inv.models import Movement, MovementItem  # Asegúrate de importar tus modelos correctamente
 
 from .services.price_evaluation_service import PriceEvaluationService
 from .custom_attributes import ProductCustomAttributes
@@ -190,12 +181,6 @@ class ProductListView(LoginRequiredMixin, ListView):
                 )
         return object_list
 
-from django.contrib.auth.decorators import user_passes_test, login_required
-from django.shortcuts import get_object_or_404, redirect
-from core.models import ProductPriceHistory
-from core.services.price_approval_service import PriceApprovalService
-from django.contrib import messages
-
 def is_admin(user):
     # Permitir tanto superusers como usuarios en el grupo 'Administrador'
     try:
@@ -231,10 +216,6 @@ def reject_price(request, ph_id):
 
 
 
-
-from django.contrib.auth import get_user_model
-from datetime import datetime
-from django.utils.timezone import make_aware
 
 # PROFORMA
 class ProformaListView(ListView):
@@ -676,9 +657,6 @@ def anular_proforma(request, id):
     messages.success(request, f'Proforma #{proforma.id} anulada y movimiento revertido.')
     return redirect('proforma_list')    
 
-from django.utils import timezone
-from datetime import datetime
-
 @login_required
 def cambiar_fecha_proforma(request, id):
     proforma = Proforma.objects.get(id=id)
@@ -995,9 +973,6 @@ def proforma_almacen(request, proforma_id):
     return response
 
 
-from .models import ProductKit, ProductKitItem
-from .forms import ProductKitForm, ProductKitItemForm
-
 # KIT DE PRODUCTOS
 class ProductKitListView(LoginRequiredMixin, ListView):
     model = ProductKit
@@ -1143,8 +1118,6 @@ def get_kit_items(request, kit_id):
     )
     return JsonResponse({'items': list(items)})
 
-
-from core.services.auto_price_service import AutoPriceService
 
 @login_required(login_url='login')
 def generate_prices_view(request):
