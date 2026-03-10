@@ -230,6 +230,55 @@
             </ul>
           </li>
 
+          <!-- FINANZAS -->
+          <li class="nav-item">
+            <a href="#" class="nav-link">
+              <i class="nav-icon fas fa-cash-register"></i>
+              <p>
+                Finanzas
+                <i class="fas fa-angle-left right"></i>
+              </p>
+            </a>
+            <ul class="nav nav-treeview" style="display: none;">
+              <li class="nav-item">
+                <a href="{% url 'finance_dashboard' %}" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Dashboard</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="{% url 'cash_register_list' %}" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Caja diaria</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="{% url 'payment_list' %}" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Pagos</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="{% url 'expense_list' %}" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Gastos</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="{% url 'transaction_list' %}" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Transacciones</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="{% url 'finance_reports' %}" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Reportes</p>
+                </a>
+              </li>
+            </ul>
+          </li>
+
           <!-- REPORTES -->
           <li class="nav-item">
             <a href="#" class="nav-link">

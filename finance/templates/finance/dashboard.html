@@ -1,0 +1,23 @@
+{% extends 'core/index.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="card mt-3">
+    <div class="card-header"><h3>{{ title }}</h3></div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3"><div class="small-box bg-info"><div class="inner"><h4>{{ payments_total }}</h4><p>Ingresos</p></div></div></div>
+            <div class="col-md-3"><div class="small-box bg-danger"><div class="inner"><h4>{{ expenses_total }}</h4><p>Egresos</p></div></div></div>
+            <div class="col-md-3"><div class="small-box bg-success"><div class="inner"><h4>{{ net_total }}</h4><p>Balance</p></div></div></div>
+            <div class="col-md-3"><div class="small-box bg-warning"><div class="inner"><h4>{% if open_cash %}#{{ open_cash.id }}{% else %}Sin caja{% endif %}</h4><p>Caja actual</p></div></div></div>
+        </div>
+
+        <a href="{% url 'cash_register_list' %}" class="btn btn-primary btn-sm">Caja diaria</a>
+        <a href="{% url 'payment_list' %}" class="btn btn-success btn-sm">Pagos</a>
+        <a href="{% url 'expense_list' %}" class="btn btn-danger btn-sm">Gastos</a>
+        <a href="{% url 'transaction_list' %}" class="btn btn-info btn-sm">Transacciones</a>
+        <a href="{% url 'finance_reports' %}" class="btn btn-secondary btn-sm">Reportes</a>
+    </div>
+</div>
+{% endblock %}
