@@ -24,9 +24,10 @@ from nlt import numlet as nl
 
 from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand, Company, ProductKit, ProductKitItem, ProductPriceHistory
 from .forms import ProductoForm, ClienteForm, ProformaAddClientForm, SupplierForm, BrandForm, \
-                    CustomPasswordChangeForm, UserProfileForm, ProductKitForm, ProductKitItemForm
+                    CustomPasswordChangeForm, UserProfileForm, ProductKitForm, ProductKitItemForm, ProductCatalogImportForm
 from .services.price_approval_service import PriceApprovalService
 from core.services.auto_price_service import AutoPriceService
+from core.services.product_catalog_import_service import ProductCatalogImportService
 
 from inv.models import Movement, MovementItem  # Asegúrate de importar tus modelos correctamente
 
@@ -180,6 +181,52 @@ class ProductListView(LoginRequiredMixin, ListView):
                     Q(nombre__icontains=palabra) | Q(descripcion__icontains=palabra)
                 )
         return object_list
+
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: user.is_superuser or user.groups.filter(name='Administrador').exists())
+def product_catalog_import(request):
+    form = ProductCatalogImportForm()
+
+    if request.method == 'POST':
+        form = ProductCatalogImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                result = ProductCatalogImportService.import_from_excel(form.cleaned_data['file'])
+
+                summary = (
+                    f"Importación completada. "
+                    f"Filas válidas: {result['total_rows']} | "
+                    f"Creados: {result['created']} | "
+                    f"Ya existentes: {result['skipped_existing']} | "
+                    f"Duplicados en archivo: {result['duplicate_in_file']}"
+                )
+                messages.success(request, summary)
+
+                for err in result.get('errors', []):
+                    messages.warning(request, err)
+
+                return redirect('product_list')
+            except ValueError as e:
+                messages.error(request, str(e))
+
+    context = {
+        'title': 'Importar catálogo de productos',
+        'form': form,
+    }
+    return render(request, 'core/product/product_catalog_import.html', context)
+
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: user.is_superuser or user.groups.filter(name='Administrador').exists())
+def download_product_catalog_template(request):
+    template_bytes = ProductCatalogImportService.build_template_file()
+    response = HttpResponse(
+        template_bytes,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="plantilla_catalogo_productos.xlsx"'
+    return response
 
 def is_admin(user):
     # Permitir tanto superusers como usuarios en el grupo 'Administrador'

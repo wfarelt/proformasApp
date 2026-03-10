@@ -1,5 +1,6 @@
 
 from django import forms
+from django.core.exceptions import ValidationError
 from decimal import Decimal
 from django.contrib.auth.forms import PasswordChangeForm
 from django.utils.translation import gettext_lazy as _
@@ -230,6 +231,22 @@ class ProductoForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class ProductCatalogImportForm(forms.Form):
+    file = forms.FileField(
+        label='Archivo Excel',
+        help_text='Formatos permitidos: .xlsx, .xlsm',
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control-file'}),
+    )
+
+    def clean_file(self):
+        uploaded_file = self.cleaned_data['file']
+        allowed_extensions = ('.xlsx', '.xlsm')
+        filename = (uploaded_file.name or '').lower()
+        if not filename.endswith(allowed_extensions):
+            raise ValidationError('Solo se permiten archivos Excel (.xlsx o .xlsm).')
+        return uploaded_file
 
 # CREAR UN FORMULARIO PARA CLIENTE
 class ClienteForm(forms.ModelForm):

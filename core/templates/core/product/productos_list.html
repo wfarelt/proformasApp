@@ -59,7 +59,8 @@
 {% endblock actions %}
 
 {% block create %}
-<a href="{% url 'producto_new' %}" class="btn btn-success btn-sm">Producto <i class="fa fa-plus"></i></a>
+<a href="{% url 'product_catalog_import' %}" class="btn btn-info mr-2">Importar catálogo <i class="fa fa-upload"></i></a>
+<a href="{% url 'producto_new' %}" class="btn btn-success">Producto <i class="fa fa-plus"></i></a>
 {% endblock create %}
 
 

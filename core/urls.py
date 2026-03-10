@@ -21,6 +21,8 @@ urlpatterns = [
     path('producto/new/', producto_new, name='producto_new'),
     path('producto/edit/<int:id>/', product_edit, name='product_edit'),
     path('productos/', ProductListView.as_view(), name='product_list'),
+    path('productos/importar-catalogo/', product_catalog_import, name='product_catalog_import'),
+    path('productos/importar-catalogo/plantilla/', download_product_catalog_template, name='download_product_catalog_template'),
     path('product/price/approve/<int:ph_id>/', approve_price, name='approve_price'),
     path('product/price/reject/<int:ph_id>/', reject_price, name='reject_price'),
     

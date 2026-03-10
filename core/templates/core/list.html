@@ -10,7 +10,7 @@ Lista de {{title}}
         <h2>Lista de {{title}}</h2>
     </div>
     <div class="card-body">
-        <div class="row">
+        <div class="row align-items-md-end">
             <div class="col-md-6">
                 <form method="get">
                     <div class="input-group">
@@ -23,7 +23,7 @@ Lista de {{title}}
                     </div>
                 </form>
             </div>
-            <div class="col-md-6 text-right">
+            <div class="col-md-6 mt-2 mt-md-0 d-flex justify-content-start justify-content-md-end">
                 {% block create %}
                 {% endblock create %}
             </div>
