@@ -6,6 +6,26 @@
 <div class="card mt-3">
     <div class="card-header"><h3>{{ title }}</h3></div>
     <div class="card-body">
+        {% if is_closing and expected_balance is not None %}
+        <div class="alert alert-secondary py-2">
+            <div><strong>Saldo inicial:</strong> {{ cash_register.opening_balance|floatformat:2 }}</div>
+            <div><strong>Ingresos:</strong> {{ incomes|floatformat:2 }}</div>
+            <div><strong>Egresos:</strong> {{ expenses_total|floatformat:2 }}</div>
+            <div><strong>Saldo esperado:</strong> <span id="expected-balance" data-value="{{ expected_balance }}">{{ expected_balance|floatformat:2 }}</span></div>
+            <div><strong>Diferencia:</strong> <span id="closing-difference">0.00</span></div>
+        </div>
+        {% endif %}
+
+        {% if not is_closing and previous_balance is not None %}
+        <div class="alert alert-info py-2">
+            Referencia de saldo anterior:
+            <strong>{{ previous_balance|floatformat:2 }}</strong>
+            {% if last_closed_register %}
+            (Caja #{{ last_closed_register.id }} cerrada el {{ last_closed_register.closed_at|date:'d/m/Y H:i' }})
+            {% endif %}
+        </div>
+        {% endif %}
+
         <form method="post">
             {% csrf_token %}
             {{ form.as_p }}
@@ -14,4 +34,37 @@
         </form>
     </div>
 </div>
+
+{% if is_closing and expected_balance is not None %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const closingInput = document.getElementById('id_closing_balance');
+    const expectedNode = document.getElementById('expected-balance');
+    const differenceNode = document.getElementById('closing-difference');
+
+    if (!closingInput || !expectedNode || !differenceNode) {
+        return;
+    }
+
+    const expected = Number(expectedNode.dataset.value || 0);
+
+    const updateDifference = function () {
+        const closingValue = Number(closingInput.value || 0);
+        const diff = closingValue - expected;
+        differenceNode.textContent = diff.toFixed(2);
+
+        if (diff === 0) {
+            differenceNode.className = 'text-success';
+        } else if (diff > 0) {
+            differenceNode.className = 'text-info';
+        } else {
+            differenceNode.className = 'text-danger';
+        }
+    };
+
+    closingInput.addEventListener('input', updateDifference);
+    updateDifference();
+});
+</script>
+{% endif %}
 {% endblock %}

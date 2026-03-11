@@ -35,12 +35,12 @@
 
 {% block rows %}                       
 <td>{{ obj.id }}</td>
-<td>{{ obj.nombre }}</td>
-<td>{{ obj.descripcion|truncatechars:45 }}</td>
-<td>{{ obj.brand.initials }}</td>
-<td class="text-right">{{ obj.cost }}</td>
-<td class="text-right">{{ obj.precio }}</td>
-<td class="text-right">{{ obj.stock }}</td>
+<td>{{ obj.nombre|default:'-' }}</td>
+<td>{{ obj.descripcion|truncatechars:45|default:'-' }}</td>
+<td>{{ obj.brand.initials|default:'-' }}</td>
+<td class="text-right">{{ obj.cost|default:'-' }}</td>
+<td class="text-right">{{ obj.precio|default:'-' }}</td>
+<td class="text-right">{{ obj.stock|default:'-' }}</td>
 {% if obj.location %}
     <td class="text-center">{{ obj.location }}</td>
 {% else %}

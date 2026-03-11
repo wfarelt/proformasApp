@@ -6,12 +6,60 @@
 <div class="card mt-3">
     <div class="card-header"><h3>{{ title }}</h3></div>
     <div class="card-body">
-        <form method="post">
+        <form method="post" id="payment-form">
             {% csrf_token %}
             {{ form.as_p }}
-            <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+            <button type="submit" class="btn btn-primary btn-sm" id="save-payment-btn">Guardar</button>
             <a href="{% url 'payment_list' %}" class="btn btn-secondary btn-sm">Cancelar</a>
         </form>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('payment-form');
+    const submitBtn = document.getElementById('save-payment-btn');
+    const methodSelect = document.getElementById('id_method');
+    const cashInput = document.getElementById('id_cash_amount');
+    const bankInput = document.getElementById('id_bank_amount');
+
+    if (!form || !submitBtn) {
+        return;
+    }
+
+    const getFieldContainer = function (input) {
+        if (!input) {
+            return null;
+        }
+        return input.closest('p');
+    };
+
+    const cashContainer = getFieldContainer(cashInput);
+    const bankContainer = getFieldContainer(bankInput);
+
+    const toggleSplitFields = function () {
+        if (!methodSelect || !cashContainer || !bankContainer) {
+            return;
+        }
+        const isMixed = methodSelect.value === 'MIXED';
+        cashContainer.style.display = isMixed ? '' : 'none';
+        bankContainer.style.display = isMixed ? '' : 'none';
+
+        if (!isMixed) {
+            cashInput.value = '';
+            bankInput.value = '';
+        }
+    };
+
+    if (methodSelect) {
+        methodSelect.addEventListener('change', toggleSplitFields);
+        toggleSplitFields();
+    }
+
+    form.addEventListener('submit', function () {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Guardando...';
+    });
+});
+</script>
 {% endblock %}

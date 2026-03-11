@@ -1,6 +1,9 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
+from decimal import Decimal
+from django.db.models import Sum, Value, DecimalField
+from django.db.models.functions import Coalesce
 
 from urllib.parse import quote
 from django.utils.translation import gettext_lazy as _
@@ -228,6 +231,20 @@ class Proforma(models.Model):
     def total_descuento(self):
         """Calcula el descuento total."""
         return self.total - self.total_neto()
+
+    def total_pagado(self):
+        """Suma los pagos registrados para esta proforma."""
+        return self.payments.filter(status='POSTED').aggregate(
+            total=Coalesce(
+                Sum('amount'),
+                Value(Decimal('0.00'), output_field=DecimalField(max_digits=12, decimal_places=2))
+            )
+        )['total']
+
+    def saldo_pendiente(self):
+        """Calcula el saldo pendiente considerando descuento y pagos aplicados."""
+        saldo = self.total_neto() - self.total_pagado()
+        return max(saldo, Decimal('0.00'))
 
     def __str__(self):
         return str(self.id)

@@ -355,7 +355,7 @@
         <div class="form-group mb-3">
             <label for="observacion" class="form-label fw-bold">Observaciones</label>
             <textarea name="observacion" id="observacion" class="form-control form-control-sm" 
-                      rows="2" placeholder="Añade observaciones adicionales...">{{ proforma.observacion|default_if_none:'' }}</textarea>
+                      rows="2" placeholder="Añade observaciones adicionales...">{{ proforma.observacion|default:'-' }}</textarea>
         </div>
 
         <!-- Estado -->

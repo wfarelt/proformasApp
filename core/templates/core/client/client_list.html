@@ -11,11 +11,11 @@
 {% endblock %}
 
 {% block rows %}
-    <td>{{ obj.name }}</td>
-    <td>{{ obj.nit }}</td>
-    <td>{{ obj.email }}</td>
-    <td>{{ obj.phone }}</td>
-    <td>{{ obj.address }}</td>
+    <td>{{ obj.name|default:'-' }}</td>
+    <td>{{ obj.nit|default:'-' }}</td>
+    <td>{{ obj.email|default:'-' }}</td>
+    <td>{{ obj.phone|default:'-' }}</td>
+    <td>{{ obj.address|default:'-' }}</td>
     {% if obj.status %}
     <td><span class="badge badge-success">Activo</span></td>
     {% else %}

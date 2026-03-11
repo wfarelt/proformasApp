@@ -11,10 +11,10 @@
 
 {% block rows %}                       
     <td>{{ obj.name }}</td>
-    <td>{{ obj.contact_person }}</td>
-    <td>{{ obj.phone }}</td>
-    <td>{{ obj.email }}</td>
-    <td>{{ obj.address }}</td>
+    <td>{{ obj.contact_person|default:'-' }}</td>
+    <td>{{ obj.phone|default:'-' }}</td>
+    <td>{{ obj.email|default:'-' }}</td>
+    <td>{{ obj.address|default:'-' }}</td>
 {% endblock rows %}
 
 {% block actions %}

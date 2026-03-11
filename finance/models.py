@@ -77,6 +77,8 @@ class Payment(models.Model):
     )
 
     amount = models.DecimalField(max_digits=12, decimal_places=2)
+    cash_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    bank_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     method = models.CharField(max_length=20, choices=METHOD_CHOICES, default='CASH')
     paid_at = models.DateTimeField(default=timezone.now)
     reference = models.CharField(max_length=100, blank=True, null=True)
