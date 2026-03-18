@@ -32,6 +32,50 @@
       top: 0;
     }
   }
+
+  .client-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1050;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .client-modal {
+    width: min(960px, 95vw);
+    max-height: 92vh;
+    overflow: auto;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+  }
+
+  .client-modal .modal-header,
+  .client-modal .modal-footer {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e9ecef;
+  }
+
+  .client-modal .modal-footer {
+    border-top: 1px solid #e9ecef;
+    border-bottom: 0;
+  }
+
+  .client-modal .modal-body {
+    padding: 16px;
+  }
+
+  .client-modal-open {
+    display: flex;
+  }
+
+  .client-results-table td,
+  .client-results-table th {
+    vertical-align: middle;
+  }
 </style>
 {% endblock style %}
 
@@ -46,12 +90,13 @@
         </strong>
       </div>
       <div class="col-md-4">
-          Cliente: {{proforma.cliente}}
-          <a href="{% url 'proforma_add_client' proforma.id %}" class="btn btn-warning btn-sm no-mostrar"><i
-          class="fas fa-user-plus"></i></a>
+          Cliente: <span id="selected-client-name">{{ proforma.cliente|default:'Sin cliente' }}</span>
+          <button type="button" id="open-client-modal" class="btn btn-warning btn-sm no-mostrar">
+          <i class="fas fa-user-plus"></i>
+          </button>
       </div>
       <div class="col-md-4">
-          Nit: {{proforma.cliente.nit}}
+          Nit: <span id="selected-client-nit">{% if proforma.cliente %}{{ proforma.cliente.nit|default:'-' }}{% else %}-{% endif %}</span>
       </div>
       <div class="col-md-4 text-right">
         <form method="post" action="{% url 'cambiar_fecha_proforma' proforma.id %}" class="d-inline">
@@ -397,6 +442,100 @@
 
 </div>
 
+<div id="client-modal-backdrop" class="client-modal-backdrop" aria-hidden="true">
+  <div class="client-modal" role="dialog" aria-modal="true" aria-labelledby="client-modal-title">
+    <div class="modal-header d-flex justify-content-between align-items-center">
+      <h5 id="client-modal-title" class="mb-0">Seleccionar o crear cliente</h5>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="close-client-modal">Cerrar</button>
+    </div>
+
+    <div class="modal-body">
+      <div id="client-modal-message" class="alert d-none" role="alert"></div>
+
+      <div class="card mb-3">
+        <div class="card-header py-2"><strong>Buscar cliente existente</strong></div>
+        <div class="card-body py-3">
+          <div class="input-group input-group-sm mb-3">
+            <input type="text" id="client-search-input" class="form-control" placeholder="Buscar por nombre, NIT o teléfono">
+            <div class="input-group-append">
+              <button type="button" class="btn btn-primary" id="client-search-btn">Buscar</button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered client-results-table mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th>ID</th>
+                  <th>Nombre</th>
+                  <th>NIT</th>
+                  <th>Teléfono</th>
+                  <th style="width: 120px;">Acción</th>
+                </tr>
+              </thead>
+              <tbody id="client-results-body">
+                <tr>
+                  <td colspan="5" class="text-center text-muted">Escribe para buscar clientes.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mt-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="client-prev-page" disabled>
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <small id="client-page-info" class="text-muted">Página 1 de 1</small>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="client-next-page" disabled>
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header py-2"><strong>Crear cliente rápido</strong></div>
+        <div class="card-body py-3">
+          <form id="quick-create-client-form">
+            {% csrf_token %}
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label for="quick-client-name">Nombre</label>
+                <input type="text" id="quick-client-name" name="name" class="form-control form-control-sm" required>
+              </div>
+              <div class="form-group col-md-6">
+                <label for="quick-client-nit">NIT</label>
+                <input type="text" id="quick-client-nit" name="nit" class="form-control form-control-sm">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group col-md-4">
+                <label for="quick-client-email">Correo</label>
+                <input type="email" id="quick-client-email" name="email" class="form-control form-control-sm">
+              </div>
+              <div class="form-group col-md-4">
+                <label for="quick-client-phone">Teléfono</label>
+                <input type="text" id="quick-client-phone" name="phone" class="form-control form-control-sm">
+              </div>
+              <div class="form-group col-md-4">
+                <label for="quick-client-address">Dirección</label>
+                <input type="text" id="quick-client-address" name="address" class="form-control form-control-sm">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-success btn-sm" id="quick-create-client-btn">
+              Crear y asignar
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer d-flex justify-content-between">
+      <small class="text-muted">Sugerencia: Enter en búsqueda para consultar rápido.</small>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -519,6 +658,228 @@
         return el ? el.value : "";
     }
   });
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const modalBackdrop = document.getElementById('client-modal-backdrop');
+  const openModalBtn = document.getElementById('open-client-modal');
+  const closeModalBtn = document.getElementById('close-client-modal');
+
+  if (!modalBackdrop || !openModalBtn || !closeModalBtn) {
+    return;
+  }
+
+  const proformaId = '{{ proforma.id }}';
+  const messageBox = document.getElementById('client-modal-message');
+  const searchInput = document.getElementById('client-search-input');
+  const searchBtn = document.getElementById('client-search-btn');
+  const resultsBody = document.getElementById('client-results-body');
+  const prevPageBtn = document.getElementById('client-prev-page');
+  const nextPageBtn = document.getElementById('client-next-page');
+  const pageInfo = document.getElementById('client-page-info');
+  const selectedClientName = document.getElementById('selected-client-name');
+  const selectedClientNit = document.getElementById('selected-client-nit');
+  const quickCreateForm = document.getElementById('quick-create-client-form');
+  let currentPage = 1;
+
+  function getCSRFToken() {
+    const el = document.querySelector('[name=csrfmiddlewaretoken]');
+    return el ? el.value : '';
+  }
+
+  function showMessage(type, text) {
+    messageBox.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-warning', 'alert-info');
+    messageBox.classList.add('alert-' + type);
+    messageBox.textContent = text;
+  }
+
+  function hideMessage() {
+    messageBox.classList.add('d-none');
+    messageBox.textContent = '';
+  }
+
+  function openModal() {
+    modalBackdrop.classList.add('client-modal-open');
+    modalBackdrop.setAttribute('aria-hidden', 'false');
+    hideMessage();
+    currentPage = 1;
+    searchClients(1);
+    setTimeout(() => searchInput.focus(), 50);
+  }
+
+  function closeModal() {
+    modalBackdrop.classList.remove('client-modal-open');
+    modalBackdrop.setAttribute('aria-hidden', 'true');
+  }
+
+  function renderClientRows(results) {
+    if (!results.length) {
+      resultsBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No se encontraron clientes.</td></tr>';
+      return;
+    }
+
+    resultsBody.innerHTML = results.map(client => {
+      return `
+        <tr>
+          <td>${client.id}</td>
+          <td>${client.name || ''}</td>
+          <td>${client.nit || '-'}</td>
+          <td>${client.phone || '-'}</td>
+          <td class="text-center">
+            <button type="button" class="btn btn-primary btn-sm client-select-btn" data-client-id="${client.id}" data-client-name="${client.name || ''}" data-client-nit="${client.nit || ''}">
+              Seleccionar
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function updatePaginationControls(pagination) {
+    const page = pagination?.page || 1;
+    const totalPages = pagination?.total_pages || 1;
+    const hasPrevious = Boolean(pagination?.has_previous);
+    const hasNext = Boolean(pagination?.has_next);
+
+    currentPage = page;
+    pageInfo.textContent = `Página ${page} de ${totalPages}`;
+    prevPageBtn.disabled = !hasPrevious;
+    nextPageBtn.disabled = !hasNext;
+  }
+
+  async function searchClients(page = 1) {
+    hideMessage();
+    const query = (searchInput.value || '').trim();
+    const url = `{% url 'proforma_search_clients_json' proforma.id %}?q=${encodeURIComponent(query)}&page=${page}`;
+
+    try {
+      searchBtn.disabled = true;
+      prevPageBtn.disabled = true;
+      nextPageBtn.disabled = true;
+      const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'No se pudo buscar clientes');
+      }
+
+      renderClientRows(data.results || []);
+      updatePaginationControls(data.pagination || null);
+    } catch (error) {
+      resultsBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error al buscar clientes.</td></tr>';
+      showMessage('danger', error.message || 'Error al buscar clientes');
+      pageInfo.textContent = 'Página -';
+    } finally {
+      searchBtn.disabled = false;
+    }
+  }
+
+  async function setClient(clientId, clientName, clientNit) {
+    hideMessage();
+    const form = new FormData();
+    form.append('cliente_id', clientId);
+    form.append('csrfmiddlewaretoken', getCSRFToken());
+
+    try {
+      const response = await fetch(`{% url 'proforma_set_client_json' proforma.id %}`, {
+        method: 'POST',
+        body: form,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'No se pudo asignar cliente');
+      }
+
+      selectedClientName.textContent = clientName || data.client.name || 'Sin cliente';
+      selectedClientNit.textContent = (clientNit || data.client.nit || '').trim() || '-';
+      showMessage('success', 'Cliente asignado correctamente.');
+      setTimeout(closeModal, 450);
+    } catch (error) {
+      showMessage('danger', error.message || 'Error al asignar cliente');
+    }
+  }
+
+  async function quickCreateClient(event) {
+    event.preventDefault();
+    hideMessage();
+
+    const formData = new FormData(quickCreateForm);
+    formData.append('csrfmiddlewaretoken', getCSRFToken());
+
+    const submitBtn = document.getElementById('quick-create-client-btn');
+    try {
+      submitBtn.disabled = true;
+
+      const response = await fetch(`{% url 'proforma_create_client_json' proforma.id %}`, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'No se pudo crear el cliente');
+      }
+
+      selectedClientName.textContent = data.client.name || 'Sin cliente';
+      selectedClientNit.textContent = (data.client.nit || '').trim() || '-';
+      quickCreateForm.reset();
+      showMessage('success', 'Cliente creado y asignado correctamente.');
+      searchInput.value = data.client.name || '';
+      await searchClients(1);
+      setTimeout(closeModal, 600);
+    } catch (error) {
+      showMessage('danger', error.message || 'Error al crear cliente');
+    } finally {
+      submitBtn.disabled = false;
+    }
+  }
+
+  openModalBtn.addEventListener('click', openModal);
+  closeModalBtn.addEventListener('click', closeModal);
+
+  modalBackdrop.addEventListener('click', function (event) {
+    if (event.target === modalBackdrop) {
+      closeModal();
+    }
+  });
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && modalBackdrop.classList.contains('client-modal-open')) {
+      closeModal();
+    }
+  });
+
+  searchBtn.addEventListener('click', searchClients);
+  searchInput.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      searchClients(1);
+    }
+  });
+
+  prevPageBtn.addEventListener('click', function () {
+    if (currentPage > 1) {
+      searchClients(currentPage - 1);
+    }
+  });
+
+  nextPageBtn.addEventListener('click', function () {
+    searchClients(currentPage + 1);
+  });
+
+  resultsBody.addEventListener('click', function (event) {
+    const btn = event.target.closest('.client-select-btn');
+    if (!btn) return;
+
+    setClient(btn.dataset.clientId, btn.dataset.clientName, btn.dataset.clientNit);
+  });
+
+  quickCreateForm.addEventListener('submit', quickCreateClient);
+});
 </script>
 
 {% if enable_kits %}

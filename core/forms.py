@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.contrib.auth.forms import PasswordChangeForm
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
-from .models import Producto, Cliente, Proforma, Supplier, Brand, User
+from .models import Producto, Cliente, Supplier, Brand, User
 
 
 # CREAR UN FORMULARIO PARA USUARIO
@@ -250,6 +250,20 @@ class ProductCatalogImportForm(forms.Form):
 
 # CREAR UN FORMULARIO PARA CLIENTE
 class ClienteForm(forms.ModelForm):
+    def clean_nit(self):
+        nit = (self.cleaned_data.get('nit') or '').strip()
+        if not nit:
+            return nit
+
+        queryset = Cliente.objects.filter(nit__iexact=nit)
+        if self.instance and self.instance.pk:
+            queryset = queryset.exclude(pk=self.instance.pk)
+
+        if queryset.exists():
+            raise forms.ValidationError('Ya existe un cliente con este NIT.')
+
+        return nit
+
     class Meta:
         model = Cliente
         fields = ['name', 'nit', 'email', 'phone', 'address']
@@ -268,18 +282,6 @@ class ClienteForm(forms.ModelForm):
             'address': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
-# CREAR UN FORMULARIO PARA MODIFICAR CLIENTE DE PROFORMA
-class ProformaAddClientForm(forms.ModelForm):
-    class Meta:
-        model = Proforma
-        fields = ['cliente']
-        labels = {
-            'cliente': 'Cliente',
-        }
-        widgets = {
-            'cliente': forms.TextInput(attrs={'class': 'form-control'}),
-        }
-        
 # FORMULARIO PROVEEDOR
 class SupplierForm(forms.ModelForm):
     class Meta:

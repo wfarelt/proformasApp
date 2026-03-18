@@ -23,7 +23,7 @@ from faker import Faker
 from nlt import numlet as nl
 
 from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand, Company, ProductKit, ProductKitItem, ProductPriceHistory
-from .forms import ProductoForm, ClienteForm, ProformaAddClientForm, SupplierForm, BrandForm, \
+from .forms import ProductoForm, ClienteForm, SupplierForm, BrandForm, \
                     CustomPasswordChangeForm, UserProfileForm, ProductKitForm, ProductKitItemForm, ProductCatalogImportForm
 from .services.price_approval_service import PriceApprovalService
 from core.services.auto_price_service import AutoPriceService
@@ -408,38 +408,120 @@ def proforma_edit(request, id):
     context = _get_proforma_context(proforma, request)
     return render(request, 'core/proforma/proforma_new.html', context)
 
+
 @login_required(login_url='login')
-def proforma_add_client(request, id):
-    context_title = 'Seleccionar cliente'
-    proforma = Proforma.objects.get(id=id)
-    if request.method == 'POST':
-        form = ProformaAddClientForm(request.POST, instance=proforma)
-        if form.is_valid():
-            form.save()
-            return redirect('proforma_edit', id)
-    else:
-        # Clientes activos
-        clients_list = Cliente.objects.filter(status=True)
-        form = ProformaAddClientForm(instance=proforma)
-        if query := request.GET.get('q'):
-            clients_list = clients_list.filter(name__icontains=query)
-            paginator = Paginator(clients_list, 5)
-            page_number = request.GET.get('page')
-            page_obj = paginator.get_page(page_number) 
-        else:
-            paginator = Paginator(clients_list, 5)
-            page_number = request.GET.get('page')
-            page_obj = paginator.get_page(page_number)
-            
-        context = {
-            'form': form,
-            'title': context_title,
-            'clients_list': page_obj,
-            'proforma': proforma, 
-            'page_obj': page_obj
+def proforma_search_clients_json(request, id):
+    """Busca clientes activos para selección rápida desde modal en proforma."""
+    proforma = get_object_or_404(Proforma, id=id)
+    query = (request.GET.get('q') or '').strip()
+    page = request.GET.get('page', '1')
+
+    clients_qs = Cliente.objects.filter(status=True).order_by('name')
+    if query:
+        clients_qs = clients_qs.filter(
+            Q(name__icontains=query) |
+            Q(nit__icontains=query) |
+            Q(phone__icontains=query)
+        )
+
+    paginator = Paginator(clients_qs, 5)
+    page_obj = paginator.get_page(page)
+
+    clients = [
+        {
+            'id': client.id,
+            'name': client.name,
+            'nit': client.nit or '',
+            'phone': client.phone or '',
         }
-            
-    return render(request, 'core/proforma/proforma_add_client.html', context)
+        for client in page_obj.object_list
+    ]
+
+    return JsonResponse({
+        'success': True,
+        'proforma_id': proforma.id,
+        'results': clients,
+        'pagination': {
+            'page': page_obj.number,
+            'total_pages': paginator.num_pages,
+            'has_previous': page_obj.has_previous(),
+            'has_next': page_obj.has_next(),
+            'total_results': paginator.count,
+        }
+    })
+
+
+@login_required(login_url='login')
+@transaction.atomic
+def proforma_set_client_json(request, id):
+    """Asigna un cliente existente a la proforma desde modal."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+
+    proforma = get_object_or_404(Proforma, id=id)
+    client_id = request.POST.get('cliente_id')
+
+    if not client_id:
+        return JsonResponse({'success': False, 'error': 'Debe seleccionar un cliente'}, status=400)
+
+    try:
+        client = Cliente.objects.get(id=int(client_id), status=True)
+    except (ValueError, Cliente.DoesNotExist):
+        return JsonResponse({'success': False, 'error': 'Cliente inválido o inactivo'}, status=400)
+
+    proforma.cliente = client
+    proforma.save(update_fields=['cliente'])
+
+    return JsonResponse({
+        'success': True,
+        'client': {
+            'id': client.id,
+            'name': client.name,
+            'nit': client.nit or '',
+        }
+    })
+
+
+@login_required(login_url='login')
+@transaction.atomic
+def proforma_create_client_json(request, id):
+    """Crea cliente rápidamente y lo asigna a la proforma."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+
+    proforma = get_object_or_404(Proforma, id=id)
+    name = (request.POST.get('name') or '').strip()
+    nit = (request.POST.get('nit') or '').strip()
+    email = (request.POST.get('email') or '').strip()
+    phone = (request.POST.get('phone') or '').strip()
+    address = (request.POST.get('address') or '').strip()
+
+    if not name:
+        return JsonResponse({'success': False, 'error': 'El nombre es obligatorio'}, status=400)
+
+    if nit and Cliente.objects.filter(nit__iexact=nit).exists():
+        return JsonResponse({'success': False, 'error': 'Ya existe un cliente con este NIT'}, status=400)
+
+    client = Cliente.objects.create(
+        name=name,
+        nit=nit or None,
+        email=email or None,
+        phone=phone or None,
+        address=address or None,
+        status=True,
+    )
+
+    proforma.cliente = client
+    proforma.save(update_fields=['cliente'])
+
+    return JsonResponse({
+        'success': True,
+        'client': {
+            'id': client.id,
+            'name': client.name,
+            'nit': client.nit or '',
+        }
+    }, status=201)
 
 @login_required(login_url='login')
 def agregar_producto_a_detalle(request):
@@ -944,9 +1026,29 @@ def brand_status(request, pk):
     return redirect('brand_list')
 
 # Reporte PDF de profoma
+def _build_insufficient_stock_product_ids(detalles):
+    """Retorna IDs de productos cuyo stock es menor al total solicitado en la proforma."""
+    from collections import defaultdict
+
+    requested_by_product = defaultdict(int)
+    stock_by_product = {}
+
+    for detalle in detalles:
+        product_id = detalle.producto.id
+        requested_by_product[product_id] += int(detalle.cantidad)
+        stock_by_product[product_id] = int(detalle.producto.stock)
+
+    return {
+        product_id
+        for product_id, requested in requested_by_product.items()
+        if stock_by_product.get(product_id, 0) < requested
+    }
+
+
 def proforma_pdf(request, proforma_id):
     proforma = Proforma.objects.get(id=proforma_id)
-    detalles = Detalle.objects.filter(proforma=proforma)
+    detalles = list(Detalle.objects.select_related('producto').filter(proforma=proforma))
+    insufficient_stock_product_ids = _build_insufficient_stock_product_ids(detalles)
     
     # Convertimos los valores a Decimal para mayor precisión
     total = Decimal(proforma.total)
@@ -975,6 +1077,7 @@ def proforma_pdf(request, proforma_id):
         'total_neto': total_neto,
         'total_bs': total_bs,
         'total_literal': total_literal,
+        'insufficient_stock_product_ids': insufficient_stock_product_ids,
         'logo_url': logo_url,
         'company': company
     }
@@ -990,7 +1093,8 @@ def proforma_pdf(request, proforma_id):
 
 def proforma_almacen(request, proforma_id):
     proforma = Proforma.objects.get(id=proforma_id)
-    detalles = Detalle.objects.filter(proforma=proforma)
+    detalles = list(Detalle.objects.select_related('producto').filter(proforma=proforma))
+    insufficient_stock_product_ids = _build_insufficient_stock_product_ids(detalles)
     
     # Convertimos los valores a Decimal para mayor precisión
     total = Decimal(proforma.total)
@@ -1017,6 +1121,7 @@ def proforma_almacen(request, proforma_id):
         'detalles': detalles,
         'total_bs': total_bs,
         'total_literal': total_literal,
+        'insufficient_stock_product_ids': insufficient_stock_product_ids,
         'logo_url': logo_url,
         'company': company
     }

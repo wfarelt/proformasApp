@@ -77,7 +77,17 @@ class CompanyAdmin(admin.ModelAdmin):
 
 admin.site.register(Company, CompanyAdmin)
 
-admin.site.register(Proforma)
+class ProformaAdmin(admin.ModelAdmin):
+    list_display = ('id', 'fecha', 'cliente', 'usuario_username', 'estado', 'total', 'company')
+    list_filter = ('estado', 'company', 'fecha')
+    search_fields = ('id', 'cliente__name', 'usuario__username', 'usuario__name')
+    ordering = ('-fecha',)
+
+    @admin.display(description='Username')
+    def usuario_username(self, obj):
+        return obj.usuario.username if obj.usuario else '-'
+
+admin.site.register(Proforma, ProformaAdmin)
 
 admin.site.register(Detalle)
 

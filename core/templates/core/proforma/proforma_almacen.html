@@ -78,6 +78,9 @@
         <thead>
             <tr>
                 <th>#</th>
+                {% if proforma.estado != 'EJECUTADO' %}
+                    <th>*</th>
+                {% endif %}
                 <th>Código</th>
                 <th>Ubicación</th>
                 <th>Producto</th>
@@ -108,6 +111,9 @@
             {% for detalle in detalles %}
             <tr>
                 <td>{{ forloop.counter }}</td>
+                {% if proforma.estado != 'EJECUTADO' %}
+                    <td>{% if detalle.producto.id in insufficient_stock_product_ids %}*{% endif %}</td>
+                {% endif %}
                 <td class="td-izquierda">{{ detalle.producto.nombre }}</td>
                 <td>{{ detalle.producto.location }}</td>
                 <td class="td-izquierda">{{ detalle.producto.descripcion }}</td>
