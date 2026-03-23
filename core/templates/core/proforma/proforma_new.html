@@ -96,6 +96,40 @@
   .recommended-products .text-muted {
     color: #2d6ea3 !important;
   }
+
+  .kit-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.55);
+  }
+
+  .kit-status.is-loading {
+    border: 1px solid #8fc2ff;
+    color: #0f4c81;
+  }
+
+  .kit-status.is-success {
+    border: 1px solid #9ad4aa;
+    color: #1f6b37;
+  }
+
+  .kit-status.is-error {
+    border: 1px solid #e0a1a8;
+    color: #8a2330;
+  }
+
+  .kit-status .spinner-border {
+    flex: 0 0 auto;
+  }
+
+  .kit-actions {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
 </style>
 {% endblock style %}
 
@@ -186,7 +220,7 @@
             </table>
         </div>
 
-        <div class="d-flex gap-2">
+        <div class="d-flex kit-actions">
             <button type="button" class="btn btn-success btn-sm" id="add-selected-kit-items" 
                     data-proforma-id="{{ proforma.id }}">
                 <i class="fas fa-plus"></i> Agregar seleccionados
@@ -198,6 +232,11 @@
                 <i class="fas fa-times"></i> Cerrar
             </button>
         </div>
+
+          <div id="kit-status" class="kit-status d-none" role="status" aria-live="polite">
+            <div class="spinner-border spinner-border-sm text-primary" id="kit-status-spinner" aria-hidden="true"></div>
+            <span id="kit-status-text">Cargando...</span>
+          </div>
     </div>
     <hr>
     </div><!-- /#kit-block -->
@@ -1010,10 +1049,48 @@ document.addEventListener('DOMContentLoaded', function () {
     const selectAll = document.getElementById('kit-select-all');
     const addSelectedBtn = document.getElementById('add-selected-kit-items');
     const clearBtn = document.getElementById('clear-kit-selection');
+    const closeBtn = document.getElementById('close-kit-preview');
+    const statusBox = document.getElementById('kit-status');
+    const statusText = document.getElementById('kit-status-text');
+    const statusSpinner = document.getElementById('kit-status-spinner');
 
     function getCSRFToken() {
         const el = document.querySelector('[name=csrfmiddlewaretoken]');
         return el ? el.value : '';
+    }
+
+    function setKitStatus(message, type) {
+      if (!statusBox || !statusText || !statusSpinner) {
+        return;
+      }
+
+      statusBox.classList.remove('d-none', 'is-loading', 'is-success', 'is-error');
+      statusBox.classList.add(type);
+      statusText.textContent = message;
+      statusSpinner.classList.toggle('d-none', type !== 'is-loading');
+    }
+
+    function clearKitStatus() {
+      if (!statusBox) {
+        return;
+      }
+
+      statusBox.classList.add('d-none');
+      statusBox.classList.remove('is-loading', 'is-success', 'is-error');
+    }
+
+    function setKitControlsDisabled(disabled) {
+      loadBtn.disabled = disabled;
+      kitSelect.disabled = disabled;
+      addSelectedBtn.disabled = disabled;
+      clearBtn.disabled = disabled;
+      closeBtn.disabled = disabled;
+      if (selectAll) {
+        selectAll.disabled = disabled;
+      }
+      document.querySelectorAll('.kit-item-checkbox').forEach(cb => {
+        cb.disabled = disabled;
+      });
     }
 
     loadBtn.addEventListener('click', function() {
@@ -1022,6 +1099,9 @@ document.addEventListener('DOMContentLoaded', function () {
             alert('Selecciona un kit primero');
             return;
         }
+
+      setKitControlsDisabled(true);
+      setKitStatus('Cargando items del kit...', 'is-loading');
 
         fetch(`/api/kits/${kitId}/items/`)
             .then(r => {
@@ -1033,6 +1113,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (!data.items || data.items.length === 0) {
                     itemsList.innerHTML = '<tr><td colspan="4">No hay productos en este kit.</td></tr>';
                     preview.classList.remove('d-none');
+                  setKitStatus('El kit no tiene productos para agregar.', 'is-success');
                     return;
                 }
                 data.items.forEach(item => {
@@ -1055,10 +1136,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
                 preview.classList.remove('d-none');
                 if (selectAll) selectAll.checked = false;
+                setKitStatus(`${data.items.length} producto(s) listos para agregar.`, 'is-success');
             })
             .catch(err => {
                 console.error('Error cargando items del kit:', err);
+                setKitStatus('Error al cargar items del kit.', 'is-error');
                 alert('Error al cargar items del kit. Revisa la consola y el endpoint /api/kits/<id>/items/');
+              })
+              .finally(() => {
+                setKitControlsDisabled(false);
             });
     });
 
@@ -1071,18 +1157,18 @@ document.addEventListener('DOMContentLoaded', function () {
     clearBtn.addEventListener('click', function() {
         document.querySelectorAll('.kit-item-checkbox').forEach(cb => cb.checked = false);
         if (selectAll) selectAll.checked = false;
+      clearKitStatus();
     });
 
-    // Cerrar preview del kit
-    const closeBtn = document.getElementById('close-kit-preview');
     closeBtn.addEventListener('click', function() {
         preview.classList.add('d-none');
         kitSelect.value = '';
         itemsList.innerHTML = '';
         if (selectAll) selectAll.checked = false;
+      clearKitStatus();
     });
 
-    addSelectedBtn.addEventListener('click', function() {
+    addSelectedBtn.addEventListener('click', async function() {
         const checked = Array.from(document.querySelectorAll('.kit-item-checkbox:checked'));
         if (checked.length === 0) {
             alert('Selecciona al menos un producto del kit');
@@ -1099,42 +1185,43 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const csrfToken = getCSRFToken();
 
-        function sendItem(cb) {
-            const productoId = cb.dataset.productoId;
-            const cantidad = cb.dataset.cantidad;
-            const precio = cb.dataset.precio;
+    const items = checked.map(cb => ({
+      producto_id: cb.dataset.productoId,
+      cantidad: cb.dataset.cantidad,
+      precio: cb.dataset.precio
+    }));
 
-            const form = new FormData();
-            form.append('proforma_id', proformaId);
-            form.append('producto_id', productoId);
-            form.append('cantidad', cantidad);
-            form.append('precio', precio);
-            form.append('tipo_busqueda', 'codigo');
-            if (csrfToken) form.append('csrfmiddlewaretoken', csrfToken);
+    setKitControlsDisabled(true);
+    setKitStatus(`Agregando ${items.length} producto(s) del kit. Espera un momento...`, 'is-loading');
 
-            // Debug: mostrar lo que se envía
-            console.log('Enviando item:', { proformaId, productoId, cantidad, precio });
+    try {
+      const response = await fetch('{% url "agregar_producto_a_detalle" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+          proforma_id: proformaId,
+          tipo_busqueda: 'codigo',
+          items: items
+        })
+      });
 
-            return fetch('{% url "agregar_producto_a_detalle" %}', {
-                method: 'POST',
-                body: form
-            }).then(resp => {
-                if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                return resp.text(); // o json() si el endpoint devuelve json
-            });
-        }
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || ('HTTP ' + response.status));
+      }
 
-        (async function() {
-            try {
-                for (const cb of checked) {
-                    await sendItem(cb);
-                }
-                window.location.href = `/proforma/edit/${proformaId}`;
-            } catch (e) {
-                console.error('Error al agregar items del kit:', e);
-                alert('Ocurrió un error al agregar los productos seleccionados. Revisa la consola y la pestaña Network.');
-            }
-        })();
+      setKitStatus(`${data.added_count} producto(s) agregados. Redirigiendo...`, 'is-success');
+      window.location.href = data.redirect_url || `/proforma/edit/${proformaId}`;
+    } catch (e) {
+      console.error('Error al agregar items del kit:', e);
+      setKitStatus(e.message || 'Ocurrió un error al agregar los productos seleccionados.', 'is-error');
+      alert('Ocurrió un error al agregar los productos seleccionados. Revisa la consola y la pestaña Network.');
+      setKitControlsDisabled(false);
+    }
     });
 });
 </script>

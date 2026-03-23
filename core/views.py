@@ -590,40 +590,111 @@ def proforma_create_client_json(request, id):
     }, status=201)
 
 @login_required(login_url='login')
+@transaction.atomic
 def agregar_producto_a_detalle(request):
-    # VALIR DATOS SI ES POST O GET
-    if request.method == 'POST':
-        proforma_id = request.POST.get('proforma_id')
-        producto_id = request.POST.get('producto_id')
-        cantidad = request.POST.get('cantidad')  
-        precio = request.POST.get('precio')
-        if not cantidad or int(cantidad) <= 0:
-            messages.error(request, f'No se puede agregar una cantidad menor o igual a 0.')
-            return redirect(reverse_lazy('proforma_edit', args=[proforma_id]))
-        if not precio or float(precio) <= 0:
-            messages.error(request, f'No se puede agregar un precio menor o igual a 0.')
-            return redirect(reverse_lazy('proforma_edit', args=[proforma_id]))
-        #añadir a subtotal en float
-        subtotal =  float(cantidad) * float(precio)
-        
-        # CREAR DETALLE
-        proforma = Proforma.objects.get(id=proforma_id)
-        producto = Producto.objects.get(id=producto_id)
-        detalle = Detalle.objects.create(proforma=proforma, producto=producto, cantidad=cantidad, precio_venta=precio , subtotal=subtotal)
-        detalle.save()
-        # ACTUALIZAR TOTAL DE PROFORMA        
-        proforma.total = float(proforma.total) + float(subtotal)
-        proforma.save()
+    def parse_positive_quantity(raw_value):
+        try:
+            quantity = int(raw_value)
+        except (TypeError, ValueError):
+            raise ValueError('No se puede agregar una cantidad menor o igual a 0.')
+
+        if quantity <= 0:
+            raise ValueError('No se puede agregar una cantidad menor o igual a 0.')
+
+        return quantity
+
+    def parse_positive_price(raw_value):
+        try:
+            price = Decimal(str(raw_value)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        except (InvalidOperation, TypeError, ValueError):
+            raise ValueError('No se puede agregar un precio menor o igual a 0.')
+
+        if price <= 0:
+            raise ValueError('No se puede agregar un precio menor o igual a 0.')
+
+        return price
+
+    def add_detail_to_proforma(proforma, producto, cantidad, precio):
+        subtotal = (Decimal(cantidad) * precio).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        detalle = Detalle.objects.create(
+            proforma=proforma,
+            producto=producto,
+            cantidad=cantidad,
+            precio_venta=precio,
+            subtotal=subtotal,
+        )
+
+        proforma.total = (Decimal(proforma.total) + subtotal).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        proforma.save(update_fields=['total'])
+
         producto.latest_price = precio
-        producto.save()
-        
-        # Capturar tipo_busqueda
-        tipo_busqueda = request.POST.get('tipo_busqueda', 'codigo')
-        redirect_url = f"{reverse_lazy('proforma_edit', args=[proforma_id])}?tipo_busqueda={tipo_busqueda}"
-        
-        return redirect(redirect_url)
-    else:
+        producto.save(update_fields=['latest_price'])
+
+        return detalle
+
+    if request.method != 'POST':
         return render(request, 'core/home.html')
+
+    is_json_request = 'application/json' in (request.content_type or '')
+
+    if is_json_request:
+        try:
+            payload = json.loads(request.body or '{}')
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'JSON inválido.'}, status=400)
+
+        proforma_id = payload.get('proforma_id')
+        items = payload.get('items') or []
+        tipo_busqueda = payload.get('tipo_busqueda', 'codigo')
+
+        if not proforma_id:
+            return JsonResponse({'success': False, 'error': 'Falta la proforma.'}, status=400)
+
+        if not items:
+            return JsonResponse({'success': False, 'error': 'No se enviaron productos para agregar.'}, status=400)
+
+        proforma = get_object_or_404(Proforma.objects.select_for_update(), id=proforma_id)
+        product_ids = [item.get('producto_id') for item in items if item.get('producto_id')]
+        productos = Producto.objects.in_bulk(product_ids)
+
+        try:
+            for item in items:
+                producto_id = item.get('producto_id')
+                producto = productos.get(int(producto_id)) if producto_id is not None else None
+                if producto is None:
+                    raise ValueError('Uno de los productos seleccionados ya no existe.')
+
+                cantidad = parse_positive_quantity(item.get('cantidad'))
+                precio = parse_positive_price(item.get('precio'))
+                add_detail_to_proforma(proforma, producto, cantidad, precio)
+        except ValueError as exc:
+            transaction.set_rollback(True)
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+
+        redirect_url = f"{reverse_lazy('proforma_edit', args=[proforma_id])}?tipo_busqueda={tipo_busqueda}"
+        return JsonResponse({
+            'success': True,
+            'added_count': len(items),
+            'redirect_url': redirect_url,
+        })
+
+    proforma_id = request.POST.get('proforma_id')
+    producto_id = request.POST.get('producto_id')
+    tipo_busqueda = request.POST.get('tipo_busqueda', 'codigo')
+
+    try:
+        cantidad = parse_positive_quantity(request.POST.get('cantidad'))
+        precio = parse_positive_price(request.POST.get('precio'))
+    except ValueError as exc:
+        messages.error(request, str(exc))
+        return redirect(reverse_lazy('proforma_edit', args=[proforma_id]))
+
+    proforma = get_object_or_404(Proforma.objects.select_for_update(), id=proforma_id)
+    producto = get_object_or_404(Producto, id=producto_id)
+    add_detail_to_proforma(proforma, producto, cantidad, precio)
+
+    redirect_url = f"{reverse_lazy('proforma_edit', args=[proforma_id])}?tipo_busqueda={tipo_busqueda}"
+    return redirect(redirect_url)
 
 @login_required(login_url='login')
 def eliminar_producto_a_detalle(request, id):
@@ -1334,9 +1405,10 @@ def kit_remove_item(request, pk, item_id):
     return redirect('kit_detail', pk=kit.id)
 
 # Para obtener kit items via AJAX en proforma
+@login_required(login_url='login')
 def get_kit_items(request, kit_id):
     """API para obtener items de un kit"""
-    kit = get_object_or_404(ProductKit, pk=kit_id)
+    kit = get_object_or_404(ProductKit, pk=kit_id, company=request.user.company, is_active=True)
     items = kit.items.all().values(
         'id', 
         'producto__id', 
