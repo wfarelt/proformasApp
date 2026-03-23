@@ -53,8 +53,8 @@ admin.site.index_title = 'Administración'
 admin.site.register(User, UserAdmin)
 
 class CompanyAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'tax_id', 'email', 'city', 'currency', 'enable_product_kits', 'is_active')
-    list_filter = ('is_active', 'enable_product_kits', 'currency')
+    list_display = ('id', 'name', 'tax_id', 'email', 'city', 'currency', 'enable_product_kits', 'enable_product_recommendations', 'is_active')
+    list_filter = ('is_active', 'enable_product_kits', 'enable_product_recommendations', 'currency')
     search_fields = ('name', 'tax_id', 'email')
     fieldsets = (
         ('Información Básica', {
@@ -64,7 +64,7 @@ class CompanyAdmin(admin.ModelAdmin):
             'fields': ('address', 'city')
         }),
         ('Configuración', {
-            'fields': ('currency', 'enable_product_kits', 'website', 'industry', 'established_date')
+            'fields': ('currency', 'enable_product_kits', 'enable_product_recommendations', 'website', 'industry', 'established_date')
         }),
         ('Campos Personalizados para Productos', {
             'fields': ('product_custom_fields_config',),

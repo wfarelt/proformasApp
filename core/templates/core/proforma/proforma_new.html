@@ -76,6 +76,26 @@
   .client-results-table th {
     vertical-align: middle;
   }
+
+  .recommended-products {
+    border: 1px solid #b8d8ff;
+    background: #eef6ff;
+    border-radius: 6px;
+    padding: 12px;
+  }
+
+  .recommended-products .table {
+    background: #ffffff;
+    margin-bottom: 0;
+  }
+
+  .recommended-products h5 {
+    color: #0f4c81;
+  }
+
+  .recommended-products .text-muted {
+    color: #2d6ea3 !important;
+  }
 </style>
 {% endblock style %}
 
@@ -114,8 +134,27 @@
   
   <div class="card-body">
 
+    <!-- Switches de visibilidad -->
+    {% if enable_kits or enable_product_recommendations %}
+    <div class="d-flex align-items-center flex-wrap mb-3 no-mostrar" style="gap:16px;">
+      {% if enable_kits %}
+      <div class="custom-control custom-switch">
+        <input type="checkbox" class="custom-control-input" id="toggle-kits" checked>
+        <label class="custom-control-label" for="toggle-kits">Cargar kit</label>
+      </div>
+      {% endif %}
+      {% if enable_product_recommendations %}
+      <div class="custom-control custom-switch">
+        <input type="checkbox" class="custom-control-input" id="toggle-recomendados" checked>
+        <label class="custom-control-label" for="toggle-recomendados">Productos recomendados</label>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
     <!-- Busqueda de kits -->
     {% if enable_kits %}
+    <div id="kit-block">
     <div class="kit-selector mb-3">
         <div class="input-group input-group-sm">
             <select id="kit-select" class="form-control">
@@ -161,6 +200,7 @@
         </div>
     </div>
     <hr>
+    </div><!-- /#kit-block -->
     {% endif %}
 
     <!-- Busqueda de productos -->
@@ -216,7 +256,7 @@
             <td style="text-align: right;">{{ producto.latest_price }}</td>
             <td><input type="number" id="precio{{ producto.id}}" name="precio" value="{{producto.precio}}" step="0.01" style="width: 80px; text-align: right;">
             </td> 
-            <td><input type="number" id="cantidad{{ producto.id}}" name="cantidad" placeholder="0" style="width: 80px; text-align: right;"></td>
+            <td><input type="number" id="cantidad{{ producto.id}}" name="cantidad" placeholder="0" min="1" step="1" inputmode="numeric" style="width: 80px; text-align: right;"></td>
             <td><input type="number" id="subtotal{{ producto.id}}" name="subtotal" value="{{ producto.precio  }}" readonly style="width: 80px; text-align: right;">
             </td>
             <td><button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i></button></td>
@@ -284,6 +324,56 @@
           </nav>
           {% endif %}
         </div>
+
+      {% if enable_product_recommendations and recommended_products %}
+      <div class="recommended-products mt-4" id="recommended-block">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="mb-0">Productos recomendados</h5>
+          <small class="text-muted">Basado en proformas ejecutadas</small>
+        </div>
+
+        <table class="table table-bordered table-sm">
+          <tr class="thead-light">
+            <th>Codigo</th>
+            <th>Descripcion</th>
+            <th>Marca</th>
+            <th>Stock</th>
+            <th>P.Ref.</th>
+            <th style="width: 10px;">Precio</th>
+            <th>Cantidad</th>
+            <th>Subtotal</th>
+            <th></th>
+          </tr>
+
+          {% for producto in recommended_products %}
+          <tr>
+            <form method="POST" action="{% url 'agregar_producto_a_detalle' %}">
+              {% csrf_token %}
+              <input type="hidden" name="proforma_id" value="{{ proforma.id }}">
+              <input type="hidden" name="producto_id" value="{{ producto.id }}">
+              <input type="hidden" name="tipo_busqueda" value="{{ request.GET.tipo_busqueda }}">
+              <td>{{ producto.nombre }}</td>
+              <td>{{ producto.descripcion }}</td>
+              {% if producto.brand == None %}
+                <td>--</td>
+              {% else %}
+                <td>{{ producto.brand.initials }}</td>
+              {% endif %}
+
+              <td style="text-align: center;">{{ producto.stock }}</td>
+              <td style="text-align: right;">{{ producto.latest_price }}</td>
+              <td><input type="number" id="rec-precio{{ producto.id }}" name="precio" value="{{ producto.precio }}" step="0.01" style="width: 80px; text-align: right;">
+              </td>
+              <td><input type="number" id="rec-cantidad{{ producto.id }}" name="cantidad" placeholder="0" min="1" step="1" inputmode="numeric" style="width: 80px; text-align: right;"></td>
+              <td><input type="number" id="rec-subtotal{{ producto.id }}" name="subtotal" value="{{ producto.precio }}" readonly style="width: 80px; text-align: right;">
+              </td>
+              <td><button type="submit" class="btn btn-success btn-sm"><i class="fas fa-plus"></i></button></td>
+            </form>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+      {% endif %}
 
     
     </div>
@@ -544,6 +634,28 @@
   document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("search-field").focus();
 
+  function enforcePositiveIntegerInput(input) {
+    if (!input) return;
+
+    input.addEventListener("keydown", function (ev) {
+      if (ev.key === "-" || ev.key === "+" || ev.key === "e" || ev.key === "E") {
+        ev.preventDefault();
+      }
+    });
+
+    input.addEventListener("input", function () {
+      if (input.value === "") return;
+      const parsed = parseInt(input.value, 10);
+      if (Number.isNaN(parsed) || parsed < 1) {
+        input.value = "";
+        return;
+      }
+      input.value = String(parsed);
+    });
+  }
+
+  document.querySelectorAll('input[type="number"][name="cantidad"]').forEach(enforcePositiveIntegerInput);
+
     
     
     document.querySelectorAll(".editar-cantidad").forEach(btn => {
@@ -560,7 +672,10 @@
             inputCantidad.type = "number";
             inputCantidad.value = cantidadActual;
             inputCantidad.className = "form-control";
+            inputCantidad.min = "1";
+            inputCantidad.step = "1";
             inputCantidad.style.width = "80px";
+            enforcePositiveIntegerInput(inputCantidad);
 
             let inputPrecio = document.createElement("input");
             inputPrecio.type = "number";
@@ -1025,6 +1140,35 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 {% endif %}
 
+<!-- Switches kit / recomendados -->
+<script>
+(function () {
+  const STORAGE_KEY_KITS = 'pf_show_kits';
+  const STORAGE_KEY_REC  = 'pf_show_recomendados';
 
+  function applyToggle(switchId, blockId, storageKey) {
+    const sw    = document.getElementById(switchId);
+    const block = document.getElementById(blockId);
+    if (!sw || !block) return;
+
+    // Restore saved state (default: visible)
+    const saved = localStorage.getItem(storageKey);
+    if (saved === 'false') {
+      sw.checked = false;
+      block.style.display = 'none';
+    }
+
+    sw.addEventListener('change', function () {
+      block.style.display = this.checked ? '' : 'none';
+      localStorage.setItem(storageKey, this.checked);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    applyToggle('toggle-kits',         'kit-block',          STORAGE_KEY_KITS);
+    applyToggle('toggle-recomendados', 'recommended-block',  STORAGE_KEY_REC);
+  });
+})();
+</script>
 
 {% endblock %}

@@ -9,7 +9,7 @@ from django.contrib.auth.views import PasswordChangeView
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Max, Q, Sum
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -346,10 +346,65 @@ class ProformaListView(ListView):
 
         return context
 
+
+def _get_recommended_products(proforma, query=None, tipo_busqueda='codigo', limit=3):
+    current_product_ids = list(
+        Detalle.objects.filter(proforma=proforma).values_list('producto_id', flat=True).distinct()
+    )
+
+    # Recomendación basada en productos vendidos junto con los ya cargados en la proforma actual.
+    if not current_product_ids:
+        return []
+
+    executed_proformas = Proforma.objects.filter(estado='EJECUTADO')
+
+    if proforma.company_id:
+        executed_proformas = executed_proformas.filter(company_id=proforma.company_id)
+
+    if proforma.pk:
+        executed_proformas = executed_proformas.exclude(id=proforma.pk)
+
+    executed_proformas = executed_proformas.filter(
+        detalles__producto_id__in=current_product_ids
+    ).distinct()
+
+    recommended_details = Detalle.objects.filter(proforma__in=executed_proformas).exclude(
+        producto_id__in=current_product_ids
+    )
+
+    if query:
+        if tipo_busqueda == 'id_producto':
+            if not query.isdigit():
+                return []
+            recommended_details = recommended_details.filter(producto_id=int(query))
+        else:
+            palabras = [p.strip() for p in query.split('%') if p.strip()]
+            for palabra in palabras:
+                recommended_details = recommended_details.filter(
+                    Q(producto__nombre__icontains=palabra) |
+                    Q(producto__descripcion__icontains=palabra)
+                )
+
+    recommended_products = recommended_details.values('producto_id').annotate(
+        co_sold_times=Count('proforma_id', distinct=True),
+        total_quantity=Sum('cantidad'),
+        last_used=Max('proforma__fecha'),
+    ).order_by(
+        '-co_sold_times',
+        '-total_quantity',
+        '-last_used',
+    )
+
+    product_ids = list(recommended_products.values_list('producto_id', flat=True)[:limit])
+    products_by_id = Producto.objects.select_related('brand').in_bulk(product_ids)
+
+    return [products_by_id[product_id] for product_id in product_ids if product_id in products_by_id]
+
 def _get_proforma_context(proforma, request):
     """Helper para obtener el contexto común de proforma_new y proforma_edit"""
     detalles = Detalle.productos_list(proforma)
     productos_list = Producto.objects.none()
+    recommended_products = []
     
     query = request.GET.get('q')
     tipo_busqueda = request.GET.get('tipo_busqueda', 'codigo')
@@ -380,6 +435,15 @@ def _get_proforma_context(proforma, request):
         kits = ProductKit.objects.filter(company=request.user.company, is_active=True)
         enable_kits = True
 
+    enable_product_recommendations = False
+    if request.user.company and request.user.company.enable_product_recommendations:
+        recommended_products = _get_recommended_products(
+            proforma,
+            query=query,
+            tipo_busqueda=tipo_busqueda,
+        )
+        enable_product_recommendations = True
+
     return {
         'proforma': proforma,
         'productos_list': page_obj,
@@ -388,6 +452,8 @@ def _get_proforma_context(proforma, request):
         'tipo_busqueda': tipo_busqueda,
         'kits': kits,
         'enable_kits': enable_kits,
+        'recommended_products': recommended_products,
+        'enable_product_recommendations': enable_product_recommendations,
     }
 
 @login_required(login_url='login')

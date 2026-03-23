@@ -37,6 +37,11 @@ class Company(models.Model):
         verbose_name='Habilitar Kits de Productos',
         help_text='Permite usar kits de productos en las proformas'
     )  # Habilitar kits de productos
+    enable_product_recommendations = models.BooleanField(
+        default=True,
+        verbose_name='Habilitar Productos Recomendados',
+        help_text='Muestra sugerencias de productos en proformas según historial de proformas ejecutadas'
+    )
     product_custom_fields_config = models.JSONField(
         default=dict,
         blank=True,
