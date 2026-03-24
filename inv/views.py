@@ -4,10 +4,11 @@ from django.contrib import messages
 from django.utils.timezone import now
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
-from datetime import timedelta
+from datetime import timedelta, time
 from django.db.models import Q
 from datetime import datetime
 from django.utils.timezone import make_aware
+from django.utils import timezone
 from django.views import View
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
@@ -123,36 +124,87 @@ def reporte_inventario(request):
 def proforma_report(request):
     proformas = Proforma.objects.none()
     total_general = 0
+    print_mode = request.GET.get('print') == '1'
 
-    fecha_inicio = request.GET.get('fecha_inicio')
-    fecha_fin = request.GET.get('fecha_fin')
+    today = timezone.localdate()
+    default_start = today.replace(day=1)
 
-    if fecha_inicio and fecha_fin:
-        try:
-            fi = make_aware(datetime.strptime(fecha_inicio, '%Y-%m-%d'))
-            ff = make_aware(datetime.strptime(fecha_fin, '%Y-%m-%d')) + timedelta(days=1)
-            proformas_queryset = Proforma.objects.filter(
-                estado='EJECUTADO',
-                fecha__range=(fi, ff)
-            ).order_by('-fecha')
+    fecha_inicio = request.GET.get('fecha_inicio') or default_start.strftime('%Y-%m-%d')
+    fecha_fin = request.GET.get('fecha_fin') or today.strftime('%Y-%m-%d')
 
-            # Calcular total general antes de paginar
-            total_general = sum(p.total_neto() for p in proformas_queryset)
+    month_labels = []
+    month_amounts = []
+    seller_labels = []
+    seller_sales = []
 
-            # Paginación
+    try:
+        fi_date = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
+        ff_date = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
+    except ValueError:
+        messages.error(request, 'Formato de fecha invalido. Se aplico el rango por defecto del mes actual.')
+        fi_date = default_start
+        ff_date = today
+        fecha_inicio = fi_date.strftime('%Y-%m-%d')
+        fecha_fin = ff_date.strftime('%Y-%m-%d')
+
+    if fi_date < ff_date:
+        fi = make_aware(datetime.combine(fi_date, time.min))
+        ff = make_aware(datetime.combine(ff_date + timedelta(days=1), time.min))
+
+        base_queryset = Proforma.objects.filter(
+            estado='EJECUTADO',
+            fecha__gte=fi,
+            fecha__lt=ff,
+        )
+
+        if getattr(request.user, 'company_id', None):
+            base_queryset = base_queryset.filter(company=request.user.company)
+
+        proformas_queryset = base_queryset.order_by('-fecha')
+
+        # Calcular total general antes de paginar
+        total_general = sum(p.total_neto() for p in proformas_queryset)
+
+        if print_mode:
+            # En modo impresión se muestra toda la tabla sin paginación.
+            proformas = proformas_queryset
+        else:
+            # Paginación para navegación en pantalla.
             paginator = Paginator(proformas_queryset, 10)  # 10 por página
             page_number = request.GET.get('page')
             proformas = paginator.get_page(page_number)
 
-        except ValueError:
-            pass
+        daily_amount_map = {}
+        seller_totals = {}
+        for proforma in base_queryset.select_related('usuario'):
+            day_date = timezone.localtime(proforma.fecha).date()
+            daily_amount_map[day_date] = daily_amount_map.get(day_date, 0.0) + float(proforma.total_neto())
+
+            seller_name = getattr(proforma.usuario, 'name', None) or getattr(proforma.usuario, 'username', None) or 'Sin vendedor'
+            seller_totals[seller_name] = seller_totals.get(seller_name, 0.0) + float(proforma.total_neto())
+
+        current_day = fi_date
+        while current_day <= ff_date:
+            month_labels.append(current_day.strftime('%d/%m'))
+            month_amounts.append(round(daily_amount_map.get(current_day, 0.0), 2))
+            current_day += timedelta(days=1)
+
+        seller_labels = list(seller_totals.keys())
+        seller_sales = [round(value, 2) for value in seller_totals.values()]
+    else:
+        messages.error(request, 'La fecha inicio debe ser menor que la fecha fin.')
 
     context = {
         'proformas': proformas,
         'fecha_inicio': fecha_inicio,
         'fecha_fin': fecha_fin,
+        'print_mode': print_mode,
         'total_general': total_general,
         'title': 'Reporte de Proformas',
+        'month_labels_json': json.dumps(month_labels),
+        'month_amounts_json': json.dumps(month_amounts),
+        'seller_labels_json': json.dumps(seller_labels),
+        'seller_sales_json': json.dumps(seller_sales),
     }
     return render(request, 'inv/reports/proforma_report.html', context)
 
