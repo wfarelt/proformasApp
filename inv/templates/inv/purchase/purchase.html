@@ -1,9 +1,49 @@
 {% extends 'core/index.html' %}
 
+{% block style %}
+<style>
+    .purchase-clean {
+        padding: 0.25rem 0;
+    }
+    .purchase-clean .card {
+        border: none;
+        box-shadow: none;
+        margin-bottom: 1rem;
+    }
+    .purchase-clean .card-header,
+    .purchase-clean .card-footer {
+        background: transparent;
+        border: none;
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
+    }
+    .purchase-clean .card-body {
+        padding: 1rem 1.25rem;
+    }
+    .purchase-clean .table {
+        margin-bottom: 0;
+    }
+
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+        .purchase-clean .card,
+        .purchase-clean .card-header,
+        .purchase-clean .card-footer {
+            border: none !important;
+            box-shadow: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 
-<div class="card">
-    <div class="card-header">
+<div class="purchase-clean">
+
+<div class="card mt-2">
+    <div class="card-header pb-2">
         <h2><i class="fas {{ icon }}"></i> {{ title }}</h2>
         <p class="text-muted">{{ subtitle }} : {{ purchase.id }}</p>
     </div>
@@ -32,7 +72,7 @@
 </div>
 
 <div class="card">
-    <div class="card-header">
+    <div class="card-header pb-2">
         <h5>Detalle de Productos</h5>
     </div>
     <div class="card-body">
@@ -44,6 +84,7 @@
                     <tr>
                         <th>#</th>
                         <th>Producto</th>
+                        <th>Descripción</th>
                         <th class="text-right">Cantidad</th>
                         <th class="text-right">Precio Unitario</th>
                         <th class="text-right">Subtotal</th>
@@ -54,6 +95,7 @@
                     <tr>
                         <td>{{ forloop.counter }}</td>
                         <td>{{ detail.product }}</td>
+                        <td>{{ detail.product.descripcion|default:"-" }}</td>
                         <td class="text-right">{{ detail.quantity }}</td>
                         <td class="text-right">{{ detail.unit_price|floatformat:2 }}</td>
                         <td class="text-right">{{ detail.subtotal|floatformat:2 }}</td>
@@ -62,15 +104,18 @@
                 </tbody>
                 <tfoot>
                     <tr>
-                        <th colspan="4" class="text-right">Total:</th>
+                        <th colspan="5" class="text-right">Total:</th>
                         <th class="text-right">{{ purchase.total_amount|floatformat:2 }}</th>
                     </tr>
                 </tfoot>
             </table>
         </div>
     </div>
-    <div class="card-footer">
+    <div class="card-footer no-print">
         <div class="text-center mb-3">
+            <button type="button" class="btn btn-primary" onclick="window.print()">
+                <i class="fas fa-print"></i> Imprimir
+            </button>
             <a href="{% url 'purchase_list' %}" class="btn btn-secondary">
                 <i class="fas fa-arrow-left"></i> Volver a la lista
             </a>
@@ -78,14 +123,16 @@
     </div>
 </div>
 
-<div class="container mt-4">
-
-
-
-
-
-
-
 </div>
 
+{% endblock %}
+
+{% block scripts %}
+{% if print_mode %}
+<script>
+    window.addEventListener('load', function () {
+        window.print();
+    });
+</script>
+{% endif %}
 {% endblock %}

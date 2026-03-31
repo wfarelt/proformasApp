@@ -53,6 +53,7 @@
                             </td>
                             <td class="text-center">
                                 <a href="{% url 'purchase_detail' purchase.id %}" class="btn btn-info btn-sm"><i class="fa fa-eye"></i></a>
+                                <a href="{% url 'purchase_detail' purchase.id %}?print=1" class="btn btn-secondary btn-sm" target="_blank" title="Imprimir compra"><i class="fa fa-print"></i></a>
                                 {% if purchase.status == "pending" %}
                                     <a href="{% url 'update_purchase' purchase.id %}" class="btn btn-warning btn-sm"><i class="fa fa-edit"></i></a>
                                 {% endif %}

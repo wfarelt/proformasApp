@@ -51,7 +51,14 @@
                         <th>Fecha</th>
                         <th>Tipo</th>
                         <th>Referencia</th>
-                        <th>Usuario</th>
+                        <th>Usuario</th>                        
+                        {% if user.company.currency == 'BOB' %}
+                            <th class="text-right">Total (Bs)</th>
+                        {% elif user.company.currency == 'USD' %}
+                            <th class="text-right">Total ($)</th>
+                        {% else %}
+                            <th class="text-right">Total</th>
+                        {% endif %}
                         <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
@@ -64,6 +71,7 @@
                         <td>{{ movement.get_movement_type_display }}</td>
                         <td>{{ movement.description }}</td>
                         <td>{{ movement.user.name }}</td>
+                        <td class="text-right">{{ movement.total|floatformat:2 }}</td>
                         <td>{{ movement.status }}</td>
                         <td class="text-center">
                             <a href="javascript:void(0);" class="btn btn-info btn-sm" onclick="openMovementDetail({{ movement.id }})">
@@ -72,7 +80,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="5">No hay movimientos registrados.</td></tr>
+                    <tr><td colspan="8">No hay movimientos registrados.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

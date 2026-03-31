@@ -433,12 +433,14 @@ def delete_purchase_detail(request, pk):
 def purchase_detail(request, pk):
     purchase = get_object_or_404(Purchase, pk=pk)
     details = PurchaseDetail.objects.filter(purchase=purchase)
+    print_mode = request.GET.get('print') == '1'
     context = {
         'purchase': purchase,
         'details': details,
         'title': 'Compra',
         'subtitle': 'Detalles de la compra',
         'icon': 'fa-shopping-cart',
+        'print_mode': print_mode,
     }
     
     return render(request, 'inv/purchase/purchase.html', context)
@@ -484,7 +486,7 @@ def create_purchase_movement(purchase):
 @login_required
 def movement_list(request):
     product_id = request.GET.get('producto_id')
-    movements = Movement.objects.all().order_by('-id', '-date')
+    movements = Movement.objects.all().prefetch_related('items__product').order_by('-id', '-date')
     selected_producto_nombre = None
     if product_id:
         try:
