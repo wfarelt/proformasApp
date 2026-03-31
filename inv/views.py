@@ -300,6 +300,7 @@ def create_purchase(request):
     return render(request, 'inv/purchase/create_purchase.html', {
         'form': form,
         'formset': formset,
+        'title': 'Registrar Compra',
     })
 
 @login_required(login_url='login')
@@ -378,6 +379,7 @@ def update_purchase(request, pk):
         'formset': formset,
         'purchase': purchase,
         'details': details_with_subtotals,
+        'title': 'Actualizar Compra',
     })
 
 def revert_purchase_movement(purchase):

@@ -8,7 +8,7 @@
     <div class="card-header">
         <h1>{{ title }}</h1>
         <div class="d-flex justify-content-between align-items-center flex-wrap">
-            <a href="{% url 'create_purchase' %}" class="btn btn-default mb-2"><i class="fa fa-plus"></i> Crear Compra</a>
+            <a href="{% url 'create_purchase' %}" class="btn btn-success mb-2"><i class="fa fa-plus"></i> Crear Compra</a>
             <form method="get" class="form-inline mb-3">
                 <select name="tipo_busqueda" class="form-control mr-2">
                     <option value="id" {% if tipo_busqueda == 'id' %}selected{% endif %}>ID</option>

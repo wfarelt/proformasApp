@@ -11,13 +11,11 @@
 {% block content %}
 
 {% if form.instance.pk %}
-<h1>Modificar Compra</h1>
-<form method="post" action="{% url 'update_purchase' form.instance.pk %}">
-    {% else %}
-    <h1>Registrar Compra</h1>
+    <form method="post" action="{% url 'update_purchase' form.instance.pk %}">
+{% else %}
     <form method="post" action="{% url 'create_purchase' %}">
-        {% endif %}
-
+{% endif %}
+        
         {% csrf_token %}
         <div class="card card-dark">
             <div class="card-header">
@@ -39,16 +37,11 @@
                     </div>
                     {% endfor %}
                 </div>
-            </div>
-        </div>
 
+                <hr>
 
-        <div class="card">
-            <div class="card-header">
                 <h4>Detalle de Productos</h4>
                 {{ formset.management_form }}
-            </div>
-            <div class="card-body">
                 <div class="table">
                     <table class="table table-bordered table-striped table-sm">
                         <thead>
@@ -109,9 +102,9 @@
         </div>
     </form>
 
-    {% endblock %}
+{% endblock %}
 
-    {% block scripts %}
+{% block scripts %}
     <script src="{% static 'plugins/select2/js/select2.min.js' %}"></script>
 
     <script>
@@ -217,5 +210,5 @@
         $(document).ready(function () {
             updateTotal();
         });
-    </script>
-    {% endblock %}
+    </script>    
+{% endblock %}
