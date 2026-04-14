@@ -25,7 +25,7 @@ from nlt import numlet as nl
 from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand, Company, ProductKit, ProductKitItem, ProductPriceHistory
 from .forms import ProductoForm, ClienteForm, SupplierForm, BrandForm, \
                     CustomPasswordChangeForm, UserProfileForm, ProductKitForm, ProductKitItemForm, ProductCatalogImportForm, \
-                    AdminUserCreateForm, AdminUserUpdateForm
+                    AdminUserCreateForm, AdminUserUpdateForm, CompanyDataForm
 from .services.price_approval_service import PriceApprovalService
 from core.services.auto_price_service import AutoPriceService
 from core.services.product_catalog_import_service import ProductCatalogImportService
@@ -82,6 +82,33 @@ def edit_profile(request):
         form = UserProfileForm(instance=user)
     
     return render(request, 'core/registration/edit_profile.html', {'form': form})
+
+
+@login_required(login_url='login')
+def company_edit(request):
+    if not is_admin(request.user):
+        messages.error(request, 'No tienes permisos para editar los datos de la empresa.')
+        return redirect('home')
+
+    company = request.user.company
+    if not company:
+        messages.warning(request, 'Tu usuario no tiene una empresa asignada.')
+        return redirect('home')
+
+    if request.method == 'POST':
+        form = CompanyDataForm(request.POST, request.FILES, instance=company)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Datos de la empresa actualizados correctamente.')
+            return redirect('company_edit')
+    else:
+        form = CompanyDataForm(instance=company)
+
+    return render(request, 'core/company/company_form.html', {
+        'form': form,
+        'title': 'Datos de la empresa',
+        'company': company,
+    })
 
 
 class UserListView(LoginRequiredMixin, ListView):

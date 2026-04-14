@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.contrib.auth.forms import PasswordChangeForm
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
-from .models import Producto, Cliente, Supplier, Brand, User
+from .models import Producto, Cliente, Supplier, Brand, User, Company
 
 
 # CREAR UN FORMULARIO PARA USUARIO
@@ -162,8 +162,42 @@ class AdminUserUpdateForm(forms.ModelForm):
         if role == User.Roles.SUPERADMIN:
             raise ValidationError('No puedes asignar el rol Superadmin desde este panel.')
         return role
-          
-          
+
+
+class CompanyDataForm(forms.ModelForm):
+    class Meta:
+        model = Company
+        fields = ['name', 'logo', 'tax_id', 'phone', 'email', 'address', 'city', 'website', 'industry']
+        labels = {
+            'name': 'Nombre de la empresa',
+            'logo': 'Logo',
+            'tax_id': 'NIT / Identificación fiscal',
+            'phone': 'Teléfono',
+            'email': 'Correo',
+            'address': 'Dirección',
+            'city': 'Ciudad',
+            'website': 'Sitio web',
+            'industry': 'Rubro',
+        }
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'logo': forms.ClearableFileInput(attrs={'class': 'form-control-file'}),
+            'tax_id': forms.TextInput(attrs={'class': 'form-control'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'city': forms.TextInput(attrs={'class': 'form-control'}),
+            'website': forms.URLInput(attrs={'class': 'form-control'}),
+            'industry': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['logo'].widget.clear_checkbox_label = 'Eliminar'
+        self.fields['logo'].widget.initial_text = 'Logo actual'
+        self.fields['logo'].widget.input_text = 'Cambiar'
+
+
 # CREAR UN FORMULARIO PARA PRODUCTO
 class ProductoForm(forms.ModelForm):
     class Meta:

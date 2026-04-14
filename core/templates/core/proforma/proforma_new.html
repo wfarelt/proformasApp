@@ -1,6 +1,6 @@
 {% extends 'core/index.html' %}
 
-{% block title %}Proforma New{% endblock %}
+{% block title %}Nueva proforma{% endblock %}
 {% load static %}
 
 {% block style %}
@@ -173,13 +173,13 @@
     <div class="d-flex align-items-center flex-wrap mb-3 no-mostrar" style="gap:16px;">
       {% if enable_kits %}
       <div class="custom-control custom-switch">
-        <input type="checkbox" class="custom-control-input" id="toggle-kits" checked>
+        <input type="checkbox" class="custom-control-input" id="toggle-kits">
         <label class="custom-control-label" for="toggle-kits">Cargar kit</label>
       </div>
       {% endif %}
       {% if enable_product_recommendations %}
       <div class="custom-control custom-switch">
-        <input type="checkbox" class="custom-control-input" id="toggle-recomendados" checked>
+        <input type="checkbox" class="custom-control-input" id="toggle-recomendados">
         <label class="custom-control-label" for="toggle-recomendados">Productos recomendados</label>
       </div>
       {% endif %}
@@ -1238,12 +1238,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const block = document.getElementById(blockId);
     if (!sw || !block) return;
 
-    // Restore saved state (default: visible)
+    // Default: hidden until the user explicitly enables it.
     const saved = localStorage.getItem(storageKey);
-    if (saved === 'false') {
-      sw.checked = false;
-      block.style.display = 'none';
-    }
+    const isEnabled = saved === 'true';
+
+    sw.checked = isEnabled;
+    block.style.display = isEnabled ? '' : 'none';
 
     sw.addEventListener('change', function () {
       block.style.display = this.checked ? '' : 'none';

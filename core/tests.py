@@ -182,3 +182,42 @@ class RoleAccessTests(TestCase):
 
 		self.assertEqual(response.status_code, 302)
 		self.assertEqual(response.url, reverse('home'))
+
+	def test_admin_can_open_company_data_panel(self):
+		user = self._create_user('admincompany', User.Roles.ADMIN)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse('company_edit'))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Datos de la empresa')
+
+	def test_admin_can_update_company_general_data(self):
+		user = self._create_user('adminupdatecompany', User.Roles.ADMIN)
+		self.client.force_login(user)
+
+		response = self.client.post(reverse('company_edit'), {
+			'name': 'Empresa Actualizada',
+			'tax_id': 'ROLE-123',
+			'phone': '7777777',
+			'email': 'empresa-actualizada@test.com',
+			'address': 'Av. Principal 123',
+			'city': 'La Paz',
+			'website': 'https://empresa.test',
+			'industry': 'Tecnología',
+			'established_date': '2024-01-15',
+		})
+
+		self.assertEqual(response.status_code, 302)
+		self.company.refresh_from_db()
+		self.assertEqual(self.company.name, 'Empresa Actualizada')
+		self.assertEqual(self.company.city, 'La Paz')
+
+	def test_ventas_cannot_open_company_data_panel(self):
+		user = self._create_user('ventascompanyblocked', User.Roles.VENTAS)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse('company_edit'))
+
+		self.assertEqual(response.status_code, 302)
+		self.assertEqual(response.url, reverse('home'))

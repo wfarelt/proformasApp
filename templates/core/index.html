@@ -49,27 +49,6 @@
 
     <!-- Right navbar links -->
     <ul class="navbar-nav ml-auto">
-      <!-- Navbar Search -->
-      <li class="nav-item">
-        <a class="nav-link" data-widget="navbar-search" href="#" role="button">
-          <i class="fas fa-search"></i>
-        </a>
-        <div class="navbar-search-block">
-          <form class="form-inline">
-            <div class="input-group input-group-sm">
-              <input class="form-control form-control-navbar" type="search" placeholder="Buscar" aria-label="Search">
-              <div class="input-group-append">
-                <button class="btn btn-navbar" type="submit">
-                  <i class="fas fa-search"></i>
-                </button>
-                <button class="btn btn-navbar" type="button" data-widget="navbar-search">
-                  <i class="fas fa-times"></i>
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-      </li>
       {% if user.is_authenticated and user.can_access_core %}
       <li class="nav-item">
         <a class="nav-link text-warning" href="{% url 'cliente_new' %}" data-toggle="tooltip" data-placement="top" title="Nuevo cliente"><i class="fas fa-user-plus"></i></a>
@@ -138,18 +117,18 @@
       <div class="user-panel mt-3 pb-3 mb-3 d-flex">
         <div class="image">
           {% if user.profile_picture %}
-            <img src="{{ user.profile_picture.url }}" class="img-circle elevation-2" alt="User Image">
+            <img src="{{ user.profile_picture.url }}" class="img-circle elevation-2" alt="Imagen de usuario">
           {% else %}
-            <img src="{% static 'dist/img/user2-160x160.jpg' %}" class="img-circle elevation-2" alt="User Image">
+            <img src="{% static 'dist/img/user2-160x160.jpg' %}" class="img-circle elevation-2" alt="Imagen de usuario">
           {% endif %}          
         </div>
         <div class="info">
           {% if request.user.is_authenticated %}
               <a href="#" class="d-block">{{ request.user.name }}</a>
               {% if user.is_superadmin %}
-                <small class="d-block text-muted">Dashboard Superusuario</small>
+                <small class="d-block text-muted">Panel de Superusuario</small>
               {% elif user.is_admin %}
-                <small class="d-block text-muted">Dashboard Administrador</small>
+                <small class="d-block text-muted">Panel de Administración</small>
               {% elif user.role == 'VENTAS' %}
                 <small class="d-block text-muted">Panel de Ventas</small>
               {% elif user.role == 'ALMACEN' %}
@@ -322,6 +301,12 @@
                 </a>
               </li>
               {% if user.is_admin %}
+              <li class="nav-item">
+                <a href="{% url 'company_edit' %}" class="nav-link">
+                  <i class="far fa-building nav-icon"></i>
+                  <p>Mi empresa</p>
+                </a>
+              </li>
               <li class="nav-item">
                 <a href="{% url 'user_list' %}" class="nav-link">
                   <i class="far fa-circle nav-icon"></i>
