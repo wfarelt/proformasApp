@@ -77,6 +77,9 @@ class UserManager(BaseUserManager):
             raise ValueError('El nombre de usuario es obligatorio')
         if not email:
             raise ValueError('El correo electrónico es obligatorio')
+
+        extra_fields.setdefault('role', self.model.Roles.VENTAS)
+
         user = self.model(
             username=username,
             email=self.normalize_email(email),
@@ -88,6 +91,7 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, username, email, name, password=None, **extra_fields):
+        extra_fields.setdefault('role', self.model.Roles.SUPERADMIN)
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_active', True)
@@ -103,12 +107,20 @@ class UserManager(BaseUserManager):
         return self.create_user(username, email, name, password, **extra_fields)
 
 class User(AbstractBaseUser, PermissionsMixin):
+    class Roles(models.TextChoices):
+        SUPERADMIN = 'SUPERADMIN', 'Superadmin'
+        ADMIN = 'ADMIN', 'Admin'
+        VENTAS = 'VENTAS', 'Ventas'
+        ALMACEN = 'ALMACEN', 'Almacén'
+        CAJA = 'CAJA', 'Caja'
+
     username = models.CharField(max_length=150, unique=True, verbose_name="Usuario")
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=255, verbose_name="Nombre completo")
     company = models.ForeignKey(Company, on_delete=models.SET_NULL, null=True, blank=True)
     profile_picture = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
-    
+    role = models.CharField(max_length=20, choices=Roles.choices, default=Roles.VENTAS, verbose_name='Rol')
+
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
@@ -120,14 +132,48 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
-    
+
+    def save(self, *args, **kwargs):
+        self.is_superuser = self.role == self.Roles.SUPERADMIN
+        self.is_staff = self.role == self.Roles.SUPERADMIN
+        super().save(*args, **kwargs)
+
+    def has_role(self, *roles):
+        return self.role in roles
+
     def is_in_group(self, group_name):
-        """Verifica si el usuario pertenece a un grupo específico"""
-        return self.groups.filter(name=group_name).exists()
-    
+        """Compatibilidad legacy sin depender de grupos de Django."""
+        legacy_map = {
+            'Administrador': self.Roles.ADMIN,
+            'Ventas': self.Roles.VENTAS,
+            'Almacen': self.Roles.ALMACEN,
+            'Contabilidad': self.Roles.CAJA,
+        }
+        return self.role == legacy_map.get(group_name)
+
     @property
     def is_admin(self):
-        return self.is_in_group("Administrador")
+        return self.role == self.Roles.ADMIN
+
+    @property
+    def is_superadmin(self):
+        return self.role == self.Roles.SUPERADMIN
+
+    @property
+    def can_access_settings(self):
+        return self.role == self.Roles.SUPERADMIN
+
+    @property
+    def can_access_core(self):
+        return self.role in {self.Roles.ADMIN, self.Roles.VENTAS, self.Roles.ALMACEN}
+
+    @property
+    def can_access_inventory(self):
+        return self.role in {self.Roles.ADMIN, self.Roles.ALMACEN}
+
+    @property
+    def can_access_finance(self):
+        return self.can_access_inventory
 
 # CLIENTE
 class Cliente(models.Model):

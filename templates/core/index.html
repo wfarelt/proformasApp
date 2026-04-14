@@ -40,9 +40,11 @@
       <li class="nav-item d-none d-sm-inline-block">
         <a href="/" class="nav-link">Inicio</a>
       </li>
+      {% if user.is_authenticated and user.can_access_core %}
       <li class="nav-item d-none d-sm-inline-block">
         <a href="{% url 'proforma_list' %}" class="nav-link">Proformas</a>
       </li>
+      {% endif %}
     </ul>
 
     <!-- Right navbar links -->
@@ -68,6 +70,7 @@
           </form>
         </div>
       </li>
+      {% if user.is_authenticated and user.can_access_core %}
       <li class="nav-item">
         <a class="nav-link text-warning" href="{% url 'cliente_new' %}" data-toggle="tooltip" data-placement="top" title="Nuevo cliente"><i class="fas fa-user-plus"></i></a>
       </li>
@@ -83,6 +86,12 @@
       <li class="nav-item">
           <a class="nav-link text-info" href="{% url 'brand_create' %}" data-toggle="tooltip" data-placement="top" title="Nueva marca"><i class="fas fa-tags"></i></a>
       </li>
+      {% endif %}
+      {% if user.is_authenticated and user.can_access_settings %}
+      <li class="nav-item">
+          <a class="nav-link text-primary" href="/admin/" data-toggle="tooltip" data-placement="top" title="Panel de configuración"><i class="fas fa-cogs"></i></a>
+      </li>
+      {% endif %}
 
       <li class="nav-item">
         <a class="nav-link" data-widget="fullscreen" href="#" role="button">
@@ -163,6 +172,7 @@
                with font-awesome or any other icon font library -->
 
           <!-- RECURSOS -->
+          {% if user.can_access_core %}
           <li class="nav-item">
             <a href="#" class="nav-link">
               <i class="nav-icon fas fa-tachometer-alt"></i>
@@ -204,8 +214,10 @@
               </li>
             </ul>
           </li>
+          {% endif %}
 
           <!-- INVENTARIO -->
+          {% if user.can_access_inventory %}
           <li class="nav-item">
             <a href="#" class="nav-link">
               <i class="nav-icon fas fa-truck"></i>
@@ -229,8 +241,10 @@
               </li>
             </ul>
           </li>
+          {% endif %}
 
           <!-- REPORTES -->
+          {% if user.can_access_inventory %}
           <li class="nav-item">
             <a href="#" class="nav-link">
               <i class="nav-icon fas fa-book"></i>
@@ -271,7 +285,8 @@
                 </a>
               </li>
             </ul>
-          </li>      
+          </li>
+          {% endif %}      
           
           <!-- OPCIONES -->
           <li class="nav-item">
@@ -291,9 +306,25 @@
               </li>
               {% if user.is_admin %}
               <li class="nav-item">
+                <a href="{% url 'user_list' %}" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Usuarios y roles</p>
+                </a>
+              </li>
+              {% endif %}
+              {% if user.can_access_inventory %}
+              <li class="nav-item">
                 <a href="{% url 'cargar_inventario_inicial' %}" class="nav-link">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Cargar Inventario Inicial</p>
+                </a>
+              </li>
+              {% endif %}
+              {% if user.can_access_settings %}
+              <li class="nav-item">
+                <a href="/admin/" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Panel de configuración</p>
                 </a>
               </li>
               {% endif %}

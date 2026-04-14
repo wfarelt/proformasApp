@@ -91,3 +91,94 @@ class ProformaRecommendationTests(TestCase):
 		self.assertFalse(response.context['enable_product_recommendations'])
 		self.assertEqual(response.context['recommended_products'], [])
 		self.assertNotContains(response, 'Productos recomendados')
+
+
+class RoleAccessTests(TestCase):
+	def setUp(self):
+		self.company = Company.objects.create(
+			name='Empresa Roles',
+			tax_id='ROLE-123',
+			email='roles@test.com',
+		)
+
+	def _create_user(self, username, role):
+		return User.objects.create_user(
+			username=username,
+			email=f'{username}@test.com',
+			name=username.title(),
+			password='secret123',
+			company=self.company,
+			role=role,
+		)
+
+	def test_superadmin_sees_configuration_dashboard_only(self):
+		user = self._create_user('superconfig', User.Roles.SUPERADMIN)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse('home'))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Panel de configuración')
+		self.assertNotContains(response, 'Productos')
+
+	def test_superadmin_is_redirected_from_operational_module(self):
+		user = self._create_user('superblocked', User.Roles.SUPERADMIN)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse('product_list'))
+
+		self.assertEqual(response.status_code, 302)
+		self.assertEqual(response.url, reverse('home'))
+
+	def test_ventas_cannot_access_inventory_module(self):
+		user = self._create_user('ventasuser', User.Roles.VENTAS)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse('movement_list'))
+
+		self.assertEqual(response.status_code, 302)
+		self.assertEqual(response.url, reverse('home'))
+
+	def test_almacen_can_access_inventory_module(self):
+		user = self._create_user('almacenuser', User.Roles.ALMACEN)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse('movement_list'))
+
+		self.assertEqual(response.status_code, 200)
+
+	def test_admin_can_open_user_management(self):
+		user = self._create_user('adminpanel', User.Roles.ADMIN)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse('user_list'))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Usuarios')
+
+	def test_admin_can_create_user_and_assign_role(self):
+		user = self._create_user('admincreator', User.Roles.ADMIN)
+		self.client.force_login(user)
+
+		response = self.client.post(reverse('user_create'), {
+			'username': 'nuevoalmacen',
+			'email': 'nuevoalmacen@test.com',
+			'name': 'Nuevo Almacen',
+			'company': self.company.id,
+			'role': User.Roles.ALMACEN,
+			'password1': 'Secret12345*',
+			'password2': 'Secret12345*',
+		})
+
+		self.assertEqual(response.status_code, 302)
+		created_user = User.objects.get(username='nuevoalmacen')
+		self.assertEqual(created_user.role, User.Roles.ALMACEN)
+
+	def test_ventas_cannot_open_user_management(self):
+		user = self._create_user('ventasblocked', User.Roles.VENTAS)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse('user_list'))
+
+		self.assertEqual(response.status_code, 302)
+		self.assertEqual(response.url, reverse('home'))

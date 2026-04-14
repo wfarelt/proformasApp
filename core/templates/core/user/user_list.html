@@ -1,0 +1,45 @@
+{% extends 'core/list.html' %}
+
+{% block title %}
+Lista de usuarios
+{% endblock %}
+
+{% block create %}
+<a href="{% url 'user_create' %}" class="btn btn-primary">
+    <i class="fas fa-user-plus"></i> Nuevo usuario
+</a>
+{% endblock create %}
+
+{% block columns %}
+<th>Usuario</th>
+<th>Nombre</th>
+<th>Correo</th>
+<th>Rol</th>
+<th>Empresa</th>
+<th>Estado</th>
+<th class="text-center">Acciones</th>
+{% endblock columns %}
+
+{% block rows %}
+<td>{{ obj.username }}</td>
+<td>{{ obj.name }}</td>
+<td>{{ obj.email }}</td>
+<td>{{ obj.get_role_display }}</td>
+<td>{{ obj.company|default:'-' }}</td>
+<td>
+    {% if obj.is_active %}
+        <span class="badge badge-success">Activo</span>
+    {% else %}
+        <span class="badge badge-secondary">Inactivo</span>
+    {% endif %}
+</td>
+{% endblock rows %}
+
+{% block actions %}
+<a href="{% url 'user_update' obj.pk %}" class="btn btn-sm btn-warning">
+    <i class="fas fa-edit"></i>
+</a>
+<a href="{% url 'user_status' obj.pk %}" class="btn btn-sm {% if obj.is_active %}btn-secondary{% else %}btn-success{% endif %}">
+    <i class="fas {% if obj.is_active %}fa-user-slash{% else %}fa-user-check{% endif %}"></i>
+</a>
+{% endblock actions %}

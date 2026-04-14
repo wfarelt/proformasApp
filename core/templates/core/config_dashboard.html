@@ -1,0 +1,62 @@
+{% extends 'core/index.html' %}
+
+{% block title %}Panel de configuración{% endblock %}
+
+{% block content %}
+<div class="row mt-4">
+  <div class="col-12 mb-3">
+    <div class="card card-primary card-outline">
+      <div class="card-body">
+        <h3 class="card-title font-weight-bold">Panel de configuración</h3>
+        <p class="mt-3 mb-0">Este dashboard está reservado para la administración general de la plataforma.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-info">
+      <div class="inner">
+        <h3>{{ quanty_companies }}</h3>
+        <p>Empresas</p>
+      </div>
+      <div class="icon"><i class="fas fa-building"></i></div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-success">
+      <div class="inner">
+        <h3>{{ quanty_users }}</h3>
+        <p>Usuarios</p>
+      </div>
+      <div class="icon"><i class="fas fa-users"></i></div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-warning">
+      <div class="inner">
+        <h3>{{ active_companies }}</h3>
+        <p>Empresas activas</p>
+      </div>
+      <div class="icon"><i class="fas fa-check-circle"></i></div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-danger">
+      <div class="inner">
+        <h3>{{ custom_configured_companies }}</h3>
+        <p>Configs personalizadas</p>
+      </div>
+      <div class="icon"><i class="fas fa-cogs"></i></div>
+    </div>
+  </div>
+
+  <div class="col-12 mt-3">
+    <a href="/admin/" class="btn btn-primary">
+      <i class="fas fa-tools"></i> Ir al panel de configuración
+    </a>
+  </div>
+</div>
+{% endblock %}

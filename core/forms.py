@@ -15,22 +15,20 @@ class UserCreationForm(UserCreationForm):
     
     class Meta:
         model = User
-        fields = ['username', 'email', 'name', 'company', 'is_staff', 'is_superuser']
+        fields = ['username', 'email', 'name', 'company', 'role']
         labels = {
             'username': 'Usuario',
             'email': 'Correo',
             'name': 'Nombre',
             'company': 'Empresa',
-            'is_staff': 'Staff',
-            'is_superuser': 'Superusuario',
+            'role': 'Rol',
         }
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'company': forms.Select(attrs={'class': 'form-control'}),
-            'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'is_superuser': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'role': forms.Select(attrs={'class': 'form-control'}),
         }
 
 # CREAR UN FORMULARIO PARA MODIFICAR USUARIO
@@ -40,22 +38,20 @@ class UserChangeForm(UserChangeForm):
     
     class Meta:
         model = User
-        fields = ['username', 'email', 'name', 'company', 'is_staff', 'is_superuser']
+        fields = ['username', 'email', 'name', 'company', 'role']
         labels = {
             'username': 'Usuario',
             'email': 'Correo',
             'name': 'Nombre',
             'company': 'Empresa',
-            'is_staff': 'Staff',
-            'is_superuser': 'Superusuario',
+            'role': 'Rol',
         }
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'company': forms.Select(attrs={'class': 'form-control'}),
-            'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'is_superuser': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'role': forms.Select(attrs={'class': 'form-control'}),
         }
 
 # PASSWORD CHANGE FORM
@@ -110,6 +106,62 @@ class UserProfileForm(forms.ModelForm):
         self.fields['profile_picture'].widget.clear_checkbox_label = 'Eliminar'
         self.fields['profile_picture'].widget.initial_text = 'Foto actual'
         self.fields['profile_picture'].widget.input_text = 'Cambiar'
+
+
+class AdminUserCreateForm(UserCreationForm):
+    def __init__(self, *args, **kwargs):
+        self.admin_user = kwargs.pop('admin_user', None)
+        super().__init__(*args, **kwargs)
+        self.fields['password1'].widget.attrs.update({'class': 'form-control'})
+        self.fields['password2'].widget.attrs.update({'class': 'form-control'})
+        self._restrict_available_choices()
+
+    def _restrict_available_choices(self):
+        self.fields['role'].choices = [choice for choice in self.fields['role'].choices if choice[0] != User.Roles.SUPERADMIN]
+        if self.admin_user and self.admin_user.company_id:
+            self.fields['company'].queryset = self.fields['company'].queryset.filter(id=self.admin_user.company_id)
+            self.fields['company'].initial = self.admin_user.company
+
+    def clean_role(self):
+        role = self.cleaned_data['role']
+        if role == User.Roles.SUPERADMIN:
+            raise ValidationError('No puedes asignar el rol Superadmin desde este panel.')
+        return role
+
+
+class AdminUserUpdateForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'name', 'company', 'role', 'is_active']
+        labels = {
+            'username': 'Usuario',
+            'email': 'Correo',
+            'name': 'Nombre',
+            'company': 'Empresa',
+            'role': 'Rol',
+            'is_active': 'Activo',
+        }
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'company': forms.Select(attrs={'class': 'form-control'}),
+            'role': forms.Select(attrs={'class': 'form-control'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.admin_user = kwargs.pop('admin_user', None)
+        super().__init__(*args, **kwargs)
+        self.fields['role'].choices = [choice for choice in self.fields['role'].choices if choice[0] != User.Roles.SUPERADMIN]
+        if self.admin_user and self.admin_user.company_id:
+            self.fields['company'].queryset = self.fields['company'].queryset.filter(id=self.admin_user.company_id)
+
+    def clean_role(self):
+        role = self.cleaned_data['role']
+        if role == User.Roles.SUPERADMIN:
+            raise ValidationError('No puedes asignar el rol Superadmin desde este panel.')
+        return role
           
           
 # CREAR UN FORMULARIO PARA PRODUCTO

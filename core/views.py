@@ -24,7 +24,8 @@ from nlt import numlet as nl
 
 from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand, Company, ProductKit, ProductKitItem, ProductPriceHistory
 from .forms import ProductoForm, ClienteForm, SupplierForm, BrandForm, \
-                    CustomPasswordChangeForm, UserProfileForm, ProductKitForm, ProductKitItemForm, ProductCatalogImportForm
+                    CustomPasswordChangeForm, UserProfileForm, ProductKitForm, ProductKitItemForm, ProductCatalogImportForm, \
+                    AdminUserCreateForm, AdminUserUpdateForm
 from .services.price_approval_service import PriceApprovalService
 from core.services.auto_price_service import AutoPriceService
 from core.services.product_catalog_import_service import ProductCatalogImportService
@@ -39,6 +40,15 @@ from .custom_attributes import ProductCustomAttributes
 # HOME
 @login_required(login_url='login')
 def home(request):
+    if getattr(request.user, 'is_superadmin', False):
+        context = {
+            'quanty_companies': Company.objects.count(),
+            'quanty_users': get_user_model().objects.count(),
+            'active_companies': Company.objects.filter(is_active=True).count(),
+            'custom_configured_companies': Company.objects.exclude(product_custom_fields_config={}).count(),
+        }
+        return render(request, 'core/config_dashboard.html', context)
+
     quanty_products = Producto.objects.count()
     quanty_clients = Cliente.objects.count()
     quanty_suppliers = Supplier.objects.count()
@@ -72,6 +82,114 @@ def edit_profile(request):
         form = UserProfileForm(instance=user)
     
     return render(request, 'core/registration/edit_profile.html', {'form': form})
+
+
+class UserListView(LoginRequiredMixin, ListView):
+    model = get_user_model()
+    template_name = 'core/user/user_list.html'
+    context_object_name = 'usuarios'
+    paginate_by = 10
+    login_url = 'login'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not is_admin(request.user):
+            messages.error(request, 'No tienes permisos para administrar usuarios.')
+            return redirect('home')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        query = self.request.GET.get('q')
+        qs = get_user_model().objects.exclude(role='SUPERADMIN').order_by('name', 'username')
+
+        if self.request.user.company_id:
+            qs = qs.filter(company=self.request.user.company)
+
+        if query:
+            qs = qs.filter(
+                Q(username__icontains=query) |
+                Q(name__icontains=query) |
+                Q(email__icontains=query)
+            )
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'usuarios'
+        context['placeholder'] = 'Buscar por usuario, nombre o correo'
+        return context
+
+
+@login_required(login_url='login')
+def user_create(request):
+    if not is_admin(request.user):
+        messages.error(request, 'No tienes permisos para crear usuarios.')
+        return redirect('home')
+
+    if request.method == 'POST':
+        form = AdminUserCreateForm(request.POST, admin_user=request.user)
+        if form.is_valid():
+            user = form.save(commit=False)
+            if request.user.company_id:
+                user.company = request.user.company
+            user.save()
+            messages.success(request, 'Usuario creado correctamente.')
+            return redirect('user_list')
+    else:
+        form = AdminUserCreateForm(admin_user=request.user)
+
+    return render(request, 'core/user/user_form.html', {'form': form, 'title': 'Nuevo usuario'})
+
+
+@login_required(login_url='login')
+def user_update(request, pk):
+    if not is_admin(request.user):
+        messages.error(request, 'No tienes permisos para editar usuarios.')
+        return redirect('home')
+
+    user_model = get_user_model()
+    queryset = user_model.objects.exclude(role='SUPERADMIN')
+    if request.user.company_id:
+        queryset = queryset.filter(company=request.user.company)
+
+    target_user = get_object_or_404(queryset, pk=pk)
+
+    if request.method == 'POST':
+        form = AdminUserUpdateForm(request.POST, instance=target_user, admin_user=request.user)
+        if form.is_valid():
+            updated_user = form.save(commit=False)
+            if request.user.company_id:
+                updated_user.company = request.user.company
+            updated_user.save()
+            messages.success(request, 'Usuario actualizado correctamente.')
+            return redirect('user_list')
+    else:
+        form = AdminUserUpdateForm(instance=target_user, admin_user=request.user)
+
+    return render(request, 'core/user/user_form.html', {'form': form, 'title': 'Editar usuario', 'target_user': target_user})
+
+
+@login_required(login_url='login')
+def user_status(request, pk):
+    if not is_admin(request.user):
+        messages.error(request, 'No tienes permisos para cambiar el estado de usuarios.')
+        return redirect('home')
+
+    user_model = get_user_model()
+    queryset = user_model.objects.exclude(role='SUPERADMIN')
+    if request.user.company_id:
+        queryset = queryset.filter(company=request.user.company)
+
+    target_user = get_object_or_404(queryset, pk=pk)
+
+    if target_user.pk == request.user.pk:
+        messages.warning(request, 'No puedes desactivar tu propio usuario.')
+        return redirect('user_list')
+
+    target_user.is_active = not target_user.is_active
+    target_user.save(update_fields=['is_active'])
+    estado = 'activado' if target_user.is_active else 'desactivado'
+    messages.success(request, f'Usuario {target_user.username} {estado} correctamente.')
+    return redirect('user_list')
 
 # PRODUCTO
 @login_required(login_url='login')
@@ -107,12 +225,12 @@ def producto_new(request):
 def product_edit(request, id):
     title = 'Editar producto'
     producto = get_object_or_404(Producto, pk=id)
-    is_admin_group = request.user.groups.filter(name='Administrador').exists()
+    is_admin_role = getattr(request.user, 'is_admin', False)
     old_price = producto.precio 
 
     if request.method == 'POST':
         form = ProductoForm(request.POST, instance=producto, company=request.user.company)
-        if is_admin_group:
+        if is_admin_role:
             if form.is_valid():
                 
                 producto = form.save(commit=False)
@@ -184,7 +302,7 @@ class ProductListView(LoginRequiredMixin, ListView):
 
 
 @login_required(login_url='login')
-@user_passes_test(lambda user: user.is_superuser or user.groups.filter(name='Administrador').exists())
+@user_passes_test(lambda user: getattr(user, 'is_admin', False))
 def product_catalog_import(request):
     form = ProductCatalogImportForm()
 
@@ -218,7 +336,7 @@ def product_catalog_import(request):
 
 
 @login_required(login_url='login')
-@user_passes_test(lambda user: user.is_superuser or user.groups.filter(name='Administrador').exists())
+@user_passes_test(lambda user: getattr(user, 'is_admin', False))
 def download_product_catalog_template(request):
     template_bytes = ProductCatalogImportService.build_template_file()
     response = HttpResponse(
@@ -229,9 +347,8 @@ def download_product_catalog_template(request):
     return response
 
 def is_admin(user):
-    # Permitir tanto superusers como usuarios en el grupo 'Administrador'
     try:
-        return user.is_superuser or user.groups.filter(name='Administrador').exists()
+        return getattr(user, 'is_admin', False)
     except Exception:
         return False
 
