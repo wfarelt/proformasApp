@@ -51,13 +51,18 @@ Inventario | Perfil
                             {% endfor %}
                         </div>
                         <hr>
-                        <div class="d-flex justify-content-between">
-                            <a href="{% url 'home' %}" class="btn btn-secondary">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap">
+                            <a href="{% url 'home' %}" class="btn btn-secondary mb-2">
                                 <i class="fas fa-arrow-left"></i> Volver
                             </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-user-edit"></i> Guardar cambios
-                            </button>
+                            <div class="mb-2">
+                                <a href="{% url 'password_change' %}" class="btn btn-warning mr-2">
+                                    <i class="fas fa-key"></i> Cambiar contraseña
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-user-edit"></i> Guardar cambios
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>

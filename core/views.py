@@ -54,10 +54,10 @@ def home(request):
 class CustomPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
     form_class = CustomPasswordChangeForm
     template_name = 'core/registration/change_password.html'
-    success_url = reverse_lazy('password_change_done')
+    success_url = reverse_lazy('edit_profile')
 
     def form_valid(self, form):
-        messages.success(self.request, "Your password has been changed successfully.")
+        messages.success(self.request, "Tu contraseña ha sido cambiada correctamente.")
         return super().form_valid(form)
 
 @login_required
