@@ -239,6 +239,12 @@
                   <p>Compras</p>
                 </a>
               </li>
+              <li class="nav-item">
+                <a href="{% url 'cargar_inventario_inicial' %}" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Carga inicial de stock</p>
+                </a>
+              </li>
             </ul>
           </li>
           {% endif %}
@@ -308,15 +314,7 @@
               <li class="nav-item">
                 <a href="{% url 'user_list' %}" class="nav-link">
                   <i class="far fa-circle nav-icon"></i>
-                  <p>Usuarios y roles</p>
-                </a>
-              </li>
-              {% endif %}
-              {% if user.can_access_inventory %}
-              <li class="nav-item">
-                <a href="{% url 'cargar_inventario_inicial' %}" class="nav-link">
-                  <i class="far fa-circle nav-icon"></i>
-                  <p>Cargar Inventario Inicial</p>
+                  <p>Usuarios</p>
                 </a>
               </li>
               {% endif %}
