@@ -11,7 +11,41 @@
         <form method="post">
             {% csrf_token %}
             <div class="card-body">
-                {{ form.as_p }}        
+                {# Fila 1: Nombre #}
+                <div class="form-group">
+                    <label>{{ form.name.label }}</label>
+                    {{ form.name }}
+                    {{ form.name.errors }}
+                </div>
+                {# Fila 2: NIT y Teléfono #}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>{{ form.nit.label }}</label>
+                            {{ form.nit }}
+                            {{ form.nit.errors }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>{{ form.phone.label }}</label>
+                            {{ form.phone }}
+                            {{ form.phone.errors }}
+                        </div>
+                    </div>
+                </div>
+                {# Fila 3: Email #}
+                <div class="form-group">
+                    <label>{{ form.email.label }}</label>
+                    {{ form.email }}
+                    {{ form.email.errors }}
+                </div>
+                {# Fila 4: Dirección #}
+                <div class="form-group">
+                    <label>{{ form.address.label }}</label>
+                    {{ form.address }}
+                    {{ form.address.errors }}
+                </div>
             </div>
             <hr>
             <div class="card-footer text-center mb-3">

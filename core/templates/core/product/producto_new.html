@@ -12,7 +12,84 @@
                 <form method="post">
                     {% csrf_token %}
                     <div class="card-body">
-                        {{ form.as_p }}
+                        {# Fila 1: Código y Marca #}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>{{ form.nombre.label }}</label>
+                                    {{ form.nombre }}
+                                    {{ form.nombre.errors }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>{{ form.brand.label }}</label>
+                                    {{ form.brand }}
+                                    {{ form.brand.errors }}
+                                </div>
+                            </div>
+                        </div>
+                        {# Fila 2: Descripción #}
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>{{ form.descripcion.label }}</label>
+                                    {{ form.descripcion }}
+                                    {{ form.descripcion.errors }}
+                                </div>
+                            </div>
+                        </div>
+                        {# Fila 3: Costo y Precio de Venta #}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>{{ form.cost.label }}</label>
+                                    {{ form.cost }}
+                                    {{ form.cost.errors }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>{{ form.precio.label }}</label>
+                                    {{ form.precio }}
+                                    {{ form.precio.errors }}
+                                </div>
+                            </div>
+                        </div>
+                        {# Fila 4: Stock y Ubicación #}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>{{ form.stock.label }}</label>
+                                    {{ form.stock }}
+                                    {{ form.stock.errors }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>{{ form.location.label }}</label>
+                                    {{ form.location }}
+                                    {{ form.location.errors }}
+                                </div>
+                            </div>
+                        </div>
+                        {# Campos personalizados de la empresa #}
+                        {% for field in form %}
+                            {% if field.html_name|slice:":8" == "custom__" %}
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label>{{ field.label }}</label>
+                                        {{ field }}
+                                        {{ field.errors }}
+                                        {% if field.help_text %}
+                                            <small class="text-muted">{{ field.help_text }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
                     </div>
                     <div class="card-footer text-center">
                         <button type="submit" class="btn btn-success">Guardar <i class="fa fa-save"></i></button>

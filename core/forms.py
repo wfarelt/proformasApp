@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from decimal import Decimal
 from django.contrib.auth.forms import PasswordChangeForm
 from django.utils.translation import gettext_lazy as _
+from django.utils.safestring import mark_safe
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import Producto, Cliente, Supplier, Brand, User, Company
 
@@ -114,6 +115,20 @@ class AdminUserCreateForm(UserCreationForm):
         super().__init__(*args, **kwargs)
         self.fields['password1'].widget.attrs.update({'class': 'form-control'})
         self.fields['password2'].widget.attrs.update({'class': 'form-control'})
+        self.fields['password1'].label = 'Contraseña'
+        self.fields['password2'].label = 'Confirmar contraseña'
+        self.fields['password1'].help_text = mark_safe(
+            '<ul class="mb-0 pl-3">'
+            '<li>Tu contraseña no puede ser demasiado parecida a tu información personal.</li>'
+            '<li>Tu contraseña debe contener al menos 8 caracteres.</li>'
+            '<li>Tu contraseña no puede ser una clave común.</li>'
+            '<li>Tu contraseña no puede ser completamente numérica.</li>'
+            '</ul>'
+        )
+        self.fields['password2'].help_text = 'Ingresa la misma contraseña para confirmar.'
+        self.fields['password1'].widget.attrs.update({'placeholder': 'Ingresa una contraseña segura'})
+        self.fields['password2'].widget.attrs.update({'placeholder': 'Repite la contraseña'})
+        self.order_fields(['username', 'name', 'email', 'company', 'role', 'password1', 'password2'])
         self._restrict_available_choices()
 
     def _restrict_available_choices(self):
@@ -154,6 +169,7 @@ class AdminUserUpdateForm(forms.ModelForm):
         self.admin_user = kwargs.pop('admin_user', None)
         super().__init__(*args, **kwargs)
         self.fields['role'].choices = [choice for choice in self.fields['role'].choices if choice[0] != User.Roles.SUPERADMIN]
+        self.order_fields(['username', 'name', 'email', 'company', 'role', 'is_active'])
         if self.admin_user and self.admin_user.company_id:
             self.fields['company'].queryset = self.fields['company'].queryset.filter(id=self.admin_user.company_id)
 

@@ -1,0 +1,107 @@
+{% extends 'core/index.html' %}
+
+{% block title %}{{title}}{% endblock %}
+
+{% load static %}
+
+{% block style %}
+{% endblock %}
+
+{% block content %}
+<div class="card mt-3">
+    <div class="card-header">
+      <h3 class="card-title">Analítica de productos</h3><br>
+        <form method="GET" class="row">
+            <div class="col-md-3 mb-2">
+                <label for="dias">Mostrar últimos</label>
+                <select class="form-control" name="dias" id="dias">
+                    {% for valor in dias_permitidos %}
+                    <option value="{{ valor }}" {% if dias == valor %}selected{% endif %}>{{ valor }} días</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-5 mb-2">
+                <label for="tipo">Tipo de reporte</label>
+                <select class="form-control" name="tipo" id="tipo">
+                    {% for clave, etiqueta in tipo_permitidos.items %}
+                    <option value="{{ clave }}" {% if tipo == clave %}selected{% endif %}>{{ etiqueta }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 mb-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary btn-block">Filtrar</button>
+            </div>
+            <div class="col-md-2 mb-2 d-flex align-items-end">
+                <span class="badge badge-info p-3 w-100 text-center">Top 100</span>
+            </div>
+        </form>
+    </div>
+
+    <div class="card-body">
+      <p class="mb-3"><strong>Mostrando:</strong> {{ tipo_label }}</p>
+      <div class="table table-responsive">
+        <table class="table table-bordered table-sm">
+          <thead>
+            <tr>
+              <th style="width: 10px">#</th>
+              <th>Código</th>
+              <th>Producto</th>
+              <th>Ubicación</th>
+              <th>Stock Actual</th>
+              <th>{{ indicador_label }}</th>
+            </tr>
+          </thead>
+          <tbody>
+              {% for producto in page_obj %}
+              <tr>
+                  <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
+                  <td>{{ producto.codigo|default:"-" }}</td>
+                  <td>{{ producto.descripcion|default:"-" }}</td>
+                  <td>{{ producto.ubicacion|default:"-" }}</td>
+                  <td class="text-center">
+                      {% if producto.stock_actual > 0 %}
+                          <span class="badge badge-success">{{ producto.stock_actual }}</span>
+                      {% else %}
+                          <span class="badge badge-danger">Sin Stock</span>
+                      {% endif %}
+                  </td>
+                  <td class="text-center"><span class="badge badge-secondary">{{ producto.indicador }}</span></td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center">No hay resultados para este filtro.</td>
+                </tr>
+              {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+    <div class="card-footer clearfix">
+      <ul class="pagination pagination-sm m-0 float-right">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?dias={{ dias }}&tipo={{ tipo }}&page=1">«</a></li>
+        <li class="page-item"><a class="page-link" href="?dias={{ dias }}&tipo={{ tipo }}&page={{ page_obj.previous_page_number }}">Anterior</a></li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">«</span></li>
+        <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+        {% endif %}
+
+        <li class="page-item disabled">
+          <span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+        </li>
+
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?dias={{ dias }}&tipo={{ tipo }}&page={{ page_obj.next_page_number }}">Siguiente</a></li>
+        <li class="page-item"><a class="page-link" href="?dias={{ dias }}&tipo={{ tipo }}&page={{ page_obj.paginator.num_pages }}">»</a></li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+        <li class="page-item disabled"><span class="page-link">»</span></li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

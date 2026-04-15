@@ -5,7 +5,7 @@ from django.utils.timezone import now
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from datetime import timedelta, time
-from django.db.models import Q
+from django.db.models import Q, F, Value, IntegerField
 from datetime import datetime
 from django.utils.timezone import make_aware
 from django.utils import timezone
@@ -23,7 +23,7 @@ from django.contrib.contenttypes.models import ContentType
 
 # InventoryUploadForm
 import openpyxl
-from django.db.models import Sum
+from django.db.models import Sum, Count
 
 from django.template.loader import render_to_string
 from django.http import HttpResponse
@@ -45,21 +45,110 @@ def product_search(request):
 
 # REPORTES
 
-def reporte_productos_mas_vendidos(request):
-    dias = request.GET.get("dias", 15)  # Obtener el valor del formulario (15 por defecto)
-    
+@login_required
+def reporte_analitica_productos(request):
+    dias_permitidos = [7, 15, 30, 60]
+    tipo_permitidos = {
+        'mas_vendidos': 'Productos más vendidos',
+        'rotacion_sin_stock': 'Productos con rotación sin stock',
+        'menos_vendidos_con_stock': 'Productos menos vendidos con stock',
+        'otros': 'Productos sin movimiento con stock',
+    }
+
     try:
-        dias = int(dias)  # Convertir a entero
-    except ValueError:
-        dias = 15  # Si hay error, usar 15 días por defecto
-    
-    productos = productos_mas_vendidos(dias)
-    
-    return render(request, "inv/reports/productos_mas_vendidos.html", {
-        "productos": productos, 
-        "dias": dias,
-        "title": "Productos más vendidos",
-        })
+        dias = int(request.GET.get('dias', 15))
+    except (TypeError, ValueError):
+        dias = 15
+
+    if dias not in dias_permitidos:
+        dias = 15
+
+    tipo = request.GET.get('tipo', 'mas_vendidos')
+    if tipo not in tipo_permitidos:
+        tipo = 'mas_vendidos'
+
+    fecha_limite = now() - timedelta(days=dias)
+
+    detalles_base = Detalle.objects.filter(
+        proforma__estado='EJECUTADO',
+        proforma__fecha__gte=fecha_limite,
+    )
+
+    if getattr(request.user, 'company_id', None):
+        detalles_base = detalles_base.filter(proforma__company=request.user.company)
+
+    if tipo == 'mas_vendidos':
+        resultados = (
+            detalles_base
+            .values('producto_id')
+            .annotate(
+                codigo=F('producto__nombre'),
+                descripcion=F('producto__descripcion'),
+                stock_actual=F('producto__stock'),
+                ubicacion=F('producto__location'),
+                indicador=Sum('cantidad'),
+            )
+            .order_by('-indicador', 'codigo')
+        )
+    elif tipo == 'rotacion_sin_stock':
+        resultados = (
+            detalles_base
+            .filter(producto__stock__lte=0)
+            .values('producto_id')
+            .annotate(
+                codigo=F('producto__nombre'),
+                descripcion=F('producto__descripcion'),
+                stock_actual=F('producto__stock'),
+                ubicacion=F('producto__location'),
+                indicador=Sum('cantidad'),
+            )
+            .order_by('-indicador', 'codigo')
+        )
+    elif tipo == 'menos_vendidos_con_stock':
+        resultados = (
+            detalles_base
+            .filter(producto__stock__gt=0)
+            .values('producto_id')
+            .annotate(
+                codigo=F('producto__nombre'),
+                descripcion=F('producto__descripcion'),
+                stock_actual=F('producto__stock'),
+                ubicacion=F('producto__location'),
+                indicador=Sum('cantidad'),
+            )
+            .order_by('indicador', 'codigo')
+        )
+    else:
+        productos_con_movimiento = detalles_base.values_list('producto_id', flat=True).distinct()
+        resultados = (
+            Producto.objects
+            .filter(stock__gt=0)
+            .exclude(id__in=productos_con_movimiento)
+            .annotate(
+                producto_id=F('id'),
+                codigo=F('nombre'),
+                stock_actual=F('stock'),
+                ubicacion=F('location'),
+                indicador=Value(0, output_field=IntegerField()),
+            )
+            .values('producto_id', 'codigo', 'descripcion', 'stock_actual', 'ubicacion', 'indicador')
+            .order_by('codigo')
+        )
+
+    resultados = resultados[:100]
+    paginator = Paginator(resultados, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'inv/reports/analitica_productos.html', {
+        'title': 'Analitica de productos',
+        'page_obj': page_obj,
+        'dias': dias,
+        'tipo': tipo,
+        'dias_permitidos': dias_permitidos,
+        'tipo_permitidos': tipo_permitidos,
+        'tipo_label': tipo_permitidos[tipo],
+        'indicador_label': 'Cantidad vendida' if tipo != 'otros' else 'Movimientos en el periodo',
+    })
 
 def historial_ventas_producto(request):
     producto_id = request.GET.get("producto_id")
@@ -207,17 +296,6 @@ def proforma_report(request):
         'seller_sales_json': json.dumps(seller_sales),
     }
     return render(request, 'inv/reports/proforma_report.html', context)
-
-def productos_mas_vendidos(dias=15):
-    fecha_limite = now() - timedelta(days=dias)  # Calcular la fecha desde donde filtrar
-    productos = (
-        Detalle.objects
-        .filter(proforma__estado="EJECUTADO", proforma__fecha__gte=fecha_limite)  # Filtrar por fecha
-        .values("producto__nombre", "producto__descripcion", "producto__stock")
-        .annotate(total_vendido=Sum("cantidad"))
-        .order_by("-total_vendido")
-    )
-    return productos
 
 # COMPRAS
 
