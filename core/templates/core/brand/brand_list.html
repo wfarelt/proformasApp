@@ -10,8 +10,8 @@
 
 {% block rows %}
     <td>{{ obj.name }}</td>
-    <td>{{ obj.initials }}</td>
-    <td>{{ obj.description }}</td>
+    <td>{{ obj.initials|default:'-' }}</td>
+    <td>{{ obj.description|default:'-' }}</td>
     {% if obj.status == True %}
         <td><span class="badge badge-success">Activo</span></td>
     {% else %}

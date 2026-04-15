@@ -63,8 +63,8 @@
     <table>
         <tr class="tr-datos">
             <td class="td-izquierda">
-                <strong>Cliente: </strong>{{ proforma.cliente }} <br>
-                <strong>Nit: </strong>{{ proforma.cliente.nit }}
+                <strong>Cliente: </strong>{{ proforma.cliente|default:'Sin cliente' }} <br>
+                <strong>Nit: </strong>{% if proforma.cliente %}{{ proforma.cliente.nit|default:'-' }}{% else %}-{% endif %}
             </td>
             <td class="td-derecha">
                 <strong>Fecha: </strong>{{ proforma.fecha|date:"d/m/Y" }} <br>
@@ -158,7 +158,7 @@
 <table>
     <tr>
         <td class="td-izquierda">
-            <strong>Observaciones: </strong>{{ proforma.observacion }}
+            <strong>Observaciones: </strong>{{ proforma.observacion|default:'-' }}
         </td>
     </tr>
 </table>
