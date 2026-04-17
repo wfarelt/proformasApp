@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404, redirect, render
+from django.conf import settings
 from django.urls import reverse_lazy
 from django.contrib import messages  # Importa el framework de mensajes
 from django.core.paginator import Paginator
