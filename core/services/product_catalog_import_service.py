@@ -9,7 +9,7 @@ from django.db.models.functions import Trim, Upper
 from openpyxl import load_workbook
 from openpyxl import Workbook
 
-from core.models import Brand, Producto
+from core.models import Producto
 
 
 @dataclass
@@ -17,17 +17,12 @@ class CatalogImportRow:
     row_number: int
     codigo: str
     descripcion: str
-    brand_name: Optional[str] = None
 
 
 class ProductCatalogImportService:
     REQUIRED_COLUMNS = {
         "codigo": ["codigo", "código", "code", "sku", "nombre"],
-    }
-
-    OPTIONAL_COLUMNS = {
         "descripcion": ["descripcion", "descripción", "description"],
-        "brand": ["brand", "marca"],
     }
 
     @classmethod
@@ -36,8 +31,8 @@ class ProductCatalogImportService:
         sheet = workbook.active
         sheet.title = "catalogo"
 
-        sheet.append(["Código", "Descripción", "Marca"])
-        sheet.append(["PROD-001", "Producto de ejemplo", "Marca Genérica"])
+        sheet.append(["Código", "Descripción"])
+        sheet.append(["PROD-001", "Producto de ejemplo"])
 
         output = BytesIO()
         workbook.save(output)
@@ -110,10 +105,13 @@ class ProductCatalogImportService:
         if codigo_col is None:
             raise ValueError("No se encontró la columna obligatoria 'codigo'.")
 
+        descripcion_col = find_column(cls.REQUIRED_COLUMNS["descripcion"])
+        if descripcion_col is None:
+            raise ValueError("No se encontró la columna obligatoria 'descripcion'.")
+
         return {
             "codigo": codigo_col,
-            "descripcion": find_column(cls.OPTIONAL_COLUMNS["descripcion"]),
-            "brand": find_column(cls.OPTIONAL_COLUMNS["brand"]),
+            "descripcion": descripcion_col,
         }
 
     @classmethod
@@ -128,10 +126,13 @@ class ProductCatalogImportService:
 
             codigo = cls._normalize_text(codigo)
             descripcion = cls._cell_value(values, header_map.get("descripcion"))
-            brand_name = cls._cell_value(values, header_map.get("brand"))
 
             if len(codigo) > 100:
                 errors.append(f"Fila {row_index}: código supera 100 caracteres.")
+                continue
+
+            if not descripcion:
+                errors.append(f"Fila {row_index}: descripción vacía.")
                 continue
 
             rows.append(
@@ -139,7 +140,6 @@ class ProductCatalogImportService:
                     row_number=row_index,
                     codigo=codigo,
                     descripcion=descripcion,
-                    brand_name=brand_name,
                 )
             )
 
@@ -150,16 +150,13 @@ class ProductCatalogImportService:
         if not rows:
             return 0
 
-        brand_map = cls._resolve_brands(rows)
         products_to_create = []
 
         for row in rows:
-            brand_obj = brand_map.get(cls._normalize_text(row.brand_name)) if row.brand_name else None
             products_to_create.append(
                 Producto(
                     nombre=row.codigo,
                     descripcion=row.descripcion,
-                    brand=brand_obj,
                     stock=0,
                     cost=0,
                     precio=0,
@@ -171,33 +168,6 @@ class ProductCatalogImportService:
             created = Producto.objects.bulk_create(products_to_create, batch_size=1000)
 
         return len(created)
-
-    @classmethod
-    def _resolve_brands(cls, rows: List[CatalogImportRow]) -> Dict[str, Brand]:
-        brand_names = {
-            cls._normalize_text(row.brand_name)
-            for row in rows
-            if row.brand_name and cls._normalize_text(row.brand_name)
-        }
-        if not brand_names:
-            return {}
-
-        brand_qs = Brand.objects.annotate(normalized_name=Upper(Trim(F("name")))).filter(
-            normalized_name__in=brand_names
-        )
-        brand_map = {cls._normalize_text(brand.name): brand for brand in brand_qs}
-
-        missing_brands = [name for name in brand_names if name not in brand_map]
-        if missing_brands:
-            new_brands = [Brand(name=name, status=True) for name in missing_brands]
-            Brand.objects.bulk_create(new_brands, batch_size=200)
-            created_qs = Brand.objects.annotate(normalized_name=Upper(Trim(F("name")))).filter(
-                normalized_name__in=missing_brands
-            )
-            for brand in created_qs:
-                brand_map[cls._normalize_text(brand.name)] = brand
-
-        return brand_map
 
     @classmethod
     def _get_existing_codes(cls, codes: List[str]) -> set:
