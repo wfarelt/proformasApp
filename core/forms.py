@@ -350,6 +350,33 @@ class ProductCatalogImportForm(forms.Form):
             raise ValidationError('Solo se permiten archivos Excel (.xlsx o .xlsm).')
         return uploaded_file
 
+
+class CloudCatalogUploadForm(forms.Form):
+    name = forms.CharField(
+        label='Nombre del catálogo',
+        max_length=120,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Electrónica'}),
+    )
+    version = forms.CharField(
+        label='Versión',
+        max_length=30,
+        initial='1.0.0',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 1.0.0'}),
+    )
+    file = forms.FileField(
+        label='Archivo Excel',
+        help_text='Formatos permitidos: .xlsx, .xlsm',
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control-file'}),
+    )
+
+    def clean_file(self):
+        uploaded_file = self.cleaned_data['file']
+        allowed_extensions = ('.xlsx', '.xlsm')
+        filename = (uploaded_file.name or '').lower()
+        if not filename.endswith(allowed_extensions):
+            raise ValidationError('Solo se permiten archivos Excel (.xlsx o .xlsm).')
+        return uploaded_file
+
 # CREAR UN FORMULARIO PARA CLIENTE
 class ClienteForm(forms.ModelForm):
     def clean_nit(self):

@@ -1,14 +1,19 @@
 import hashlib
+import json
 from dataclasses import dataclass
+from datetime import date
 from io import BytesIO
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 import requests
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import F
 from django.db.models.functions import Trim, Upper
+from django.utils.text import slugify
 
 from openpyxl import load_workbook
 from openpyxl import Workbook
@@ -23,6 +28,11 @@ ALLOWED_DOWNLOAD_DOMAINS = {"raw.githubusercontent.com"}
 
 # Tamaño máximo permitido por descarga (10 MB)
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
+
+CATALOG_CLOUD_DIR = Path(settings.BASE_DIR) / "catalog_cloud"
+CATALOG_FILES_DIR = CATALOG_CLOUD_DIR / "catalogos"
+LOCAL_CLOUD_INDEX_PATH = CATALOG_CLOUD_DIR / "index.json"
+CLOUD_FILES_BASE_URL = "https://raw.githubusercontent.com/wfarelt/proformasApp/master/catalog_cloud/catalogos"
 
 
 @dataclass
@@ -267,6 +277,73 @@ class ProductCatalogImportService:
         cls._verify_checksum(content, expected_checksum)
 
         return cls.import_from_excel(BytesIO(content))
+
+    @classmethod
+    def get_local_cloud_catalogs(cls) -> List[Dict]:
+        """Lee el index.json local para mostrar los catálogos cargados por superadmin."""
+        if not LOCAL_CLOUD_INDEX_PATH.exists():
+            return []
+
+        with open(LOCAL_CLOUD_INDEX_PATH, "r", encoding="utf-8") as file_obj:
+            data = json.load(file_obj)
+
+        catalogs = data.get("catalogs", [])
+        return catalogs if isinstance(catalogs, list) else []
+
+    @classmethod
+    def save_cloud_catalog(cls, uploaded_file, catalog_name: str, version: str) -> Dict:
+        """Guarda un catálogo en el repositorio local, actualiza index.json y devuelve sus metadatos."""
+        workbook = load_workbook(uploaded_file, data_only=True)
+        sheet = workbook.active
+        cls._build_header_map(sheet)
+
+        slug = slugify(catalog_name)
+        if not slug:
+            raise ValueError("No se pudo generar un identificador válido para el catálogo.")
+
+        CATALOG_FILES_DIR.mkdir(parents=True, exist_ok=True)
+
+        original_name = uploaded_file.name or f"{slug}.xlsx"
+        extension = Path(original_name).suffix.lower() or ".xlsx"
+        target_filename = f"{slug}{extension}"
+        target_path = CATALOG_FILES_DIR / target_filename
+
+        uploaded_file.seek(0)
+        content = uploaded_file.read()
+        if len(content) > MAX_FILE_SIZE_BYTES:
+            raise ValueError("El archivo supera el tamaño máximo permitido (10 MB).")
+
+        with open(target_path, "wb") as target_file:
+            target_file.write(content)
+
+        checksum = f"sha256:{hashlib.sha256(content).hexdigest()}"
+        catalog_entry = {
+            "name": catalog_name.strip(),
+            "slug": slug,
+            "version": version.strip() or "1.0.0",
+            "url": f"{CLOUD_FILES_BASE_URL}/{target_filename}",
+            "date": date.today().isoformat(),
+            "checksum": checksum,
+        }
+
+        catalogs = cls.get_local_cloud_catalogs()
+        catalogs = [catalog for catalog in catalogs if catalog.get("slug") != slug]
+        catalogs.append(catalog_entry)
+        catalogs.sort(key=lambda catalog: str(catalog.get("name", "")).lower())
+
+        cls._write_local_cloud_index(catalogs)
+        return catalog_entry
+
+    @staticmethod
+    def _write_local_cloud_index(catalogs: List[Dict]) -> None:
+        CATALOG_CLOUD_DIR.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "schema_version": "1",
+            "updated_at": date.today().isoformat(),
+            "catalogs": catalogs,
+        }
+        with open(LOCAL_CLOUD_INDEX_PATH, "w", encoding="utf-8") as file_obj:
+            json.dump(payload, file_obj, ensure_ascii=False, indent=2)
 
     @staticmethod
     def _validate_download_url(url: str) -> None:

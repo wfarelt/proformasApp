@@ -24,7 +24,7 @@ from nlt import numlet as nl
 
 from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand, Company, ProductKit, ProductKitItem, ProductPriceHistory
 from .forms import ProductoForm, ClienteForm, SupplierForm, BrandForm, \
-                    CustomPasswordChangeForm, UserProfileForm, ProductKitForm, ProductKitItemForm, ProductCatalogImportForm, \
+                    CustomPasswordChangeForm, UserProfileForm, ProductKitForm, ProductKitItemForm, ProductCatalogImportForm, CloudCatalogUploadForm, \
                     AdminUserCreateForm, AdminUserUpdateForm, CompanyDataForm
 from .services.price_approval_service import PriceApprovalService
 from core.services.auto_price_service import AutoPriceService
@@ -425,6 +425,37 @@ def cloud_catalog_import_from_url(request):
         messages.error(request, str(exc))
 
     return redirect('product_list')
+
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: getattr(user, 'is_superadmin', False))
+def superadmin_cloud_catalog_upload(request):
+    """Permite al superadmin subir archivos xlsx al repositorio local de catálogos."""
+    if request.method == 'POST':
+        form = CloudCatalogUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                catalog = ProductCatalogImportService.save_cloud_catalog(
+                    uploaded_file=form.cleaned_data['file'],
+                    catalog_name=form.cleaned_data['name'],
+                    version=form.cleaned_data['version'],
+                )
+                messages.success(
+                    request,
+                    f"Catálogo '{catalog['name']}' guardado correctamente. Ejecuta git add/commit/push para publicarlo en GitHub.",
+                )
+                return redirect('superadmin_cloud_catalog_upload')
+            except ValueError as exc:
+                messages.error(request, str(exc))
+    else:
+        form = CloudCatalogUploadForm()
+
+    context = {
+        'title': 'Subir catálogos a la nube',
+        'form': form,
+        'catalogs': ProductCatalogImportService.get_local_cloud_catalogs(),
+    }
+    return render(request, 'core/catalog/cloud_catalog_upload.html', context)
 
 
 def is_admin(user):

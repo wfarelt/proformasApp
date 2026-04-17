@@ -1,0 +1,84 @@
+{% extends 'core/index.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row mt-4">
+  <div class="col-lg-5">
+    <div class="card card-primary card-outline">
+      <div class="card-header">
+        <h3 class="card-title">Subir nuevo catálogo</h3>
+      </div>
+      <div class="card-body">
+        <p class="text-muted">Carga un archivo Excel válido con columnas Código y Descripción. Si el slug ya existe, el archivo y la entrada del índice se reemplazan.</p>
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="form-group">
+            {{ form.name.label_tag }}
+            {{ form.name }}
+            {% for err in form.name.errors %}
+            <div class="text-danger">{{ err }}</div>
+            {% endfor %}
+          </div>
+          <div class="form-group">
+            {{ form.version.label_tag }}
+            {{ form.version }}
+            {% for err in form.version.errors %}
+            <div class="text-danger">{{ err }}</div>
+            {% endfor %}
+          </div>
+          <div class="form-group">
+            {{ form.file.label_tag }}
+            {{ form.file }}
+            {% if form.file.help_text %}
+            <small class="form-text text-muted">{{ form.file.help_text }}</small>
+            {% endif %}
+            {% for err in form.file.errors %}
+            <div class="text-danger">{{ err }}</div>
+            {% endfor %}
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Guardar catálogo
+          </button>
+          <a href="{% url 'home' %}" class="btn btn-secondary">Volver</a>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card card-secondary card-outline">
+      <div class="card-header">
+        <h3 class="card-title">Catálogos registrados</h3>
+      </div>
+      <div class="card-body p-0">
+        {% if catalogs %}
+        <div class="table-responsive">
+          <table class="table table-sm table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Versión</th>
+                <th>Fecha</th>
+                <th>Slug</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for catalog in catalogs %}
+              <tr>
+                <td>{{ catalog.name }}</td>
+                <td>{{ catalog.version }}</td>
+                <td>{{ catalog.date }}</td>
+                <td>{{ catalog.slug }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="p-3 text-muted">Todavía no hay catálogos registrados en el índice local.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

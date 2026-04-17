@@ -53,4 +53,7 @@ class RoleAccessMiddleware:
         return path in allowed_paths
 
     def _superadmin_allowed(self, path):
-        return self._self_service_allowed(path) or path.startswith('/admin/')
+        allowed_paths = {
+            reverse('superadmin_cloud_catalog_upload'),
+        }
+        return self._self_service_allowed(path) or path.startswith('/admin/') or path in allowed_paths
