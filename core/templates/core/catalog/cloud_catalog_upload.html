@@ -37,6 +37,13 @@
             <div class="text-danger">{{ err }}</div>
             {% endfor %}
           </div>
+          {% if autopublish_enabled %}
+          <div class="form-group form-check">
+            {{ form.publish_now }}
+            <label class="form-check-label" for="{{ form.publish_now.id_for_label }}">{{ form.publish_now.label }}</label>
+          </div>
+          <small class="form-text text-muted mb-3">Si el servidor ya tiene credenciales git configuradas, el archivo y el index se publicarán automáticamente al remoto.</small>
+          {% endif %}
           <button type="submit" class="btn btn-primary">
             <i class="fas fa-save"></i> Guardar catálogo
           </button>

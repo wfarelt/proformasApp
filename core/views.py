@@ -440,10 +440,17 @@ def superadmin_cloud_catalog_upload(request):
                     catalog_name=form.cleaned_data['name'],
                     version=form.cleaned_data['version'],
                 )
-                messages.success(
-                    request,
-                    f"Catálogo '{catalog['name']}' guardado correctamente. Ejecuta git add/commit/push para publicarlo en GitHub.",
-                )
+                if form.cleaned_data.get('publish_now'):
+                    ProductCatalogImportService.publish_cloud_catalog(catalog)
+                    messages.success(
+                        request,
+                        f"Catálogo '{catalog['name']}' guardado y publicado correctamente en GitHub.",
+                    )
+                else:
+                    messages.success(
+                        request,
+                        f"Catálogo '{catalog['name']}' guardado correctamente. Pendiente de publicación manual en GitHub.",
+                    )
                 return redirect('superadmin_cloud_catalog_upload')
             except ValueError as exc:
                 messages.error(request, str(exc))
@@ -454,6 +461,7 @@ def superadmin_cloud_catalog_upload(request):
         'title': 'Subir catálogos a la nube',
         'form': form,
         'catalogs': ProductCatalogImportService.get_local_cloud_catalogs(),
+        'autopublish_enabled': getattr(settings, 'CLOUD_CATALOG_GIT_AUTOPUBLISH', False),
     }
     return render(request, 'core/catalog/cloud_catalog_upload.html', context)
 

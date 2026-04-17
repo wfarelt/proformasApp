@@ -1,5 +1,6 @@
 import hashlib
 import json
+import subprocess
 from dataclasses import dataclass
 from datetime import date
 from io import BytesIO
@@ -332,7 +333,40 @@ class ProductCatalogImportService:
         catalogs.sort(key=lambda catalog: str(catalog.get("name", "")).lower())
 
         cls._write_local_cloud_index(catalogs)
+        catalog_entry["local_file_path"] = target_path
         return catalog_entry
+
+    @classmethod
+    def publish_cloud_catalog(cls, catalog_entry: Dict) -> None:
+        """Publica en GitHub solo el catálogo subido y el index.json, sin incluir cambios ajenos."""
+        if not settings.CLOUD_CATALOG_GIT_AUTOPUBLISH:
+            raise ValueError("La publicación automática de catálogos está deshabilitada en la configuración.")
+
+        local_file_path = catalog_entry.get("local_file_path")
+        if not local_file_path:
+            raise ValueError("No se encontró la ruta local del catálogo para publicarlo.")
+
+        repo_path = Path(settings.BASE_DIR)
+        index_relative = LOCAL_CLOUD_INDEX_PATH.relative_to(repo_path)
+        file_relative = Path(local_file_path).relative_to(repo_path)
+        branch = settings.CLOUD_CATALOG_GIT_BRANCH or cls._get_current_git_branch(repo_path)
+        commit_message = f"Publish catalog {catalog_entry['slug']} {catalog_entry['version']}"
+
+        cls._run_git_command(["git", "add", "--", str(index_relative), str(file_relative)], repo_path)
+
+        has_changes = cls._run_git_command(
+            ["git", "diff", "--cached", "--quiet", "--", str(index_relative), str(file_relative)],
+            repo_path,
+            check=False,
+        )
+        if has_changes.returncode == 0:
+            return
+
+        cls._run_git_command(
+            ["git", "commit", "-m", commit_message, "--", str(index_relative), str(file_relative)],
+            repo_path,
+        )
+        cls._run_git_command(["git", "push", "origin", branch], repo_path)
 
     @staticmethod
     def _write_local_cloud_index(catalogs: List[Dict]) -> None:
@@ -344,6 +378,28 @@ class ProductCatalogImportService:
         }
         with open(LOCAL_CLOUD_INDEX_PATH, "w", encoding="utf-8") as file_obj:
             json.dump(payload, file_obj, ensure_ascii=False, indent=2)
+
+    @staticmethod
+    def _run_git_command(command: List[str], cwd: Path, check: bool = True):
+        result = subprocess.run(
+            command,
+            cwd=str(cwd),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if check and result.returncode != 0:
+            error_output = (result.stderr or result.stdout or "").strip()
+            raise ValueError(f"Error ejecutando {' '.join(command[:2])}: {error_output or 'sin detalle.'}")
+        return result
+
+    @classmethod
+    def _get_current_git_branch(cls, repo_path: Path) -> str:
+        result = cls._run_git_command(["git", "rev-parse", "--abbrev-ref", "HEAD"], repo_path)
+        branch_name = (result.stdout or "").strip()
+        if not branch_name:
+            raise ValueError("No se pudo determinar la rama git actual para publicar el catálogo.")
+        return branch_name
 
     @staticmethod
     def _validate_download_url(url: str) -> None:

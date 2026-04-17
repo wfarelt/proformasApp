@@ -368,6 +368,12 @@ class CloudCatalogUploadForm(forms.Form):
         help_text='Formatos permitidos: .xlsx, .xlsm',
         widget=forms.ClearableFileInput(attrs={'class': 'form-control-file'}),
     )
+    publish_now = forms.BooleanField(
+        label='Publicar inmediatamente en GitHub',
+        required=False,
+        initial=True,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+    )
 
     def clean_file(self):
         uploaded_file = self.cleaned_data['file']
