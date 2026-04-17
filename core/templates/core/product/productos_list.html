@@ -59,8 +59,10 @@
 {% endblock actions %}
 
 {% block create %}
+{% if user.is_admin %}
 <a href="{% url 'cloud_catalog_list' %}" class="btn btn-primary mr-2">Catálogo nube <i class="fa fa-cloud-download"></i></a>
 <a href="{% url 'product_catalog_import' %}" class="btn btn-info mr-2">Importar catálogo <i class="fa fa-upload"></i></a>
+{% endif %}
 <a href="{% url 'producto_new' %}" class="btn btn-success">Producto <i class="fa fa-plus"></i></a>
 {% endblock create %}
 
