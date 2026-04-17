@@ -28,6 +28,8 @@ urlpatterns = [
     path('productos/', ProductListView.as_view(), name='product_list'),
     path('productos/importar-catalogo/', product_catalog_import, name='product_catalog_import'),
     path('productos/importar-catalogo/plantilla/', download_product_catalog_template, name='download_product_catalog_template'),
+    path('productos/catalogo-nube/', cloud_catalog_list, name='cloud_catalog_list'),
+    path('productos/catalogo-nube/importar/', cloud_catalog_import_from_url, name='cloud_catalog_import_from_url'),
     path('product/price/approve/<int:ph_id>/', approve_price, name='approve_price'),
     path('product/price/reject/<int:ph_id>/', reject_price, name='reject_price'),
     

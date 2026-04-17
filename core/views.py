@@ -373,6 +373,60 @@ def download_product_catalog_template(request):
     response['Content-Disposition'] = 'attachment; filename="plantilla_catalogo_productos.xlsx"'
     return response
 
+@login_required(login_url='login')
+@user_passes_test(lambda user: getattr(user, 'is_admin', False))
+def cloud_catalog_list(request):
+    """Muestra los catálogos disponibles en el repositorio de la nube."""
+    try:
+        catalogs = ProductCatalogImportService.fetch_cloud_index()
+        error = None
+    except ValueError as exc:
+        catalogs = []
+        error = str(exc)
+
+    return render(request, 'core/product/cloud_catalog_list.html', {
+        'title': 'Catálogos disponibles en la nube',
+        'catalogs': catalogs,
+        'error': error,
+    })
+
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: getattr(user, 'is_admin', False))
+def cloud_catalog_import_from_url(request):
+    """Descarga e importa el catálogo seleccionado desde la nube."""
+    if request.method != 'POST':
+        return redirect('cloud_catalog_list')
+
+    url = request.POST.get('url', '').strip()
+    checksum = request.POST.get('checksum', '').strip()
+    catalog_name = request.POST.get('catalog_name', 'Catálogo').strip()
+
+    if not url:
+        messages.error(request, 'URL del catálogo no proporcionada.')
+        return redirect('cloud_catalog_list')
+
+    try:
+        result = ProductCatalogImportService.import_from_cloud_url(url, checksum)
+
+        summary = (
+            f"Catálogo '{catalog_name}' importado. "
+            f"Filas válidas: {result['total_rows']} | "
+            f"Creados: {result['created']} | "
+            f"Ya existentes: {result['skipped_existing']} | "
+            f"Duplicados en archivo: {result['duplicate_in_file']}"
+        )
+        messages.success(request, summary)
+
+        for err in result.get('errors', []):
+            messages.warning(request, err)
+
+    except ValueError as exc:
+        messages.error(request, str(exc))
+
+    return redirect('product_list')
+
+
 def is_admin(user):
     try:
         return getattr(user, 'is_admin', False)

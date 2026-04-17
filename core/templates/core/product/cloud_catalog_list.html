@@ -1,0 +1,82 @@
+{% extends 'core/index.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="card mt-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="mb-0">{{ title }}</h2>
+        <a href="{% url 'product_list' %}" class="btn btn-secondary btn-sm">
+            <i class="fa fa-arrow-left"></i> Volver
+        </a>
+    </div>
+    <div class="card-body">
+
+        {% if error %}
+        <div class="alert alert-danger">
+            <i class="fa fa-exclamation-triangle"></i>
+            <strong>No se pudo conectar con el repositorio de catálogos.</strong><br>
+            {{ error }}
+        </div>
+        {% endif %}
+
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        {% if not error %}
+        {% if catalogs %}
+        <p class="text-muted mb-3">
+            Selecciona un catálogo para importar sus productos. Los códigos que ya existen en el sistema serán omitidos automáticamente.
+        </p>
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Catálogo</th>
+                        <th>Versión</th>
+                        <th>Fecha</th>
+                        <th class="text-center" style="width:140px;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for catalog in catalogs %}
+                    <tr>
+                        <td>
+                            <strong>{{ catalog.name }}</strong><br>
+                            <small class="text-muted">{{ catalog.slug }}</small>
+                        </td>
+                        <td>{{ catalog.version }}</td>
+                        <td>{{ catalog.date }}</td>
+                        <td class="text-center">
+                            <form method="post" action="{% url 'cloud_catalog_import_from_url' %}"
+                                  onsubmit="return confirm('¿Importar el catálogo \'{{ catalog.name }}\'?\nLos productos existentes serán omitidos.');">
+                                {% csrf_token %}
+                                <input type="hidden" name="url"          value="{{ catalog.url }}">
+                                <input type="hidden" name="checksum"     value="{{ catalog.checksum }}">
+                                <input type="hidden" name="catalog_name" value="{{ catalog.name }}">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fa fa-download"></i> Importar
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            No hay catálogos disponibles en el repositorio por el momento.
+        </div>
+        {% endif %}
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

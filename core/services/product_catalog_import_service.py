@@ -1,6 +1,10 @@
+import hashlib
 from dataclasses import dataclass
 from io import BytesIO
 from typing import Dict, List, Optional, Tuple
+from urllib.parse import urlparse
+
+import requests
 
 from django.db import transaction
 from django.db.models import F
@@ -10,6 +14,15 @@ from openpyxl import load_workbook
 from openpyxl import Workbook
 
 from core.models import Producto
+
+# URL pública del index.json en el repositorio de catálogos
+CLOUD_INDEX_URL = "https://raw.githubusercontent.com/wfarelt/proformasApp/master/catalog_cloud/index.json"
+
+# Dominios permitidos para descargar archivos de catálogo
+ALLOWED_DOWNLOAD_DOMAINS = {"raw.githubusercontent.com"}
+
+# Tamaño máximo permitido por descarga (10 MB)
+MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
 
 
 @dataclass
@@ -202,3 +215,68 @@ class ProductCatalogImportService:
     @staticmethod
     def _normalize_text(text: str) -> str:
         return str(text).strip().upper() if text is not None else ""
+
+    # ------------------------------------------------------------------ #
+    # Métodos para importación desde catálogo en la nube                  #
+    # ------------------------------------------------------------------ #
+
+    @classmethod
+    def fetch_cloud_index(cls) -> List[Dict]:
+        """Descarga y valida el index.json del repositorio de catálogos en la nube.
+        Retorna la lista de catálogos disponibles."""
+        try:
+            response = requests.get(CLOUD_INDEX_URL, timeout=10)
+            response.raise_for_status()
+        except requests.RequestException as exc:
+            raise ValueError(f"No se pudo obtener el índice de catálogos: {exc}")
+
+        try:
+            data = response.json()
+        except ValueError:
+            raise ValueError("El índice de catálogos tiene un formato inválido.")
+
+        if not isinstance(data, dict) or "catalogs" not in data:
+            raise ValueError("El índice de catálogos no tiene la estructura esperada.")
+
+        return data.get("catalogs", [])
+
+    @classmethod
+    def import_from_cloud_url(cls, url: str, expected_checksum: str) -> Dict:
+        """Descarga un archivo xlsx desde una URL confiable, verifica su checksum
+        y ejecuta la importación reutilizando el pipeline existente."""
+        cls._validate_download_url(url)
+
+        try:
+            response = requests.get(url, timeout=30, stream=True)
+            response.raise_for_status()
+        except requests.RequestException as exc:
+            raise ValueError(f"No se pudo descargar el archivo: {exc}")
+
+        content = b""
+        for chunk in response.iter_content(chunk_size=8192):
+            content += chunk
+            if len(content) > MAX_FILE_SIZE_BYTES:
+                raise ValueError("El archivo supera el tamaño máximo permitido (10 MB).")
+
+        cls._verify_checksum(content, expected_checksum)
+
+        return cls.import_from_excel(BytesIO(content))
+
+    @staticmethod
+    def _validate_download_url(url: str) -> None:
+        """Verifica que la URL pertenezca a un dominio confiable."""
+        parsed = urlparse(url)
+        if parsed.scheme != "https":
+            raise ValueError("Solo se permiten URLs con HTTPS.")
+        if parsed.netloc not in ALLOWED_DOWNLOAD_DOMAINS:
+            raise ValueError(f"Dominio no permitido: '{parsed.netloc}'.")
+
+    @staticmethod
+    def _verify_checksum(content: bytes, expected: str) -> None:
+        """Verifica el checksum SHA-256 del contenido descargado."""
+        if not expected or not expected.startswith("sha256:"):
+            return  # Sin checksum declarado, se omite la verificación
+        expected_hash = expected.removeprefix("sha256:")
+        actual_hash = hashlib.sha256(content).hexdigest()
+        if actual_hash != expected_hash:
+            raise ValueError("El archivo descargado no coincide con el checksum esperado. Posible archivo corrupto o alterado.")

@@ -6,7 +6,7 @@
       "name": "Electronica",
       "slug": "electronica",
       "version": "1.0.0",
-      "url": "https://raw.githubusercontent.com/wfarelt/proformasApp/main/catalogos/electronica.xlsx",
+      "url": "https://raw.githubusercontent.com/wfarelt/proformasApp/master/catalog_cloud/catalogos/electronica.xlsx",
       "date": "2026-04-17",
       "checksum": "sha256:38b7601944a85869476afa00a5c2b9953555a9c0d92611035be4b62b5878ebd6"
     }
