@@ -238,12 +238,18 @@ class ProductCatalogImportService:
         if not isinstance(data, dict) or "catalogs" not in data:
             raise ValueError("El índice de catálogos no tiene la estructura esperada.")
 
-        return data.get("catalogs", [])
+        catalogs = data.get("catalogs", [])
+        for catalog in catalogs:
+            if isinstance(catalog, dict) and catalog.get("url"):
+                catalog["url"] = cls._normalize_catalog_url(catalog["url"])
+
+        return catalogs
 
     @classmethod
     def import_from_cloud_url(cls, url: str, expected_checksum: str) -> Dict:
         """Descarga un archivo xlsx desde una URL confiable, verifica su checksum
         y ejecuta la importación reutilizando el pipeline existente."""
+        url = cls._normalize_catalog_url(url)
         cls._validate_download_url(url)
 
         try:
@@ -280,3 +286,19 @@ class ProductCatalogImportService:
         actual_hash = hashlib.sha256(content).hexdigest()
         if actual_hash != expected_hash:
             raise ValueError("El archivo descargado no coincide con el checksum esperado. Posible archivo corrupto o alterado.")
+
+    @staticmethod
+    def _normalize_catalog_url(url: str) -> str:
+        """Corrige rutas legacy de GitHub Raw mientras se propagan cambios del index.json."""
+        if not url or "raw.githubusercontent.com/wfarelt/proformasApp/" not in url:
+            return url
+
+        normalized_url = url.replace(
+            "/main/catalogos/",
+            "/master/catalog_cloud/catalogos/",
+        )
+        normalized_url = normalized_url.replace(
+            "/master/catalogos/",
+            "/master/catalog_cloud/catalogos/",
+        )
+        return normalized_url
