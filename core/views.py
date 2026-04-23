@@ -10,7 +10,7 @@ from django.contrib.auth.views import PasswordChangeView
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
-from django.db import IntegrityError
+from django.db import IntegrityError, OperationalError
 from django.db.models import Count, Max, Q, Sum
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
@@ -38,6 +38,10 @@ from .services.price_evaluation_service import PriceEvaluationService
 from .custom_attributes import ProductCustomAttributes
 
 # Create your views here.
+
+PROFORMA_BASE_CURRENCY = 'USD'
+PROFORMA_REFERENCE_CURRENCY = 'BOB'
+DEFAULT_USD_BOB_RATE = Decimal('6.960000')
 
 # HOME
 @login_required(login_url='login')
@@ -174,7 +178,7 @@ def exchange_rate_list_create(request):
     else:
         form = ExchangeRateForm(
             instance=ExchangeRate(company=company),
-            initial={'from_currency': 'USD', 'to_currency': company.currency}
+            initial={'from_currency': PROFORMA_BASE_CURRENCY, 'to_currency': PROFORMA_REFERENCE_CURRENCY}
         )
 
     rates = ExchangeRate.objects.filter(company=company).order_by('-valid_from', '-created_at')
@@ -552,18 +556,18 @@ def _apply_exchange_rate_snapshot(proforma):
     if proforma.exchange_rate_applied:
         return
 
-    company = proforma.company
+    company = proforma.company or getattr(proforma.usuario, 'company', None)
     proforma_date = timezone.localtime(proforma.fecha).date() if proforma.fecha else timezone.now().date()
 
     if not company:
-        proforma.currency_source = 'USD'
-        proforma.currency_target = 'USD'
-        proforma.exchange_rate_applied = Decimal('1.000000')
+        proforma.currency_source = PROFORMA_BASE_CURRENCY
+        proforma.currency_target = PROFORMA_REFERENCE_CURRENCY
+        proforma.exchange_rate_applied = DEFAULT_USD_BOB_RATE
         proforma.exchange_rate_date = proforma_date
         return
 
-    target_currency = company.currency
-    source_currency = 'USD'
+    target_currency = PROFORMA_REFERENCE_CURRENCY
+    source_currency = PROFORMA_BASE_CURRENCY
 
     if source_currency == target_currency:
         proforma.currency_source = source_currency
@@ -587,11 +591,89 @@ def _apply_exchange_rate_snapshot(proforma):
         proforma.exchange_rate_date = rate.valid_from
         return
 
-    # Fallback seguro: mantiene compatibilidad de documentos sin bloquear ejecución.
+    # Fallback seguro por defecto si no existe tasa configurada para la fecha.
     proforma.currency_source = target_currency
     proforma.currency_target = target_currency
-    proforma.exchange_rate_applied = Decimal('1.000000')
+    proforma.exchange_rate_applied = DEFAULT_USD_BOB_RATE
     proforma.exchange_rate_date = proforma_date
+
+
+def _get_exchange_rate_preview(proforma):
+    """Calcula el tipo de cambio visible en pantalla sin persistir snapshot."""
+    proforma_date = timezone.localtime(proforma.fecha).date() if proforma.fecha else timezone.now().date()
+    company = proforma.company or getattr(proforma.usuario, 'company', None)
+
+    # Si ya existe snapshot (proforma ejecutada), mostrar ese valor congelado.
+    if proforma.exchange_rate_applied:
+        rate_value = Decimal(proforma.exchange_rate_applied)
+        return {
+            'source_currency': proforma.currency_source or PROFORMA_BASE_CURRENCY,
+            'target_currency': proforma.currency_target or PROFORMA_REFERENCE_CURRENCY,
+            'rate': rate_value,
+            'rate_date': proforma.exchange_rate_date or proforma_date,
+            'is_snapshot': True,
+            'has_active_rate': True,
+            'converted_total': proforma.total_convertido(),
+        }
+
+    if not company:
+        fallback_rate = DEFAULT_USD_BOB_RATE
+        return {
+            'source_currency': PROFORMA_BASE_CURRENCY,
+            'target_currency': PROFORMA_REFERENCE_CURRENCY,
+            'rate': fallback_rate,
+            'rate_date': proforma_date,
+            'is_snapshot': False,
+            'has_active_rate': False,
+            'converted_total': proforma.total_neto(),
+        }
+
+    source_currency = PROFORMA_BASE_CURRENCY
+    target_currency = PROFORMA_REFERENCE_CURRENCY
+
+    if source_currency == target_currency:
+        unit_rate = Decimal('1.000000')
+        return {
+            'source_currency': source_currency,
+            'target_currency': target_currency,
+            'rate': unit_rate,
+            'rate_date': proforma_date,
+            'is_snapshot': False,
+            'has_active_rate': True,
+            'converted_total': proforma.total_neto(),
+        }
+
+    current_rate = ExchangeRate.objects.filter(
+        company=company,
+        from_currency=source_currency,
+        to_currency=target_currency,
+        is_active=True,
+        valid_from__lte=proforma_date,
+    ).order_by('-valid_from', '-created_at').first()
+
+    if current_rate:
+        proforma.exchange_rate_applied = current_rate.rate
+        return {
+            'source_currency': current_rate.from_currency,
+            'target_currency': current_rate.to_currency,
+            'rate': current_rate.rate,
+            'rate_date': current_rate.valid_from,
+            'is_snapshot': False,
+            'has_active_rate': True,
+            'converted_total': proforma.total_convertido(),
+        }
+
+    fallback_rate = DEFAULT_USD_BOB_RATE
+    proforma.exchange_rate_applied = fallback_rate
+    return {
+        'source_currency': target_currency,
+        'target_currency': target_currency,
+        'rate': fallback_rate,
+        'rate_date': proforma_date,
+        'is_snapshot': False,
+        'has_active_rate': False,
+        'converted_total': proforma.total_convertido(),
+    }
 
 @login_required(login_url='login')
 @user_passes_test(is_admin)
@@ -802,6 +884,8 @@ def _get_proforma_context(proforma, request):
         )
         enable_product_recommendations = True
 
+    exchange_rate_info = _get_exchange_rate_preview(proforma)
+
     return {
         'proforma': proforma,
         'productos_list': page_obj,
@@ -812,6 +896,7 @@ def _get_proforma_context(proforma, request):
         'enable_kits': enable_kits,
         'recommended_products': recommended_products,
         'enable_product_recommendations': enable_product_recommendations,
+        'exchange_rate_info': exchange_rate_info,
     }
 
 @login_required(login_url='login')
@@ -820,6 +905,9 @@ def proforma_new(request):
     last_proforma = Proforma.objects.filter(usuario=request.user).last()
     if last_proforma and Detalle.productos_list(last_proforma).count() < 1:
         proforma = last_proforma
+        if not proforma.company and request.user.company:
+            proforma.company = request.user.company
+            proforma.save(update_fields=['company'])
     else:
         proforma = Proforma.objects.create(usuario=request.user)
     
@@ -829,6 +917,9 @@ def proforma_new(request):
 @login_required(login_url='login')
 def proforma_edit(request, id):
     proforma = Proforma.objects.get(id=id)
+    if not proforma.company and request.user.company:
+        proforma.company = request.user.company
+        proforma.save(update_fields=['company'])
     context = _get_proforma_context(proforma, request)
     return render(request, 'core/proforma/proforma_new.html', context)
 
@@ -1144,77 +1235,84 @@ def editar_cantidad_detalle(request, detalle_id):
 @login_required(login_url='login')
 @transaction.atomic
 def cambiar_estado_proforma(request, id):
-    proforma = Proforma.objects.get(id=id)
-    
-    # VALIDAR DESCUENTO PORCENTUAL
-    if request.POST.get('discount_percentage'):
-        try:
-            discount = float(request.POST.get('discount_percentage'))
-            if discount < 0:
-                messages.error(request, 'El descuento no puede ser negativo.')
-                return redirect('proforma_edit', id)
-            if discount > 100:
-                messages.warning(request, 'El descuento no puede ser mayor a 100%.')
-                return redirect('proforma_edit', id)
-            proforma.discount_percentage = discount
-            proforma.save()
-        except (ValueError, TypeError):
-            messages.error(request, 'El descuento debe ser un número válido.')
-            return redirect('proforma_edit', id)
-    
-    if request.POST.get('observacion'):
-        proforma.observacion = request.POST.get('observacion')
-        proforma.save()
-    
-    if request.POST.get('estado') == 'EJECUTADO':
-        if proforma.cliente:
-            proforma.estado = 'EJECUTADO'
-            _apply_exchange_rate_snapshot(proforma)
-            from collections import defaultdict
-            cantidades_por_producto = defaultdict(int)
-            detalles = Detalle.productos_list(proforma)
-            for detalle in detalles:
-                cantidades_por_producto[detalle.producto.id] += detalle.cantidad
-
-            # Verificar stock agrupado
-            for producto_id, cantidad_total in cantidades_por_producto.items():
-                producto = Producto.objects.get(id=producto_id)
-                if producto.stock < cantidad_total:
-                    messages.error(request, f'No hay suficiente stock para el producto "{producto.nombre}".')
+    try:
+        proforma = Proforma.objects.get(id=id)
+        
+        # VALIDAR DESCUENTO PORCENTUAL
+        if request.POST.get('discount_percentage'):
+            try:
+                discount = float(request.POST.get('discount_percentage'))
+                if discount < 0:
+                    messages.error(request, 'El descuento no puede ser negativo.')
                     return redirect('proforma_edit', id)
+                if discount > 100:
+                    messages.warning(request, 'El descuento no puede ser mayor a 100%.')
+                    return redirect('proforma_edit', id)
+                proforma.discount_percentage = discount
+                proforma.save(update_fields=['discount_percentage'])
+            except (ValueError, TypeError):
+                messages.error(request, 'El descuento debe ser un número válido.')
+                return redirect('proforma_edit', id)
+        
+        if request.POST.get('observacion') is not None:
+            proforma.observacion = request.POST.get('observacion')
+            proforma.save(update_fields=['observacion'])
+        
+        if request.POST.get('estado') == 'EJECUTADO':
+            if proforma.cliente:
+                proforma.estado = 'EJECUTADO'
+                _apply_exchange_rate_snapshot(proforma)
+                from collections import defaultdict
+                cantidades_por_producto = defaultdict(int)
+                detalles = Detalle.productos_list(proforma)
+                for detalle in detalles:
+                    cantidades_por_producto[detalle.producto.id] += detalle.cantidad
 
-            # Descontar stock agrupado
-            for producto_id, cantidad_total in cantidades_por_producto.items():
-                producto = Producto.objects.get(id=producto_id)
-                producto.stock -= cantidad_total
-                producto.save()
+                # Verificar stock agrupado
+                for producto_id, cantidad_total in cantidades_por_producto.items():
+                    producto = Producto.objects.get(id=producto_id)
+                    if producto.stock < cantidad_total:
+                        messages.error(request, f'No hay suficiente stock para el producto "{producto.nombre}".')
+                        return redirect('proforma_edit', id)
 
-            # Crear Movement (egreso)
-            proforma_content_type = ContentType.objects.get_for_model(Proforma)
-            movement = Movement.objects.create(
-                movement_type='OUT',
-                content_type=proforma_content_type,
-                object_id=proforma.id,
-                description=f'Egreso por venta de la proforma #{proforma.id}',
-                user=request.user,
-            )
+                # Descontar stock agrupado
+                for producto_id, cantidad_total in cantidades_por_producto.items():
+                    producto = Producto.objects.get(id=producto_id)
+                    producto.stock -= cantidad_total
+                    producto.save(update_fields=['stock'])
 
-            # Crear MovementItems: uno por cada detalle de la proforma (sin agrupar)
-            for detalle in detalles:
-                MovementItem.objects.create(
-                    movement=movement,
-                    product=detalle.producto,
-                    quantity=detalle.cantidad,
+                # Crear Movement (egreso)
+                proforma_content_type = ContentType.objects.get_for_model(Proforma)
+                movement = Movement.objects.create(
+                    movement_type='OUT',
+                    content_type=proforma_content_type,
+                    object_id=proforma.id,
+                    description=f'Egreso por venta de la proforma #{proforma.id}',
+                    user=request.user,
                 )
 
-            messages.success(request, f'Proforma #{proforma.id} ejecutada correctamente.')
-            proforma.save()
+                # Crear MovementItems: uno por cada detalle de la proforma (sin agrupar)
+                for detalle in detalles:
+                    MovementItem.objects.create(
+                        movement=movement,
+                        product=detalle.producto,
+                        quantity=detalle.cantidad,
+                    )
+
+                proforma.save()
+                messages.success(request, f'Proforma #{proforma.id} ejecutada correctamente.')
+            else:
+                messages.error(request, 'Esta proforma no tiene asignado un cliente')
+                return redirect('proforma_edit', id)
+            return redirect('proforma_list')
         else:
-            messages.error(request, 'Esta proforma no tiene asignado un cliente')
-            return redirect('proforma_edit', id)
-        return redirect('proforma_list')
-    else:
-        return redirect(reverse_lazy('proforma_edit', args=[proforma.id]))
+            return redirect(reverse_lazy('proforma_edit', args=[proforma.id]))
+    except OperationalError:
+        messages.warning(
+            request,
+            'La base de datos estaba ocupada al guardar la proforma. Intenta nuevamente una sola vez.'
+        )
+        return redirect('proforma_edit', id)
 
 def proforma_view(request, id):
     proforma = Proforma.objects.get(id=id)
@@ -1222,6 +1320,7 @@ def proforma_view(request, id):
     total_descuento = proforma.discount_percentage * proforma.total / 100
     total_neto = proforma.total - total_descuento
     literal = numero_a_literal(total_neto)
+    exchange_rate_info = _get_exchange_rate_preview(proforma)
 
     custom_config = {}
     if proforma.company:
@@ -1241,6 +1340,7 @@ def proforma_view(request, id):
         'total_descuento': total_descuento,
         'total_con_descuento': total_neto,
         'literal': literal,
+        'exchange_rate_info': exchange_rate_info,
         'custom_attribute_columns': custom_attribute_columns,
         'detail_table_colspan': 6 + len(custom_attribute_columns),
         'detail_total_blank_colspan': 5 + len(custom_attribute_columns),
@@ -1291,15 +1391,21 @@ def anular_proforma(request, id):
 @login_required
 def cambiar_fecha_proforma(request, id):
     proforma = Proforma.objects.get(id=id)
+
+    if proforma.estado == 'EJECUTADO':
+        messages.warning(request, 'No se puede cambiar la fecha de una proforma ejecutada.')
+        return redirect('proforma_edit', id)
+
     if request.method == 'POST':
         fecha_str = request.POST.get('fecha')
         if fecha_str:
-            # Si tu campo es DateTimeField, puedes hacer:
-            
-            fecha_naive = datetime.strptime(fecha_str, "%Y-%m-%d")
-            proforma.fecha = timezone.make_aware(fecha_naive)
-            proforma.save()
-            messages.success(request, "Fecha actualizada correctamente.")
+            try:
+                fecha_naive = datetime.strptime(fecha_str, "%Y-%m-%d")
+                proforma.fecha = timezone.make_aware(fecha_naive)
+                proforma.save(update_fields=['fecha'])
+                messages.success(request, "Fecha actualizada correctamente.")
+            except ValueError:
+                messages.error(request, 'Fecha inválida.')
     return redirect('proforma_edit', id)
 
 # CLIENTE    
@@ -1556,8 +1662,8 @@ def proforma_pdf(request, proforma_id):
     # Calculamos el total neto
     total_neto = (total - descuento).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-    # Convertimos a bolivianos con precisión
-    total_bs = (total_neto * Decimal('6.96')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    exchange_rate_info = _get_exchange_rate_preview(proforma)
+    total_bs = exchange_rate_info['converted_total']
     
     total_literal = numero_a_literal(total_neto)
     company = Company.objects.get(id=proforma.company.id)
@@ -1572,6 +1678,7 @@ def proforma_pdf(request, proforma_id):
         'descuento': descuento,
         'total_neto': total_neto,
         'total_bs': total_bs,
+        'exchange_rate_info': exchange_rate_info,
         'total_literal': total_literal,
         'insufficient_stock_product_ids': insufficient_stock_product_ids,
         'logo_url': logo_url,
@@ -1602,8 +1709,8 @@ def proforma_almacen(request, proforma_id):
     # Calculamos el total neto
     total_neto = (total - descuento).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-    # Convertimos a bolivianos con precisión
-    total_bs = (total_neto * Decimal('6.96')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    exchange_rate_info = _get_exchange_rate_preview(proforma)
+    total_bs = exchange_rate_info['converted_total']
     
     total_literal = numero_a_literal(total_neto)
     company = Company.objects.get(id=proforma.company.id)
@@ -1616,6 +1723,7 @@ def proforma_almacen(request, proforma_id):
         'proforma': proforma,
         'detalles': detalles,
         'total_bs': total_bs,
+        'exchange_rate_info': exchange_rate_info,
         'total_literal': total_literal,
         'insufficient_stock_product_ids': insufficient_stock_product_ids,
         'logo_url': logo_url,

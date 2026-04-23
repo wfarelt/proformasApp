@@ -1,7 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from urllib.parse import quote
 from django.utils.translation import gettext_lazy as _
@@ -308,18 +308,21 @@ class Proforma(models.Model):
     
     def total_neto(self):
         """Calcula el total después de aplicar el descuento porcentual."""
-        descuento = (self.total * self.discount_percentage) / 100
-        return max(self.total - descuento, 0)  # Asegura que no sea negativo
+        total = Decimal(self.total or 0)
+        discount_percentage = Decimal(self.discount_percentage or 0)
+        descuento = (total * discount_percentage / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        total_neto = total - descuento
+        return max(total_neto, Decimal('0.00')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
     
     def total_descuento(self):
         """Calcula el descuento total."""
-        return self.total - self.total_neto()
+        return (Decimal(self.total or 0) - self.total_neto()).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
     def total_convertido(self):
         """Devuelve total neto convertido según el tipo de cambio aplicado."""
         if not self.exchange_rate_applied:
             return self.total_neto()
-        return self.total_neto() * Decimal(self.exchange_rate_applied)
+        return (self.total_neto() * Decimal(self.exchange_rate_applied)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
     def __str__(self):
         return str(self.id)

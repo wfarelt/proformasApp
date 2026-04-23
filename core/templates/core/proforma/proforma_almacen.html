@@ -69,7 +69,8 @@
             <td class="td-derecha">
                 <strong>Fecha: </strong>{{ proforma.fecha|date:"d/m/Y" }} <br>
                 <strong>Hora: </strong>{{ proforma.fecha|date:"H:i" }} <br>
-                <strong>Vendedor: </strong>{{ proforma.usuario.name }}
+                <strong>Vendedor: </strong>{{ proforma.usuario.name }} <br>
+                <strong>TC: </strong>{{ exchange_rate_info.rate|floatformat:2 }}
             </td>
         </tr>
     </table>
@@ -115,7 +116,7 @@
                     <td>{% if detalle.producto.id in insufficient_stock_product_ids %}*{% endif %}</td>
                 {% endif %}
                 <td class="td-izquierda">{{ detalle.producto.nombre }}</td>
-                <td>{{ detalle.producto.location }}</td>
+                <td>{{ detalle.producto.location|default_if_none:'' }}</td>
                 <td class="td-izquierda">{{ detalle.producto.descripcion }}</td>
                 <td>{{ detalle.cantidad }}</td>
                 <td class="td-derecha">{{ detalle.precio_venta }}</td>
@@ -138,21 +139,20 @@
         </td>
         <td class="sin-borde td-derecha">
             <strong>Total:
-                {% if company.currency == 'BOB' %}Bs{% elif company.currency == 'USD' %}${% elif company.currency == 'EUR' %}€{% endif %}
+                $
             </strong> {{ proforma.total }}<br>
             <strong>Descuento:
-                - {% if company.currency == 'BOB' %}Bs{% elif company.currency == 'USD' %}${% elif company.currency == 'EUR' %}€{% endif %}
+                - $
             </strong> {{ proforma.total_descuento|floatformat:2 }}<br>
             ----- <br>
             <strong>Total Neto:
-                {% if company.currency == 'BOB' %}Bs{% elif company.currency == 'USD' %}${% elif company.currency == 'EUR' %}€{% endif %}
+                $
             </strong> {{ proforma.total_neto|floatformat:2 }}     
+            <br>
         </td>
 </table>
 
-{% if company.currency != 'BOB' %}
-    <h3 id="dolarBoliviano" class="h3-derecha">Bs.- {{ total_bs|floatformat:2 }}</h3>
-{% endif %}
+<h3 id="dolarBoliviano" class="h3-derecha">Bs.- {{ total_bs|floatformat:2 }}</h3>
 
 <br>
 <table>
