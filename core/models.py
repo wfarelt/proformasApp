@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from decimal import Decimal, ROUND_HALF_UP
+from typing import cast
 
 from urllib.parse import quote
 from django.utils.translation import gettext_lazy as _
@@ -233,9 +234,9 @@ class Producto(models.Model):
     referencia_cruzada = models.CharField(max_length=100, blank=True, null=True, db_index=True)
     descripcion = models.TextField(blank=True, null=True)
     brand = models.ForeignKey(Brand, on_delete=models.CASCADE, blank=True, null=True)
-    cost = models.DecimalField(default=0, max_digits=10, decimal_places=2, blank=True, null=True)
-    precio = models.DecimalField(default=0, max_digits=10, decimal_places=2)
-    latest_price = models.DecimalField(default=0, max_digits=10, decimal_places=2 )
+    cost = models.DecimalField(default=cast(Decimal, 0), max_digits=10, decimal_places=2, blank=True, null=True)
+    precio = models.DecimalField(default=cast(Decimal, 0), max_digits=10, decimal_places=2)
+    latest_price = models.DecimalField(default=cast(Decimal, 0), max_digits=10, decimal_places=2 )
     stock = models.PositiveIntegerField(default=0, blank=True, null=True)
     location = models.CharField(max_length=10, blank=True, null=True)
     custom_attributes = models.JSONField(
@@ -275,9 +276,9 @@ class Proforma(models.Model):
     )
     fecha = models.DateTimeField(default=timezone.now)
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, blank=True, null=True)
-    total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=cast(Decimal, 0))
     discount_percentage = models.DecimalField(
-        max_digits=5, decimal_places=2, default=0.00,
+        max_digits=5, decimal_places=2, default=cast(Decimal, 0),
         help_text="Descuento en porcentaje (ej. 10.00 para 10%)"
     )
     estado = models.CharField(max_length=10, choices=ESTADO, default='PENDIENTE')
