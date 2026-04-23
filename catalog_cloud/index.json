@@ -1,7 +1,15 @@
 {
   "schema_version": "1",
-  "updated_at": "2026-04-17",
+  "updated_at": "2026-04-23",
   "catalogs": [
+    {
+      "name": "10000_ITEMS_CAT",
+      "slug": "10000_items_cat",
+      "version": "1.0.0",
+      "url": "https://raw.githubusercontent.com/wfarelt/proformasApp/master/catalog_cloud/catalogos/10000_items_cat.xlsx",
+      "date": "2026-04-23",
+      "checksum": "sha256:fd510a720ab4f28bd73ebe27fdecebf26bd5f86da6a231cc7098625e8ccd0c55"
+    },
     {
       "name": "320D2",
       "slug": "320d2",
