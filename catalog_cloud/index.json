@@ -5,10 +5,10 @@
     {
       "name": "10000_ITEMS_CAT",
       "slug": "10000_items_cat",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "url": "https://raw.githubusercontent.com/wfarelt/proformasApp/master/catalog_cloud/catalogos/10000_items_cat.xlsx",
       "date": "2026-04-23",
-      "checksum": "sha256:61c9f09c588ed2754d1454f9e1fe627afe5d39ae28eb493e5bfb7fe9c7889ea9"
+      "checksum": "sha256:9ea4d066644adf13bd8041cbd4167dc54dc7ed427fe7e1ce5c2741deb0ca7b4c"
     }
   ]
 }
