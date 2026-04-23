@@ -10,7 +10,7 @@
         <h2>{{ title }}</h2>
     </div>
     <div class="card-body">
-        <p class="mb-3">Sube un archivo Excel para crear catálogo con código y descripción. Si el código ya existe, se omite y la importación continúa con los demás productos.</p>
+        <p class="mb-3">Sube un archivo Excel con las columnas Código, Referencia cruzada (opcional) y Descripción. Usa la plantilla de muestra para evitar errores de mapeo de columnas.</p>
         <a href="{% url 'download_product_catalog_template' %}" class="btn btn-outline-info btn-sm mb-3">
             Descargar plantilla Excel
         </a>

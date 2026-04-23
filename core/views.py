@@ -547,6 +547,67 @@ def superadmin_cloud_catalog_upload(request):
     return render(request, 'core/catalog/cloud_catalog_upload.html', context)
 
 
+@login_required(login_url='login')
+@user_passes_test(lambda user: getattr(user, 'is_superadmin', False))
+def superadmin_cloud_catalog_rename(request):
+    if request.method != 'POST':
+        return redirect('superadmin_cloud_catalog_upload')
+
+    slug = (request.POST.get('slug') or '').strip()
+    new_name = (request.POST.get('name') or '').strip()
+    publish_now = request.POST.get('publish_now') == 'on'
+    autopublish_enabled = getattr(settings, 'CLOUD_CATALOG_GIT_AUTOPUBLISH', False)
+
+    try:
+        updated_catalog = ProductCatalogImportService.rename_cloud_catalog(slug=slug, new_name=new_name)
+        if autopublish_enabled and publish_now:
+            ProductCatalogImportService.publish_cloud_catalog_index_changes(
+                commit_message=f"Rename catalog {updated_catalog['slug']}"
+            )
+            messages.success(
+                request,
+                f"Catálogo '{updated_catalog['name']}' actualizado y publicado correctamente en GitHub.",
+            )
+        else:
+            messages.success(request, f"Catálogo '{updated_catalog['name']}' actualizado correctamente.")
+    except ValueError as exc:
+        messages.error(request, str(exc))
+
+    return redirect('superadmin_cloud_catalog_upload')
+
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: getattr(user, 'is_superadmin', False))
+def superadmin_cloud_catalog_delete(request):
+    if request.method != 'POST':
+        return redirect('superadmin_cloud_catalog_upload')
+
+    slug = (request.POST.get('slug') or '').strip()
+    publish_now = request.POST.get('publish_now') == 'on'
+    autopublish_enabled = getattr(settings, 'CLOUD_CATALOG_GIT_AUTOPUBLISH', False)
+
+    try:
+        result = ProductCatalogImportService.delete_cloud_catalog(slug=slug)
+        deleted_catalog = result['catalog']
+        deleted_file_path = result.get('deleted_file_path')
+
+        if autopublish_enabled and publish_now:
+            ProductCatalogImportService.publish_cloud_catalog_delete(
+                deleted_file_path=deleted_file_path,
+                commit_message=f"Delete catalog {deleted_catalog['slug']}",
+            )
+            messages.success(
+                request,
+                f"Catálogo '{deleted_catalog['name']}' eliminado y publicado correctamente en GitHub.",
+            )
+        else:
+            messages.success(request, f"Catálogo '{deleted_catalog['name']}' eliminado correctamente.")
+    except ValueError as exc:
+        messages.error(request, str(exc))
+
+    return redirect('superadmin_cloud_catalog_upload')
+
+
 def is_admin(user):
     try:
         return getattr(user, 'is_admin', False)

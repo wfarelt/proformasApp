@@ -1,7 +1,13 @@
 from django.test import TestCase
 from django.urls import reverse
+from unittest.mock import patch
+from io import BytesIO
+
+from openpyxl import Workbook, load_workbook
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from core.models import Company, Detalle, Producto, Proforma, User
+from core.services.product_catalog_import_service import ProductCatalogImportService
 
 
 class ProformaRecommendationTests(TestCase):
@@ -221,3 +227,98 @@ class RoleAccessTests(TestCase):
 
 		self.assertEqual(response.status_code, 302)
 		self.assertEqual(response.url, reverse('home'))
+
+
+class CloudCatalogSuperadminTests(TestCase):
+	def setUp(self):
+		self.company = Company.objects.create(
+			name='Empresa Catalogos',
+			tax_id='CAT-123',
+			email='catalogos@test.com',
+		)
+		self.superadmin = User.objects.create_user(
+			username='supercatalog',
+			email='supercatalog@test.com',
+			name='Super Catalog',
+			password='secret123',
+			company=self.company,
+			role=User.Roles.SUPERADMIN,
+		)
+
+	@patch('core.views.ProductCatalogImportService.publish_cloud_catalog_index_changes')
+	@patch('core.views.ProductCatalogImportService.rename_cloud_catalog')
+	def test_superadmin_can_rename_cloud_catalog(self, rename_mock, publish_mock):
+		rename_mock.return_value = {
+			'name': 'Catalogo Renombrado',
+			'slug': 'electronica',
+		}
+
+		self.client.force_login(self.superadmin)
+		response = self.client.post(reverse('superadmin_cloud_catalog_rename'), {
+			'slug': 'electronica',
+			'name': 'Catalogo Renombrado',
+			'publish_now': 'on',
+		})
+
+		self.assertEqual(response.status_code, 302)
+		self.assertEqual(response.url, reverse('superadmin_cloud_catalog_upload'))
+		rename_mock.assert_called_once_with(slug='electronica', new_name='Catalogo Renombrado')
+		publish_mock.assert_called_once_with(commit_message='Rename catalog electronica')
+
+	@patch('core.views.ProductCatalogImportService.publish_cloud_catalog_delete')
+	@patch('core.views.ProductCatalogImportService.delete_cloud_catalog')
+	def test_superadmin_can_delete_cloud_catalog(self, delete_mock, publish_mock):
+		delete_mock.return_value = {
+			'catalog': {
+				'name': 'Catalogo Legacy',
+				'slug': 'legacy',
+			},
+			'deleted_file_path': None,
+		}
+
+		self.client.force_login(self.superadmin)
+		response = self.client.post(reverse('superadmin_cloud_catalog_delete'), {
+			'slug': 'legacy',
+			'publish_now': 'on',
+		})
+
+		self.assertEqual(response.status_code, 302)
+		self.assertEqual(response.url, reverse('superadmin_cloud_catalog_upload'))
+		delete_mock.assert_called_once_with(slug='legacy')
+		publish_mock.assert_called_once_with(
+			deleted_file_path=None,
+			commit_message='Delete catalog legacy',
+		)
+
+
+class ProductCatalogImportTemplateTests(TestCase):
+	def test_generated_template_contains_expected_headers(self):
+		template_bytes = ProductCatalogImportService.build_template_file()
+		workbook = load_workbook(BytesIO(template_bytes))
+		sheet = workbook.active
+
+		headers = [cell.value for cell in sheet[1]]
+		self.assertEqual(headers, ['Código', 'Referencia cruzada', 'Descripción'])
+
+	def test_import_maps_referencia_cruzada_and_descripcion(self):
+		workbook = Workbook()
+		sheet = workbook.active
+		sheet.append(['Código', 'Referencia cruzada', 'Descripción'])
+		sheet.append(['ABC-001', 'REF-001', 'Producto A'])
+
+		buffer = BytesIO()
+		workbook.save(buffer)
+		buffer.seek(0)
+
+		uploaded_file = SimpleUploadedFile(
+			name='catalogo.xlsx',
+			content=buffer.getvalue(),
+			content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+		)
+
+		result = ProductCatalogImportService.import_from_excel(uploaded_file)
+		self.assertEqual(result['created'], 1)
+
+		producto = Producto.objects.get(nombre='ABC-001')
+		self.assertEqual(producto.referencia_cruzada, 'REF-001')
+		self.assertEqual(producto.descripcion, 'Producto A')

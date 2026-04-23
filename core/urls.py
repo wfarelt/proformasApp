@@ -15,6 +15,8 @@ urlpatterns = [
         template_name='core/registration/password_change_done.html'), name='password_change_done'),
     path('perfil/editar/', edit_profile, name='edit_profile'),
     path('config/catalogos/', superadmin_cloud_catalog_upload, name='superadmin_cloud_catalog_upload'),
+    path('config/catalogos/renombrar/', superadmin_cloud_catalog_rename, name='superadmin_cloud_catalog_rename'),
+    path('config/catalogos/eliminar/', superadmin_cloud_catalog_delete, name='superadmin_cloud_catalog_delete'),
     path('empresa/editar/', company_edit, name='company_edit'),
     path('empresa/tipo-cambio/', exchange_rate_list_create, name='exchange_rate_list'),
     path('usuarios/', UserListView.as_view(), name='user_list'),

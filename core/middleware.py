@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.urls import NoReverseMatch
 
 
 class RoleAccessMiddleware:
@@ -53,7 +54,31 @@ class RoleAccessMiddleware:
         return path in allowed_paths
 
     def _superadmin_allowed(self, path):
-        allowed_paths = {
-            reverse('superadmin_cloud_catalog_upload'),
-        }
-        return self._self_service_allowed(path) or path.startswith('/admin/') or path in allowed_paths
+        allowed_paths = set()
+        for route_name in (
+            'superadmin_cloud_catalog_upload',
+            'superadmin_cloud_catalog_rename',
+            'superadmin_cloud_catalog_delete',
+        ):
+            try:
+                allowed_paths.add(reverse(route_name))
+            except NoReverseMatch:
+                continue
+
+        # Permitir cualquier acceso a la ruta de descarga de plantilla, con o sin barra final
+        plantilla_path = None
+        try:
+            plantilla_path = reverse('download_product_catalog_template')
+        except NoReverseMatch:
+            pass
+
+        catalog_base_prefix = '/config/catalogos'
+
+        return (
+            self._self_service_allowed(path)
+            or path.startswith('/admin/')
+            or path in allowed_paths
+            or path.startswith(f"{catalog_base_prefix}/")
+            or path == catalog_base_prefix
+            or (plantilla_path and (path == plantilla_path or path.startswith(plantilla_path)))
+        )

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import date
 from io import BytesIO
 from pathlib import Path
+from posixpath import basename
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
@@ -40,6 +41,7 @@ CLOUD_FILES_BASE_URL = "https://raw.githubusercontent.com/wfarelt/proformasApp/m
 class CatalogImportRow:
     row_number: int
     codigo: str
+    referencia_cruzada: str
     descripcion: str
 
 
@@ -48,6 +50,15 @@ class ProductCatalogImportService:
         "codigo": ["codigo", "código", "code", "sku", "nombre"],
         "descripcion": ["descripcion", "descripción", "description"],
     }
+    OPTIONAL_COLUMNS = {
+        "referencia_cruzada": [
+            "referencia cruzada",
+            "referencia_cruzada",
+            "ref cruzada",
+            "cross reference",
+            "cross_reference",
+        ],
+    }
 
     @classmethod
     def build_template_file(cls) -> bytes:
@@ -55,8 +66,9 @@ class ProductCatalogImportService:
         sheet = workbook.active
         sheet.title = "catalogo"
 
-        sheet.append(["Código", "Descripción"])
-        sheet.append(["PROD-001", "Producto de ejemplo"])
+        sheet.append(["Código", "Descripción", "Referencia cruzada"])
+        sheet.append(["PROD-001", "Producto de ejemplo 1", "ALT-001"])
+        sheet.append(["PROD-002", "Producto de ejemplo 2", "ALT-002"])
 
         output = BytesIO()
         workbook.save(output)
@@ -133,8 +145,11 @@ class ProductCatalogImportService:
         if descripcion_col is None:
             raise ValueError("No se encontró la columna obligatoria 'descripcion'.")
 
+        referencia_cruzada_col = find_column(cls.OPTIONAL_COLUMNS["referencia_cruzada"])
+
         return {
             "codigo": codigo_col,
+            "referencia_cruzada": referencia_cruzada_col,
             "descripcion": descripcion_col,
         }
 
@@ -149,10 +164,15 @@ class ProductCatalogImportService:
                 continue
 
             codigo = cls._normalize_text(codigo)
+            referencia_cruzada = cls._cell_value(values, header_map.get("referencia_cruzada"))
             descripcion = cls._cell_value(values, header_map.get("descripcion"))
 
             if len(codigo) > 100:
                 errors.append(f"Fila {row_index}: código supera 100 caracteres.")
+                continue
+
+            if referencia_cruzada and len(referencia_cruzada) > 100:
+                errors.append(f"Fila {row_index}: referencia cruzada supera 100 caracteres.")
                 continue
 
             if not descripcion:
@@ -163,6 +183,7 @@ class ProductCatalogImportService:
                 CatalogImportRow(
                     row_number=row_index,
                     codigo=codigo,
+                    referencia_cruzada=referencia_cruzada,
                     descripcion=descripcion,
                 )
             )
@@ -180,6 +201,7 @@ class ProductCatalogImportService:
             products_to_create.append(
                 Producto(
                     nombre=row.codigo,
+                    referencia_cruzada=row.referencia_cruzada or None,
                     descripcion=row.descripcion,
                     stock=0,
                     cost=0,
@@ -346,16 +368,118 @@ class ProductCatalogImportService:
         if not local_file_path:
             raise ValueError("No se encontró la ruta local del catálogo para publicarlo.")
 
+        cls._publish_catalog_git_changes(
+            paths=[Path(local_file_path)],
+            commit_message=f"Publish catalog {catalog_entry['slug']} {catalog_entry['version']}",
+        )
+
+    @classmethod
+    def rename_cloud_catalog(cls, slug: str, new_name: str) -> Dict:
+        """Actualiza solo el nombre de un catálogo en index.json, manteniendo slug/archivo."""
+        normalized_slug = slugify(slug)
+        if not normalized_slug:
+            raise ValueError("Identificador de catálogo inválido.")
+
+        cleaned_name = (new_name or "").strip()
+        if not cleaned_name:
+            raise ValueError("El nombre del catálogo no puede estar vacío.")
+
+        catalogs = cls.get_local_cloud_catalogs()
+        target_catalog = None
+
+        for catalog in catalogs:
+            if catalog.get("slug") == normalized_slug:
+                catalog["name"] = cleaned_name
+                target_catalog = catalog
+                break
+
+        if target_catalog is None:
+            raise ValueError("No se encontró el catálogo solicitado.")
+
+        catalogs.sort(key=lambda catalog: str(catalog.get("name", "")).lower())
+        cls._write_local_cloud_index(catalogs)
+        return target_catalog
+
+    @classmethod
+    def delete_cloud_catalog(cls, slug: str) -> Dict:
+        """Elimina un catálogo del index local y su archivo físico si existe."""
+        normalized_slug = slugify(slug)
+        if not normalized_slug:
+            raise ValueError("Identificador de catálogo inválido.")
+
+        catalogs = cls.get_local_cloud_catalogs()
+        target_catalog = None
+        remaining_catalogs = []
+
+        for catalog in catalogs:
+            if catalog.get("slug") == normalized_slug:
+                target_catalog = catalog
+                continue
+            remaining_catalogs.append(catalog)
+
+        if target_catalog is None:
+            raise ValueError("No se encontró el catálogo solicitado.")
+
+        local_file_path = cls._resolve_catalog_local_file(target_catalog)
+        if local_file_path and local_file_path.exists():
+            local_file_path.unlink()
+
+        remaining_catalogs.sort(key=lambda catalog: str(catalog.get("name", "")).lower())
+        cls._write_local_cloud_index(remaining_catalogs)
+
+        return {
+            "catalog": target_catalog,
+            "deleted_file_path": local_file_path,
+        }
+
+    @classmethod
+    def publish_cloud_catalog_index_changes(cls, commit_message: str) -> None:
+        """Publica únicamente cambios del index.json de catálogos."""
+        cls._publish_catalog_git_changes(paths=[], commit_message=commit_message)
+
+    @classmethod
+    def publish_cloud_catalog_delete(cls, deleted_file_path: Optional[Path], commit_message: str) -> None:
+        """Publica eliminación de archivo de catálogo junto con index.json."""
+        tracked_paths = [deleted_file_path] if deleted_file_path else []
+        cls._publish_catalog_git_changes(paths=tracked_paths, commit_message=commit_message)
+
+    @classmethod
+    def _resolve_catalog_local_file(cls, catalog_entry: Dict) -> Optional[Path]:
+        url = catalog_entry.get("url", "")
+        filename = basename(urlparse(url).path)
+
+        if filename:
+            return CATALOG_FILES_DIR / filename
+
+        slug = slugify(catalog_entry.get("slug") or "")
+        if not slug:
+            return None
+
+        matching_files = sorted(CATALOG_FILES_DIR.glob(f"{slug}.*"))
+        return matching_files[0] if matching_files else None
+
+    @classmethod
+    def _publish_catalog_git_changes(cls, paths: List[Path], commit_message: str) -> None:
+        if not settings.CLOUD_CATALOG_GIT_AUTOPUBLISH:
+            raise ValueError("La publicación automática de catálogos está deshabilitada en la configuración.")
+
         repo_path = Path(settings.BASE_DIR)
         index_relative = LOCAL_CLOUD_INDEX_PATH.relative_to(repo_path)
-        file_relative = Path(local_file_path).relative_to(repo_path)
-        branch = settings.CLOUD_CATALOG_GIT_BRANCH or cls._get_current_git_branch(repo_path)
-        commit_message = f"Publish catalog {catalog_entry['slug']} {catalog_entry['version']}"
 
-        cls._run_git_command(["git", "add", "--", str(index_relative), str(file_relative)], repo_path)
+        relative_paths = [str(index_relative)]
+        for path_item in paths:
+            if not path_item:
+                continue
+            relative_paths.append(str(Path(path_item).relative_to(repo_path)))
+
+        # Elimina duplicados preservando orden para comandos git con pathspec.
+        relative_paths = list(dict.fromkeys(relative_paths))
+
+        branch = settings.CLOUD_CATALOG_GIT_BRANCH or cls._get_current_git_branch(repo_path)
+        cls._run_git_command(["git", "add", "-A", "--", *relative_paths], repo_path)
 
         has_changes = cls._run_git_command(
-            ["git", "diff", "--cached", "--quiet", "--", str(index_relative), str(file_relative)],
+            ["git", "diff", "--cached", "--quiet", "--", *relative_paths],
             repo_path,
             check=False,
         )
@@ -363,7 +487,7 @@ class ProductCatalogImportService:
             return
 
         cls._run_git_command(
-            ["git", "commit", "-m", commit_message, "--", str(index_relative), str(file_relative)],
+            ["git", "commit", "-m", commit_message, "--", *relative_paths],
             repo_path,
         )
         cls._run_git_command(["git", "push", "origin", branch], repo_path)

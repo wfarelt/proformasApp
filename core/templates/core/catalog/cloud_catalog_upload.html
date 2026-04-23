@@ -10,7 +10,10 @@
         <h3 class="card-title">Subir nuevo catálogo</h3>
       </div>
       <div class="card-body">
-        <p class="text-muted">Carga un archivo Excel válido con columnas Código y Descripción. Si el slug ya existe, el archivo y la entrada del índice se reemplazan.</p>
+        <p class="text-muted">Carga un archivo Excel con las columnas <b>Código</b>, <b>Descripción</b> y <b>Referencia cruzada</b> (opcional). Usa la plantilla de muestra para evitar errores de mapeo de columnas.</p>
+        <a href="{% url 'download_product_catalog_template' %}" class="btn btn-outline-info btn-sm mb-3">
+          Descargar plantilla Excel
+        </a>
         <form method="post" enctype="multipart/form-data">
           {% csrf_token %}
           <div class="form-group">
@@ -67,15 +70,43 @@
                 <th>Versión</th>
                 <th>Fecha</th>
                 <th>Slug</th>
+                <th class="text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {% for catalog in catalogs %}
               <tr>
-                <td>{{ catalog.name }}</td>
+                <td>
+                  <form method="post" action="{% url 'superadmin_cloud_catalog_rename' %}" class="form-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="slug" value="{{ catalog.slug }}">
+                    <input type="text" name="name" value="{{ catalog.name }}" class="form-control form-control-sm mr-2" maxlength="120" required>
+                    {% if autopublish_enabled %}
+                    <div class="form-check mr-2">
+                      <input class="form-check-input" type="checkbox" name="publish_now" id="rename-publish-{{ catalog.slug }}" checked>
+                      <label class="form-check-label small" for="rename-publish-{{ catalog.slug }}">Publicar</label>
+                    </div>
+                    {% endif %}
+                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                      <i class="fas fa-pen"></i>
+                    </button>
+                  </form>
+                </td>
                 <td>{{ catalog.version }}</td>
                 <td>{{ catalog.date }}</td>
                 <td>{{ catalog.slug }}</td>
+                <td class="text-right">
+                  <form method="post" action="{% url 'superadmin_cloud_catalog_delete' %}" class="d-inline" onsubmit="return confirm('¿Eliminar el catálogo {{ catalog.name }}? Esta acción no se puede deshacer.');">
+                    {% csrf_token %}
+                    <input type="hidden" name="slug" value="{{ catalog.slug }}">
+                    {% if autopublish_enabled %}
+                    <input type="hidden" name="publish_now" value="on">
+                    {% endif %}
+                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                      <i class="fas fa-trash"></i> Eliminar
+                    </button>
+                  </form>
+                </td>
               </tr>
               {% endfor %}
             </tbody>
