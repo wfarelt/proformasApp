@@ -283,7 +283,7 @@ class Proforma(models.Model):
     )
     estado = models.CharField(max_length=10, choices=ESTADO, default='PENDIENTE')
     observacion = models.TextField(max_length=200, blank=True, null=True, help_text="Observaciones adicionales sobre la proforma")
-    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="proformas", default=1)
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="proformas")
     company = models.ForeignKey(
         Company,
         on_delete=models.SET_NULL,
