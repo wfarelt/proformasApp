@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
+from decimal import Decimal
 
 from urllib.parse import quote
 from django.utils.translation import gettext_lazy as _
@@ -54,6 +55,30 @@ class Company(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class ExchangeRate(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='exchange_rates')
+    from_currency = models.CharField(max_length=3, choices=Company.CURRENCY_CHOICES, verbose_name='Moneda origen')
+    to_currency = models.CharField(max_length=3, choices=Company.CURRENCY_CHOICES, verbose_name='Moneda destino')
+    rate = models.DecimalField(max_digits=12, decimal_places=6, verbose_name='Tipo de cambio')
+    valid_from = models.DateField(verbose_name='Vigente desde')
+    is_active = models.BooleanField(default=True, verbose_name='Activo')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='created_exchange_rates',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-valid_from', '-created_at']
+        verbose_name = 'Tipo de Cambio'
+        verbose_name_plural = 'Tipos de Cambio'
+        unique_together = ('company', 'from_currency', 'to_currency', 'valid_from')
+
+    def __str__(self):
+        return f"{self.from_currency}/{self.to_currency} {self.rate} ({self.valid_from})"
 
 # USUARIO
 class UserManager(BaseUserManager):
@@ -264,6 +289,16 @@ class Proforma(models.Model):
         blank=True,
         related_name="proformas"
     )
+    currency_source = models.CharField(max_length=3, blank=True, null=True, verbose_name='Moneda origen')
+    currency_target = models.CharField(max_length=3, blank=True, null=True, verbose_name='Moneda destino')
+    exchange_rate_applied = models.DecimalField(
+        max_digits=12,
+        decimal_places=6,
+        blank=True,
+        null=True,
+        verbose_name='Tipo de cambio aplicado',
+    )
+    exchange_rate_date = models.DateField(blank=True, null=True, verbose_name='Fecha del tipo de cambio')
     
     def save(self, *args, **kwargs):
         # Solo al crear (no actualizar), asignar la empresa actual del usuario
@@ -279,6 +314,12 @@ class Proforma(models.Model):
     def total_descuento(self):
         """Calcula el descuento total."""
         return self.total - self.total_neto()
+
+    def total_convertido(self):
+        """Devuelve total neto convertido según el tipo de cambio aplicado."""
+        if not self.exchange_rate_applied:
+            return self.total_neto()
+        return self.total_neto() * Decimal(self.exchange_rate_applied)
 
     def __str__(self):
         return str(self.id)

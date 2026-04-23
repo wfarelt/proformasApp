@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import Producto, Proforma, Cliente, Detalle, Brand, \
-    Supplier, User, Company
+    Supplier, User, Company, ExchangeRate
 from import_export.admin import ImportExportModelAdmin
 from .resources import ProductResource
 
@@ -66,6 +66,16 @@ class CompanyAdmin(admin.ModelAdmin):
     )
 
 admin.site.register(Company, CompanyAdmin)
+
+
+class ExchangeRateAdmin(admin.ModelAdmin):
+    list_display = ('id', 'company', 'from_currency', 'to_currency', 'rate', 'valid_from', 'is_active', 'created_by')
+    list_filter = ('company', 'from_currency', 'to_currency', 'is_active', 'valid_from')
+    search_fields = ('company__name', 'created_by__username')
+    ordering = ('-valid_from', '-created_at')
+
+
+admin.site.register(ExchangeRate, ExchangeRateAdmin)
 
 class ProformaAdmin(admin.ModelAdmin):
     list_display = ('id', 'fecha', 'cliente', 'usuario_username', 'estado', 'total', 'company')

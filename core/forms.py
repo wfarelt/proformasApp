@@ -3,10 +3,11 @@ from django import forms
 from django.core.exceptions import ValidationError
 from decimal import Decimal
 from django.contrib.auth.forms import PasswordChangeForm
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.utils.safestring import mark_safe
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
-from .models import Producto, Cliente, Supplier, Brand, User, Company
+from .models import Producto, Cliente, Supplier, Brand, User, Company, ExchangeRate
 
 
 # CREAR UN FORMULARIO PARA USUARIO
@@ -212,6 +213,86 @@ class CompanyDataForm(forms.ModelForm):
         self.fields['logo'].widget.clear_checkbox_label = 'Eliminar'
         self.fields['logo'].widget.initial_text = 'Logo actual'
         self.fields['logo'].widget.input_text = 'Cambiar'
+
+
+class ExchangeRateForm(forms.ModelForm):
+    class Meta:
+        model = ExchangeRate
+        fields = ['from_currency', 'to_currency', 'rate', 'valid_from', 'is_active']
+        labels = {
+            'from_currency': 'Moneda origen',
+            'to_currency': 'Moneda destino',
+            'rate': 'Tipo de cambio',
+            'valid_from': 'Vigente desde',
+            'is_active': 'Activo',
+        }
+        widgets = {
+            'from_currency': forms.Select(attrs={'class': 'form-control'}),
+            'to_currency': forms.Select(attrs={'class': 'form-control'}),
+            'rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001', 'min': '0.000001'}),
+            'valid_from': forms.DateInput(attrs={
+                'class': 'form-control', 
+                'type': 'date',
+                'readonly': 'readonly',
+            }, format='%Y-%m-%d'),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        today = timezone.localdate()
+        self.fields['valid_from'].initial = today
+        self.fields['valid_from'].help_text = 'Fecha asignada automáticamente según la fecha actual del sistema. Campo de solo lectura.'
+        # Forzar el valor en el widget para que se renderice correctamente
+        if not self.instance.pk:
+            # Para formularios nuevos, establecer el valor del widget
+            self.fields['valid_from'].widget.attrs['value'] = today.strftime('%Y-%m-%d')
+
+    def clean(self):
+        cleaned_data = super().clean()
+        from_currency = cleaned_data.get('from_currency')
+        to_currency = cleaned_data.get('to_currency')
+        rate = cleaned_data.get('rate')
+        valid_from = timezone.localdate()
+        cleaned_data['valid_from'] = valid_from
+
+        if from_currency and to_currency and from_currency == to_currency:
+            raise ValidationError('La moneda origen y destino deben ser diferentes.')
+
+        if rate is not None and rate <= 0:
+            raise ValidationError('El tipo de cambio debe ser mayor a cero.')
+
+        company = getattr(self.instance, 'company', None)
+        if company and from_currency and to_currency and valid_from:
+            duplicate_qs = ExchangeRate.objects.filter(
+                company=company,
+                from_currency=from_currency,
+                to_currency=to_currency,
+                valid_from=valid_from,
+            )
+            if self.instance.pk:
+                duplicate_qs = duplicate_qs.exclude(pk=self.instance.pk)
+            if duplicate_qs.exists():
+                raise ValidationError(
+                    'Ya existe un tipo de cambio para esa combinación de monedas y fecha. '
+                    'Si quieres ajustar la tasa, edita el registro existente o usa otra fecha.'
+                )
+
+            latest_qs = ExchangeRate.objects.filter(
+                company=company,
+                from_currency=from_currency,
+                to_currency=to_currency,
+            )
+            if self.instance.pk:
+                latest_qs = latest_qs.exclude(pk=self.instance.pk)
+
+            latest_rate = latest_qs.order_by('-valid_from', '-created_at').first()
+            if latest_rate and rate == latest_rate.rate:
+                raise ValidationError(
+                    'No se puede registrar el mismo tipo de cambio que el último valor vigente para este par de monedas.'
+                )
+
+        return cleaned_data
 
 
 # CREAR UN FORMULARIO PARA PRODUCTO

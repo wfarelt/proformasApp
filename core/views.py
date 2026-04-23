@@ -10,6 +10,7 @@ from django.contrib.auth.views import PasswordChangeView
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
+from django.db import IntegrityError
 from django.db.models import Count, Max, Q, Sum
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
@@ -23,10 +24,10 @@ import weasyprint
 from faker import Faker
 from nlt import numlet as nl
 
-from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand, Company, ProductKit, ProductKitItem, ProductPriceHistory
+from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand, Company, ProductKit, ProductKitItem, ProductPriceHistory, ExchangeRate
 from .forms import ProductoForm, ClienteForm, SupplierForm, BrandForm, \
                     CustomPasswordChangeForm, UserProfileForm, ProductKitForm, ProductKitItemForm, ProductCatalogImportForm, CloudCatalogUploadForm, \
-                    AdminUserCreateForm, AdminUserUpdateForm, CompanyDataForm
+                    AdminUserCreateForm, AdminUserUpdateForm, CompanyDataForm, ExchangeRateForm
 from .services.price_approval_service import PriceApprovalService
 from core.services.auto_price_service import AutoPriceService
 from core.services.product_catalog_import_service import ProductCatalogImportService
@@ -108,6 +109,79 @@ def company_edit(request):
     return render(request, 'core/company/company_form.html', {
         'form': form,
         'title': 'Datos de la empresa',
+        'company': company,
+    })
+
+
+@login_required(login_url='login')
+def exchange_rate_list_create(request):
+    if not is_admin(request.user):
+        messages.error(request, 'No tienes permisos para administrar tipos de cambio.')
+        return redirect('home')
+
+    company = request.user.company
+    if not company:
+        messages.warning(request, 'Tu usuario no tiene una empresa asignada.')
+        return redirect('home')
+
+    if request.method == 'POST':
+        form = ExchangeRateForm(request.POST, instance=ExchangeRate(company=company))
+        if form.is_valid():
+            exchange_rate = form.save(commit=False)
+            exchange_rate.company = company
+            exchange_rate.created_by = request.user
+            try:
+                with transaction.atomic():
+                    # Si la nueva tasa queda activa, desactivar el resto del mismo par.
+                    if exchange_rate.is_active:
+                        ExchangeRate.objects.filter(
+                            company=company,
+                            from_currency=exchange_rate.from_currency,
+                            to_currency=exchange_rate.to_currency,
+                            is_active=True,
+                        ).update(is_active=False)
+
+                    exchange_rate.save()
+                messages.success(request, 'Tipo de cambio guardado correctamente.')
+                return redirect('exchange_rate_list')
+            except IntegrityError:
+                existing_rate = ExchangeRate.objects.filter(
+                    company=company,
+                    from_currency=exchange_rate.from_currency,
+                    to_currency=exchange_rate.to_currency,
+                    valid_from=exchange_rate.valid_from,
+                ).first()
+
+                # Idempotencia: si ya existe exactamente el mismo registro, tratarlo como éxito.
+                if (
+                    existing_rate
+                    and existing_rate.rate == exchange_rate.rate
+                    and existing_rate.is_active == exchange_rate.is_active
+                ):
+                    messages.success(request, 'Tipo de cambio ya registrado anteriormente (doble envío detectado).')
+                else:
+                    messages.warning(
+                        request,
+                        'Ya existe un tipo de cambio para esa combinación de monedas y fecha. '
+                        'Si necesitas otro valor, edita el registro existente o usa otra fecha.'
+                    )
+                return redirect('exchange_rate_list')
+        else:
+            # Mostrar errores del formulario
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
+    else:
+        form = ExchangeRateForm(
+            instance=ExchangeRate(company=company),
+            initial={'from_currency': 'USD', 'to_currency': company.currency}
+        )
+
+    rates = ExchangeRate.objects.filter(company=company).order_by('-valid_from', '-created_at')
+    return render(request, 'core/company/exchange_rate_form.html', {
+        'title': 'Tipos de cambio',
+        'form': form,
+        'rates': rates,
         'company': company,
     })
 
@@ -472,6 +546,52 @@ def is_admin(user):
         return getattr(user, 'is_admin', False)
     except Exception:
         return False
+
+
+def _apply_exchange_rate_snapshot(proforma):
+    if proforma.exchange_rate_applied:
+        return
+
+    company = proforma.company
+    proforma_date = timezone.localtime(proforma.fecha).date() if proforma.fecha else timezone.now().date()
+
+    if not company:
+        proforma.currency_source = 'USD'
+        proforma.currency_target = 'USD'
+        proforma.exchange_rate_applied = Decimal('1.000000')
+        proforma.exchange_rate_date = proforma_date
+        return
+
+    target_currency = company.currency
+    source_currency = 'USD'
+
+    if source_currency == target_currency:
+        proforma.currency_source = source_currency
+        proforma.currency_target = target_currency
+        proforma.exchange_rate_applied = Decimal('1.000000')
+        proforma.exchange_rate_date = proforma_date
+        return
+
+    rate = ExchangeRate.objects.filter(
+        company=company,
+        from_currency=source_currency,
+        to_currency=target_currency,
+        is_active=True,
+        valid_from__lte=proforma_date,
+    ).order_by('-valid_from', '-created_at').first()
+
+    if rate:
+        proforma.currency_source = rate.from_currency
+        proforma.currency_target = rate.to_currency
+        proforma.exchange_rate_applied = rate.rate
+        proforma.exchange_rate_date = rate.valid_from
+        return
+
+    # Fallback seguro: mantiene compatibilidad de documentos sin bloquear ejecución.
+    proforma.currency_source = target_currency
+    proforma.currency_target = target_currency
+    proforma.exchange_rate_applied = Decimal('1.000000')
+    proforma.exchange_rate_date = proforma_date
 
 @login_required(login_url='login')
 @user_passes_test(is_admin)
@@ -1049,6 +1169,7 @@ def cambiar_estado_proforma(request, id):
     if request.POST.get('estado') == 'EJECUTADO':
         if proforma.cliente:
             proforma.estado = 'EJECUTADO'
+            _apply_exchange_rate_snapshot(proforma)
             from collections import defaultdict
             cantidades_por_producto = defaultdict(int)
             detalles = Detalle.productos_list(proforma)

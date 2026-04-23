@@ -16,6 +16,7 @@ urlpatterns = [
     path('perfil/editar/', edit_profile, name='edit_profile'),
     path('config/catalogos/', superadmin_cloud_catalog_upload, name='superadmin_cloud_catalog_upload'),
     path('empresa/editar/', company_edit, name='company_edit'),
+    path('empresa/tipo-cambio/', exchange_rate_list_create, name='exchange_rate_list'),
     path('usuarios/', UserListView.as_view(), name='user_list'),
     path('usuarios/nuevo/', user_create, name='user_create'),
     path('usuarios/<int:pk>/editar/', user_update, name='user_update'),
