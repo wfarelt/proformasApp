@@ -348,6 +348,7 @@ class Detalle(models.Model):
         return f"{self.cantidad} x {self.producto.nombre} en {self.proforma.pk}"
     
     # LISTAR PRODUCTOS DE LA PROFORMA
+    @staticmethod
     def productos_list(proforma):
         detalles = Detalle.objects.filter(proforma=proforma)
         return detalles
