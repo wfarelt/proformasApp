@@ -3,14 +3,6 @@
   "updated_at": "2026-04-23",
   "catalogs": [
     {
-      "name": "320D2",
-      "slug": "320d2",
-      "version": "1.0.1",
-      "url": "https://raw.githubusercontent.com/wfarelt/proformasApp/master/catalog_cloud/catalogos/320d2.xlsx",
-      "date": "2026-04-17",
-      "checksum": "sha256:25157da83806871731370b445849a5040a035c93337418e3e7b8772881a4f97b"
-    },
-    {
       "name": "Electronica",
       "slug": "electronica",
       "version": "1.0.0",
