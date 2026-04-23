@@ -389,7 +389,7 @@ class ProductKit(models.Model):
     
     def get_items_count(self):
         """Retorna la cantidad de productos en el kit"""
-        return self.items.count()
+        return ProductKitItem.objects.filter(kit=self).count()
 
 class ProductKitItem(models.Model):
     kit = models.ForeignKey(ProductKit, on_delete=models.CASCADE, related_name="items")
