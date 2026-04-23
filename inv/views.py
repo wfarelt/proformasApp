@@ -39,7 +39,9 @@ import json
 @login_required       
 def product_search(request):
     query = request.GET.get('q', '')
-    products = Producto.objects.filter(nombre__icontains=query)[:10]  # Muestra solo 10 resultados
+    products = Producto.objects.filter(
+        Q(nombre__icontains=query) | Q(referencia_cruzada__icontains=query)
+    )[:10]  # Muestra solo 10 resultados
     data = [{"id": p.id, "name": p.nombre} for p in products]
     return JsonResponse(data, safe=False)
 
@@ -181,7 +183,9 @@ def buscar_productos(request):
     query = request.GET.get('q', '')
     page = int(request.GET.get('page', 1))
 
-    productos = Producto.objects.filter(nombre__icontains=query).order_by('nombre')
+    productos = Producto.objects.filter(
+        Q(nombre__icontains=query) | Q(referencia_cruzada__icontains=query)
+    ).order_by('nombre')
 
     paginator = Paginator(productos, 10)  # 10 productos por página
     productos_pagina = paginator.get_page(page)
@@ -821,7 +825,9 @@ def pre_inventario(request):
     # Filtro de búsqueda
     if query:
         productos = productos.filter(
-            Q(nombre__icontains=query) | Q(descripcion__icontains=query)
+            Q(nombre__icontains=query)
+            | Q(referencia_cruzada__icontains=query)
+            | Q(descripcion__icontains=query)
         )
     # Filtro de stock
     if con_stock:
@@ -852,6 +858,6 @@ def pre_inventario(request):
         'sin_costo': sin_costo,
         'sin_precio': sin_precio,
         'title': 'Pre-inventario por ubicación',
-        'placeholder': 'Buscar por código o descripción'
+        'placeholder': 'Buscar por código, referencia cruzada o descripción'
     }
     return render(request, 'inv/reports/pre_inventario.html', context)

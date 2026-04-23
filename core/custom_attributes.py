@@ -85,11 +85,8 @@ class CustomAttributeConfig:
         """
         errors = {}
         
-        # Validar campos requeridos
+        # Los atributos personalizados se manejan como opcionales.
         for field_name, field_config in config.items():
-            if field_config.get('required', False) and field_name not in values:
-                errors.setdefault(field_name, []).append('Este campo es requerido')
-            
             if field_name in values:
                 value = values[field_name]
                 

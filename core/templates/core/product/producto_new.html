@@ -73,6 +73,16 @@
                                 </div>
                             </div>
                         </div>
+                        {# Fila 5: Referencia cruzada #}
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>{{ form.referencia_cruzada.label }}</label>
+                                    {{ form.referencia_cruzada }}
+                                    {{ form.referencia_cruzada.errors }}
+                                </div>
+                            </div>
+                        </div>
                         {# Campos personalizados de la empresa #}
                         {% for field in form %}
                             {% if field.html_name|slice:":8" == "custom__" %}

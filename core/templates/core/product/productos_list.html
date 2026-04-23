@@ -4,6 +4,7 @@
 {% block columns %}                
 <th>Id</th>
 <th>Código</th>
+<th>Referencia cruzada</th>
 <th>Descripción</th>
 <th>Marca</th>
 <th class="text-right" style="width: 10%;">
@@ -37,6 +38,7 @@
 <td>{{ obj.id }}</td>
 <td>{{ obj.nombre }}</td>
 <td>{{ obj.descripcion|truncatechars:45 }}</td>
+<td>{{ obj.referencia_cruzada|default:"-"|truncatechars:45 }}</td>
 <td>{{ obj.brand.initials }}</td>
 <td class="text-right">{{ obj.cost }}</td>
 <td class="text-right">{{ obj.precio }}</td>

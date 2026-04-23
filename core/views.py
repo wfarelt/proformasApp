@@ -380,7 +380,7 @@ class ProductListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = 'productos'
-        context['placeholder'] = 'Buscar por codigo o descripción'
+        context['placeholder'] = 'Buscar por código, referencia cruzada o descripción'
         custom_config = {}
         if self.request.user.company:
             custom_config = self.request.user.company.product_custom_fields_config or {}
@@ -402,7 +402,9 @@ class ProductListView(LoginRequiredMixin, ListView):
             palabras = [p.strip() for p in query.split('%') if p.strip()]
             for palabra in palabras:
                 object_list = object_list.filter(
-                    Q(nombre__icontains=palabra) | Q(descripcion__icontains=palabra)
+                    Q(nombre__icontains=palabra)
+                    | Q(referencia_cruzada__icontains=palabra)
+                    | Q(descripcion__icontains=palabra)
                 )
         return object_list
 
@@ -822,6 +824,7 @@ def _get_recommended_products(proforma, query=None, tipo_busqueda='codigo', limi
             for palabra in palabras:
                 recommended_details = recommended_details.filter(
                     Q(producto__nombre__icontains=palabra) |
+                    Q(producto__referencia_cruzada__icontains=palabra) |
                     Q(producto__descripcion__icontains=palabra)
                 )
 
@@ -861,7 +864,9 @@ def _get_proforma_context(proforma, request):
             palabras = [p.strip() for p in query.split('%') if p.strip()]
             for palabra in palabras:
                 productos_list = productos_list.filter(
-                    Q(nombre__icontains=palabra) | Q(descripcion__icontains=palabra)
+                    Q(nombre__icontains=palabra)
+                    | Q(referencia_cruzada__icontains=palabra)
+                    | Q(descripcion__icontains=palabra)
                 )
     
     paginator = Paginator(productos_list, 5)

@@ -299,9 +299,10 @@ class ExchangeRateForm(forms.ModelForm):
 class ProductoForm(forms.ModelForm):
     class Meta:
         model = Producto
-        fields = ['nombre', 'descripcion', 'brand', 'stock', 'cost', 'precio', 'location']
+        fields = ['nombre', 'referencia_cruzada', 'descripcion', 'brand', 'stock', 'cost', 'precio', 'location']
         labels = {
             'nombre': 'Código',
+            'referencia_cruzada': 'Referencia cruzada',
             'descripcion': 'Descripción',
             'brand': 'Marca',
             'cost': 'Costo',
@@ -311,6 +312,7 @@ class ProductoForm(forms.ModelForm):
         }
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
+            'referencia_cruzada': forms.TextInput(attrs={'class': 'form-control'}),
             'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'brand': forms.Select(attrs={'class': 'form-control'}), # 'type': 'text
             'stock': forms.NumberInput(attrs={'class': 'form-control', 'readonly': 'readonly'}), # 'type': 'number
@@ -344,7 +346,7 @@ class ProductoForm(forms.ModelForm):
     def _build_dynamic_field(self, field_cfg):
         field_type = field_cfg.get('type', 'text')
         label = field_cfg.get('label', 'Campo Personalizado')
-        required = field_cfg.get('required', False)
+        required = False
 
         common_kwargs = {
             'label': label,

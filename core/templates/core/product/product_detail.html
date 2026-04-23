@@ -5,16 +5,17 @@
 {% load static %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-6 offset-md-3 mt-4">
-        <div class="card border-primary shadow">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h3 class="card-title mb-0">
+<div class="row mt-4">
+    <div class="col-lg-4 mb-4 mb-lg-0">
+        <div class="card border-primary shadow-sm h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
                     <i class="fas fa-box-open mr-2"></i> {{ producto.nombre }}
-                </h3>
+                </h5>
             </div>
             <div class="card-body">
                 <p class="mb-2"><strong>Descripción:</strong> {{ producto.descripcion|default:"Sin descripción" }}</p>
+                <p class="mb-2"><strong>Referencia cruzada:</strong> {{ producto.referencia_cruzada|default:"No especificada" }}</p>
                 <p class="mb-2"><strong>Costo:</strong> <span class="badge badge-secondary">
                     {% if user.company.currency == 'BOB' %}
                         (Bs)
@@ -30,17 +31,17 @@
                     {% endif %}
                     {{ producto.precio }}</span></p>
                 <p class="mb-2"><strong>Stock:</strong> <span class="badge badge-info">{{ producto.stock }}</span></p>
-                <p class="mb-2"><strong>Ubicación:</strong> {{ producto.location|default:"No especificada" }}</p>
+                <p class="mb-0"><strong>Ubicación:</strong> {{ producto.location|default:"No especificada" }}</p>
 
                 {% if custom_attributes_display %}
                     <hr>
-                    <h5 class="mb-3">Atributos personalizados</h5>
+                    <h6 class="mb-3">Atributos personalizados</h6>
                     <div class="table-responsive">
                         <table class="table table-sm table-borderless mb-0">
                             <tbody>
                                 {% for attr in custom_attributes_display %}
                                     <tr>
-                                        <td class="font-weight-bold" style="width: 35%;">{{ attr.label }}:</td>
+                                        <td class="font-weight-bold" style="width: 40%;">{{ attr.label }}:</td>
                                         <td>{% if attr.value %}{{ attr.value }}{% else %}-{% endif %}</td>
                                     </tr>
                                 {% endfor %}
@@ -49,81 +50,86 @@
                     </div>
                 {% endif %}
             </div>
-            <div class="card-footer text-center">
-                <a href="{% url 'product_edit' producto.id %}" class="btn btn-warning btn-sm">
+            <div class="card-footer bg-white text-center">
+                <a href="{% url 'product_edit' producto.id %}" class="btn btn-warning btn-sm mr-2">
                     <i class="fas fa-edit"></i> Editar
                 </a>
-                
                 <a href="{% url 'product_list' %}" class="btn btn-secondary btn-sm">
                     <i class="fas fa-list"></i> Ver lista
                 </a>
             </div>
         </div>
     </div>
-</div>
-
-<div class="card card-body mt-4">
-    <h2>Historial de Precios</h2>
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>#</th>
-            <th>Fecha</th>
-            <th>Tipo</th>
-            <th>Precio Anterior</th>
-            <th>Precio Nuevo</th>
-            <th>Cost</th>
-            <th>Margen %</th>
-            <th>Estado</th>
-            <th>Creado por</th>
-            <th>Aprobado por</th>
-            <th>Acciones</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for ph in price_history %}
-        <tr>
-            <td>{{ forloop.counter }}</td>
-            <td>{{ ph.created_at|date:"d/m/Y H:i" }}</td>
-            <td>{{ ph.get_change_type_display }}</td>
-            <td>{{ ph.old_price }}</td>
-            <td>{{ ph.new_price }}</td>
-            <td>{{ ph.cost_reference }}</td>
-            <td>{{ ph.margin_percent }}</td>
-            <td>
-                {% if ph.status == 'APPROVED' %}
-                    <span class="badge badge-success">{{ ph.get_status_display }}</span>
-                {% elif ph.status == 'PENDING' %}
-                    <span class="badge badge-warning">{{ ph.get_status_display }}</span>
-                {% elif ph.status == 'REJECTED' %}
-                    <span class="badge badge-danger">{{ ph.get_status_display }}</span>
-                {% elif ph.status == 'EXPIRED' %}
-                    <span class="badge badge-secondary">{{ ph.get_status_display }}</span>
-                {% endif %}
-            </td>
-            <td>{{ ph.created_by.name }}</td>
-            <td>
-                {% if ph.approved_by %}
-                    {{ ph.approved_by.name }}
-                {% else %}
-                    N/A
-                {% endif %}
-            </td>
-            <td>
-                {% if ph.status == 'PENDING' and user.is_admin %}
-                <a href="{% url 'approve_price' ph.id %}" class="btn btn-success btn-sm">Aprobar</a>
-                <a href="{% url 'reject_price' ph.id %}" class="btn btn-danger btn-sm">Rechazar</a>
-                {% else %}
-                {% endif %}
-            </td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="10">No hay historial de precios.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Historial de Precios</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Fecha</th>
+                                <th>Tipo</th>
+                                <th>Precio Anterior</th>
+                                <th>Precio Nuevo</th>
+                                <th>Cost</th>
+                                <th>Margen %</th>
+                                <th>Estado</th>
+                                <th>Creado por</th>
+                                <th>Aprobado por</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ph in price_history %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ ph.created_at|date:"d/m/Y H:i" }}</td>
+                                <td>{{ ph.get_change_type_display }}</td>
+                                <td>{{ ph.old_price }}</td>
+                                <td>{{ ph.new_price }}</td>
+                                <td>{{ ph.cost_reference }}</td>
+                                <td>{{ ph.margin_percent }}</td>
+                                <td>
+                                    {% if ph.status == 'APPROVED' %}
+                                        <span class="badge badge-success">{{ ph.get_status_display }}</span>
+                                    {% elif ph.status == 'PENDING' %}
+                                        <span class="badge badge-warning">{{ ph.get_status_display }}</span>
+                                    {% elif ph.status == 'REJECTED' %}
+                                        <span class="badge badge-danger">{{ ph.get_status_display }}</span>
+                                    {% elif ph.status == 'EXPIRED' %}
+                                        <span class="badge badge-secondary">{{ ph.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ ph.created_by.name }}</td>
+                                <td>
+                                    {% if ph.approved_by %}
+                                        {{ ph.approved_by.name }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if ph.status == 'PENDING' and user.is_admin %}
+                                    <a href="{% url 'approve_price' ph.id %}" class="btn btn-success btn-sm">Aprobar</a>
+                                    <a href="{% url 'reject_price' ph.id %}" class="btn btn-danger btn-sm">Rechazar</a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="11" class="text-center py-4">No hay historial de precios.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 
