@@ -327,7 +327,7 @@ class Proforma(models.Model):
         return (self.total_neto() * Decimal(self.exchange_rate_applied)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
     def __str__(self):
-        return str(self.id)
+        return str(self.pk)
     
     def proforma__cliente__name(self):
         return self.cliente.name if self.cliente else "Sin Cliente"
@@ -345,7 +345,7 @@ class Detalle(models.Model):
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
 
     def __str__(self):
-        return f"{self.cantidad} x {self.producto.nombre} en {self.proforma.id}"
+        return f"{self.cantidad} x {self.producto.nombre} en {self.proforma.pk}"
     
     # LISTAR PRODUCTOS DE LA PROFORMA
     def productos_list(proforma):
