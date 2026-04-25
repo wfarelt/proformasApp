@@ -709,8 +709,11 @@ def movement_pdf(request, pk):
 
     return response
 
+
 @login_required
 def cargar_inventario_inicial(request):
+    from core.services.price_evaluation_service import PriceEvaluationService
+    from core.models import ProductPriceHistory
     if request.method == 'POST':
         form = InventoryUploadForm(request.POST, request.FILES)
         if form.is_valid():
@@ -718,22 +721,74 @@ def cargar_inventario_inicial(request):
             nombre_archivo = archivo.name.lower()
             errores = []
             items_a_crear = []
-            # Solo aceptar archivos .xlsx
             if nombre_archivo.endswith('.xlsx'):
                 wb = openpyxl.load_workbook(archivo)
                 ws = wb.active
                 for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-                    product_code = row[0]
-                    quantity = row[1]
-                    cost = row[2] if len(row) > 2 else None
-                    precio = row[3] if len(row) > 3 else None
-                    location = row[4] if len(row) > 4 else None
-                    try:
-                        producto_id = Producto.objects.filter(nombre=product_code).values_list('id', flat=True).first()
-                        producto = Producto.objects.get(id=producto_id)
-                        items_a_crear.append((producto, quantity, cost, precio, location))
-                    except Producto.DoesNotExist:
-                        errores.append(f"Línea {i}: Producto con código '{product_code}' no existe.")
+                    product_code = str(row[0]).strip() if row[0] else None
+                    quantity = int(row[1]) if row[1] is not None else 0
+                    cost = float(row[2]) if len(row) > 2 and row[2] is not None else None
+                    precio = float(row[3]) if len(row) > 3 and row[3] is not None else None
+                    location = str(row[4]).strip() if len(row) > 4 and row[4] else None
+                    if not product_code or quantity <= 0:
+                        errores.append(f"Línea {i}: Código de producto y cantidad son obligatorios.")
+                        continue
+                    producto = Producto.objects.filter(nombre=product_code).first()
+                    if not producto:
+                        # Crear producto si no existe
+                        producto = Producto.objects.create(
+                            nombre=product_code,
+                            cost=cost or 0,
+                            precio=precio or 0,
+                            stock=0,
+                            location=location or ""
+                        )
+                        # Crear historial de precio inicial
+                        if precio is not None:
+                            PriceEvaluationService.propose_new_price(
+                                product=producto,
+                                old_price=0,
+                                new_price=precio,
+                                user=request.user,
+                                reason="Carga de inventario inicial",
+                                cost_reference=cost,
+                                change_type='INICIAL',
+                                auto_approve_on_increase=True
+                            )
+                        items_a_crear.append((producto, quantity, cost, precio, location, True))
+                    else:
+                        # Producto ya existe
+                        actualizar_precio = False
+                        crear_historial = False
+                        precio_anterior = float(producto.precio or 0)
+                        if producto.stock and precio is not None:
+                            if precio > precio_anterior:
+                                # Actualizar precio y datos
+                                producto.precio = precio
+                                if cost is not None:
+                                    producto.cost = cost
+                                if location:
+                                    producto.location = location
+                                crear_historial = True
+                                actualizar_precio = True
+                            elif precio < precio_anterior:
+                                # Solo actualizar stock
+                                pass
+                            else:
+                                # Igual, solo stock
+                                pass
+                        else:
+                            # Producto sin stock previo o sin precio previo
+                            if precio is not None:
+                                producto.precio = precio
+                                crear_historial = True
+                                actualizar_precio = True
+                            if cost is not None:
+                                producto.cost = cost
+                            if location:
+                                producto.location = location
+                        items_a_crear.append((producto, quantity, cost, precio, location, crear_historial and actualizar_precio))
+                # Fin for
             else:
                 errores.append("Solo se permiten archivos Excel (.xlsx).")
 
@@ -742,30 +797,36 @@ def cargar_inventario_inicial(request):
                     messages.error(request, error)
                 return render(request, 'inv/movement/cargar_inventario.html', {'form': form})
 
-            # Si no hubo errores, ahora sí crea el movimiento y los items
-            movimiento = Movement.objects.create(
-                movement_type='IN',
-                description=form.cleaned_data.get('descripcion') or 'Inventario inicial',
-                user=request.user
-            )
-            for producto, quantity, cost, precio, location in items_a_crear:
-                MovementItem.objects.create(
-                    movement=movimiento,
-                    product=producto,
-                    quantity=int(quantity)
+            # Crear movimiento y cargar items
+            with transaction.atomic():
+                movimiento = Movement.objects.create(
+                    movement_type='IN',
+                    description=form.cleaned_data.get('descripcion') or 'Inventario inicial',
+                    user=request.user
                 )
-                # Actualizar stock del producto
-                producto.stock = (producto.stock or 0) + int(quantity)
-                # Actualizar cost y precio si vienen en el archivo
-                if cost is not None:
-                    producto.cost = cost
-                if precio is not None:
-                    producto.precio = precio
-                if location is not None:
-                    producto.location = location
-                producto.save()
+                for producto, quantity, cost, precio, location, crear_historial in items_a_crear:
+                    MovementItem.objects.create(
+                        movement=movimiento,
+                        product=producto,
+                        quantity=int(quantity)
+                    )
+                    # Actualizar stock
+                    producto.stock = (producto.stock or 0) + int(quantity)
+                    producto.save()
+                    # Crear historial de precio si corresponde
+                    if crear_historial and precio is not None:
+                        PriceEvaluationService.propose_new_price(
+                            product=producto,
+                            old_price=precio,
+                            new_price=precio,
+                            user=request.user,
+                            reason="Actualización por inventario inicial",
+                            cost_reference=cost,
+                            change_type='INICIAL',
+                            auto_approve_on_increase=True
+                        )
             messages.success(request, "Inventario inicial cargado correctamente.")
-            return redirect('movement_detail', movimiento.id)
+            return redirect('movement_list')
     else:
         form = InventoryUploadForm()
     return render(request, 'inv/movement/cargar_inventario.html', {'form': form})
