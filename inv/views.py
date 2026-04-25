@@ -1,3 +1,23 @@
+# Descargar plantilla de inventario inicial
+from openpyxl import Workbook
+
+def download_inventory_template(request):
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "inventario"
+    sheet.append(["product_code", "quantity", "cost", "precio", "location"])
+    sheet.append(["1R0750", 1, 10, 16, "a-1"])
+    sheet.append(["2R0800", 2, 20, 30, "b-2"])
+    from io import BytesIO
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="plantilla_inventario_inicial.xlsx"'
+    return response
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
 from django.contrib import messages
@@ -725,7 +745,7 @@ def cargar_inventario_inicial(request):
             # Si no hubo errores, ahora sí crea el movimiento y los items
             movimiento = Movement.objects.create(
                 movement_type='IN',
-                description='Inventario inicial',
+                description=form.cleaned_data.get('descripcion') or 'Inventario inicial',
                 user=request.user
             )
             for producto, quantity, cost, precio, location in items_a_crear:

@@ -133,6 +133,11 @@ MovementItemFormSet = inlineformset_factory(
 
 class InventoryUploadForm(forms.Form):
     archivo = forms.FileField(label='Archivo XLSX')
+    descripcion = forms.CharField(
+        label='Descripción',
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Descripción del inventario'})
+    )
 
             
             

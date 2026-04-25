@@ -7,9 +7,17 @@
         <h4>Cargar Inventario Inicial</h4>
     </div>
     <div class="card-body">
+        <a href="{% url 'download_inventory_template' %}" class="btn btn-outline-info btn-sm mb-3">
+            Descargar plantilla Excel
+        </a>
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
-            {{ form.as_p }}
+            {{ form.archivo.label_tag }}
+            {{ form.archivo }}
+            <div class="mb-3">
+                {{ form.descripcion.label_tag }}
+                {{ form.descripcion }}
+            </div>            
             <button type="submit" class="btn btn-primary">Cargar inventario</button>
         </form>
         <hr>
