@@ -72,7 +72,15 @@
                         <td>{{ movement.description }}</td>
                         <td>{{ movement.user.name }}</td>
                         <td class="text-right">{{ movement.total|floatformat:2 }}</td>
-                        <td>{{ movement.status }}</td>
+                        <td>
+                            {% if movement.status == 'PENDING' %}
+                                Pendiente
+                            {% elif movement.status == 'COMPLETED' %}
+                                Completado
+                            {% else %}
+                                {{ movement.get_status_display }}
+                            {% endif %}
+                        </td>
                         <td class="text-center">
                             <a href="javascript:void(0);" class="btn btn-info btn-sm" onclick="openMovementDetail({{ movement.id }})">
                                 <i class="fa fa-eye"></i>

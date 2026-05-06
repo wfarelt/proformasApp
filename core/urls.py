@@ -3,10 +3,12 @@
 from django.urls import path
 from django.contrib.auth.views import LoginView, LogoutView, PasswordChangeDoneView
 from .views import CustomPasswordChangeView
+from django.views.generic import RedirectView
 
 from core.views import *
 
 urlpatterns = [
+    path('accounts/login/', RedirectView.as_view(url='/login/', permanent=False, query_string=True), name='accounts_login_compat'),
     
     path('login/', LoginView.as_view(template_name='core/registration/login.html'), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),

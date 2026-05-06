@@ -5,8 +5,8 @@ def download_inventory_template(request):
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "inventario"
-    sheet.append(["product_code", "quantity", "cost", "precio", "location"])
-    sheet.append(["1R0750", 1, 10, 16, "a-1"])
+    sheet.append(["product_code", "quantity", "cost", "precio", "location", "descripcion"])
+    sheet.append(["1R0750", 1, 10, 16, "a-1", "Filtro de aceite"])
     sheet.append(["2R0800", 2, 20, 30, "b-2"])
     from io import BytesIO
     output = BytesIO()
@@ -380,14 +380,13 @@ def create_purchase(request):
                     purchase.total_amount = total
                     purchase.save()
 
-                    messages.success(request, "Compra registrada correctamente.")
-
                     if purchase.status == 'confirmed':
                         create_purchase_movement(purchase)
                         create_price_history_from_purchase(purchase, request.user)
                         messages.success(request, "Compra confirmada correctamente.")
                         return redirect('purchase_list')
                     else:
+                        messages.success(request, "Compra registrada correctamente.")
                         return redirect('update_purchase', pk=purchase.pk)
             else:
                 # formset inválido: renderizar con errores
@@ -485,39 +484,75 @@ def update_purchase(request, pk):
     })
 
 def revert_purchase_movement(purchase):
-    # Solo si la compra tiene un movimiento de ingreso
-    if hasattr(purchase, 'movement'):
-        movement_in = purchase.movement
-        # Crear movimiento de egreso
-        movement_out = Movement.objects.create(
-            movement_type='OUT',
-            content_type=ContentType.objects.get_for_model(purchase),
-            object_id=purchase.id,
-            user=purchase.user,
-            description=f"Egreso por anulación de compra #{purchase.id}"
-        )
-        for item in movement_in.items.all():
-            MovementItem.objects.create(
-                movement=movement_out,
-                product=item.product,
-                quantity=item.quantity  # misma cantidad que el ingreso
+    ct = ContentType.objects.get_for_model(purchase)
+
+    # Evita duplicar egresos si la anulación se procesa más de una vez.
+    existing_out = Movement.objects.filter(
+        content_type=ct,
+        object_id=purchase.id,
+        movement_type='OUT'
+    ).first()
+    if existing_out:
+        return existing_out
+
+    movement_in = purchase.movement
+    if not movement_in:
+        return None
+
+    movement_items = list(movement_in.items.select_related('product'))
+    insufficient = []
+    for item in movement_items:
+        current_stock = item.product.stock or 0
+        if current_stock < item.quantity:
+            insufficient.append(
+                f"{item.product.nombre} (stock actual: {current_stock}, requiere: {item.quantity})"
             )
-            # Actualizar stock
-            item.product.stock -= item.quantity
-            item.product.save()
-        return movement_out
-    return None
+
+    if insufficient:
+        raise ValueError("Stock insuficiente para anular la compra: " + "; ".join(insufficient))
+
+    # Crear movimiento de egreso solo si el stock alcanza para todos los items.
+    movement_out = Movement.objects.create(
+        movement_type='OUT',
+        content_type=ct,
+        object_id=purchase.id,
+        user=purchase.user,
+        description=f"Egreso por anulación de compra #{purchase.id}"
+    )
+    for item in movement_items:
+        MovementItem.objects.create(
+            movement=movement_out,
+            product=item.product,
+            quantity=item.quantity,  # misma cantidad que el ingreso
+            unit_price=item.unit_price or item.product.cost  # Usar el costo guardado en el movimiento original
+        )
+        item.product.stock = (item.product.stock or 0) - item.quantity
+        item.product.save(update_fields=['stock'])
+    return movement_out
 
 # No se puede eliminar una compra, solo se puede anular
 @login_required
 def cancelled_purchase(request, pk):
-    purchase = get_object_or_404(Purchase, pk=pk)
     if request.method == 'POST':
-        purchase.status = 'cancelled'
-        purchase.save()
-        revert_purchase_movement(purchase)
-        messages.success(request, "Compra anulada y stock revertido correctamente.")
-        return redirect('purchase_list')
+        try:
+            with transaction.atomic():
+                purchase = Purchase.objects.select_for_update().get(pk=pk)
+
+                if purchase.status == 'cancelled':
+                    messages.warning(request, "La compra ya estaba anulada.")
+                    return redirect('purchase_list')
+
+                revert_purchase_movement(purchase)
+                purchase.status = 'cancelled'
+                purchase.save(update_fields=['status'])
+
+            messages.success(request, "Compra anulada y stock revertido correctamente.")
+            return redirect('purchase_list')
+        except ValueError as exc:
+            messages.error(request, str(exc))
+            return redirect('purchase_list')
+
+    purchase = get_object_or_404(Purchase, pk=pk)
     return render(request, 'inv/purchase/cancelled_purchase.html', {
         'purchase': purchase,
     })
@@ -555,7 +590,6 @@ def create_purchase_movement(purchase):
 
     # Verificar si ya se creó un movimiento para evitar duplicados y enviar mensaje de error
     if hasattr(purchase, 'movement') and purchase.movement:
-        messages.error("Ya se ha creado un movimiento para esta compra.")
         return None
 
     movement = Movement.objects.create(
@@ -570,7 +604,8 @@ def create_purchase_movement(purchase):
         MovementItem.objects.create(
             movement=movement,
             product=detail.product,
-            quantity=detail.quantity
+            quantity=detail.quantity,
+            unit_price=detail.unit_price  # Guardar el costo de compra histórico
         )
 
         # Actualizar stock del producto
@@ -713,12 +748,15 @@ def movement_pdf(request, pk):
 @login_required
 def cargar_inventario_inicial(request):
     from core.services.price_evaluation_service import PriceEvaluationService
-    from core.models import ProductPriceHistory
     if request.method == 'POST':
         form = InventoryUploadForm(request.POST, request.FILES)
         if form.is_valid():
             archivo = form.cleaned_data['archivo']
             nombre_archivo = archivo.name.lower()
+            update_descripcion = form.cleaned_data.get('actualizar_descripcion', False)
+            update_costo = form.cleaned_data.get('actualizar_costo', False)
+            update_precio = form.cleaned_data.get('actualizar_precio', False)
+            update_ubicacion = form.cleaned_data.get('actualizar_ubicacion', False)
             errores = []
             items_a_crear = []
             if nombre_archivo.endswith('.xlsx'):
@@ -730,6 +768,7 @@ def cargar_inventario_inicial(request):
                     cost = float(row[2]) if len(row) > 2 and row[2] is not None else None
                     precio = float(row[3]) if len(row) > 3 and row[3] is not None else None
                     location = str(row[4]).strip() if len(row) > 4 and row[4] else None
+                    descripcion_producto = str(row[5]).strip() if len(row) > 5 and row[5] else None
                     if not product_code or quantity <= 0:
                         errores.append(f"Línea {i}: Código de producto y cantidad son obligatorios.")
                         continue
@@ -738,6 +777,7 @@ def cargar_inventario_inicial(request):
                         # Crear producto si no existe
                         producto = Producto.objects.create(
                             nombre=product_code,
+                            descripcion=descripcion_producto or "",
                             cost=cost or 0,
                             precio=precio or 0,
                             stock=0,
@@ -755,39 +795,30 @@ def cargar_inventario_inicial(request):
                                 change_type='INICIAL',
                                 auto_approve_on_increase=True
                             )
-                        items_a_crear.append((producto, quantity, cost, precio, location, True))
+                        items_a_crear.append((producto, quantity, cost, precio, True))
                     else:
                         # Producto ya existe
-                        actualizar_precio = False
                         crear_historial = False
                         precio_anterior = float(producto.precio or 0)
-                        if producto.stock and precio is not None:
-                            if precio > precio_anterior:
-                                # Actualizar precio y datos
-                                producto.precio = precio
-                                if cost is not None:
-                                    producto.cost = cost
-                                if location:
-                                    producto.location = location
-                                crear_historial = True
-                                actualizar_precio = True
-                            elif precio < precio_anterior:
-                                # Solo actualizar stock
-                                pass
-                            else:
-                                # Igual, solo stock
-                                pass
-                        else:
-                            # Producto sin stock previo o sin precio previo
-                            if precio is not None:
+
+                        if update_descripcion and descripcion_producto is not None:
+                            producto.descripcion = descripcion_producto
+
+                        if update_costo and cost is not None:
+                            producto.cost = cost
+
+                        if update_ubicacion and location:
+                            producto.location = location
+
+                        if update_precio and precio is not None:
+                            if producto.stock and precio > precio_anterior:
                                 producto.precio = precio
                                 crear_historial = True
-                                actualizar_precio = True
-                            if cost is not None:
-                                producto.cost = cost
-                            if location:
-                                producto.location = location
-                        items_a_crear.append((producto, quantity, cost, precio, location, crear_historial and actualizar_precio))
+                            elif not producto.stock:
+                                producto.precio = precio
+                                crear_historial = True
+
+                        items_a_crear.append((producto, quantity, cost, precio, crear_historial))
                 # Fin for
             else:
                 errores.append("Solo se permiten archivos Excel (.xlsx).")
@@ -804,11 +835,12 @@ def cargar_inventario_inicial(request):
                     description=form.cleaned_data.get('descripcion') or 'Inventario inicial',
                     user=request.user
                 )
-                for producto, quantity, cost, precio, location, crear_historial in items_a_crear:
+                for producto, quantity, cost, precio, crear_historial in items_a_crear:
                     MovementItem.objects.create(
                         movement=movimiento,
                         product=producto,
-                        quantity=int(quantity)
+                        quantity=int(quantity),
+                        unit_price=cost  # Guardar el costo con el que se creó el movimiento
                     )
                     # Actualizar stock
                     producto.stock = (producto.stock or 0) + int(quantity)

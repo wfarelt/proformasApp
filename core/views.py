@@ -336,6 +336,8 @@ def product_edit(request, id):
 
     if request.method == 'POST':
         form = ProductoForm(request.POST, instance=producto, company=request.user.company)
+        # Bloquear el campo de costo al editar
+        form.fields['cost'].disabled = True
         if is_admin_role:
             if form.is_valid():
                 
@@ -366,6 +368,8 @@ def product_edit(request, id):
             return redirect('product_list')
     else:
         form = ProductoForm(instance=producto, company=request.user.company)
+        # Bloquear el campo de costo al editar
+        form.fields['cost'].disabled = True
     
     return render(request, 'core/product/producto_new.html', {'form': form, 'title': title})
 

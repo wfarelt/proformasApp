@@ -7,43 +7,112 @@
         <h4>Cargar Inventario Inicial</h4>
     </div>
     <div class="card-body">
+        <p>Puedes subir un archivo <b>Excel (.xlsx)</b> con las columnas: <b>product_code, quantity, cost, precio, location, descripcion</b></p>
+        
+        <table class="table table-bordered table-sm w-auto mb-4">
+            <thead>
+                <tr>
+                    <th>product_code</th>
+                    <th>quantity</th>
+                    <th>cost</th>
+                    <th>precio</th>
+                    <th>location</th>
+                    <th>descripcion</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1R0750</td>
+                    <td>1</td>
+                    <td>10</td>
+                    <td>16</td>
+                    <td>a-1</td>
+                    <td>Filtro de diesel</td>
+                </tr>
+            </tbody>
+        </table>
+        
         <a href="{% url 'download_inventory_template' %}" class="btn btn-outline-info btn-sm mb-3">
             Descargar plantilla Excel
         </a>
-        <form method="post" enctype="multipart/form-data">
+
+        <hr>
+        
+        <form id="inventory-upload-form" method="post" enctype="multipart/form-data">
             {% csrf_token %}
             {{ form.archivo.label_tag }}
             {{ form.archivo }}
             <div class="mb-3">
                 {{ form.descripcion.label_tag }}
                 {{ form.descripcion }}
-            </div>            
-            <button type="submit" class="btn btn-primary">Cargar inventario</button>
+            </div>
+
+            <div class="mb-3">
+                <label class="d-block font-weight-bold">Si el código ya existe, actualizar:</label>
+                <div class="form-check">
+                    {{ form.actualizar_descripcion }}
+                    <label class="form-check-label" for="{{ form.actualizar_descripcion.id_for_label }}">Descripción</label>
+                </div>
+                <div class="form-check">
+                    {{ form.actualizar_costo }}
+                    <label class="form-check-label" for="{{ form.actualizar_costo.id_for_label }}">Costo</label>
+                </div>
+                <div class="form-check">
+                    {{ form.actualizar_precio }}
+                    <label class="form-check-label" for="{{ form.actualizar_precio.id_for_label }}">Precio</label>
+                </div>
+                <div class="form-check">
+                    {{ form.actualizar_ubicacion }}
+                    <label class="form-check-label" for="{{ form.actualizar_ubicacion.id_for_label }}">Ubicación</label>
+                </div>
+            </div>
+
+            <button id="inventory-upload-submit" type="submit" class="btn btn-primary">Cargar inventario</button>
         </form>
-        <hr>
-        <p>Puedes subir un archivo <b>Excel (.xlsx)</b> con las columnas: <b>product_code, quantity, cost, precio, location</b></p>
-        <pre>
-            <table class="table table-bordered table-sm w-auto">
-                <thead>
-                    <tr>
-                        <th>product_code</th>
-                        <th>quantity</th>
-                        <th>cost</th>
-                        <th>precio</th>
-                        <th>location</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>1R0750</td>
-                        <td>1</td>
-                        <td>10</td>
-                        <td>16</td>
-                        <td>a-1</td>
-                    </tr>
-                </tbody>
-            </table>
-        </pre>
+        
+        
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    (function () {
+        const form = document.getElementById('inventory-upload-form');
+        const submitButton = document.getElementById('inventory-upload-submit');
+        let alreadyConfirmed = false;
+
+        if (!form || !submitButton) {
+            return;
+        }
+
+        form.addEventListener('submit', async function (event) {
+            if (alreadyConfirmed) {
+                return;
+            }
+
+            event.preventDefault();
+
+            const result = await Swal.fire({
+                title: 'Confirmar carga',
+                text: 'Se cargara el inventario desde el archivo seleccionado. Deseas continuar?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Si, cargar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            });
+
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Cargando...';
+            alreadyConfirmed = true;
+            form.submit();
+        });
+    })();
+</script>
 {% endblock %}

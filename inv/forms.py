@@ -138,6 +138,26 @@ class InventoryUploadForm(forms.Form):
         required=False,
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Descripción del inventario'})
     )
+    actualizar_descripcion = forms.BooleanField(
+        label='Actualizar descripción si el código existe',
+        required=False,
+        initial=True,
+    )
+    actualizar_costo = forms.BooleanField(
+        label='Actualizar costo si el código existe',
+        required=False,
+        initial=True,
+    )
+    actualizar_precio = forms.BooleanField(
+        label='Actualizar precio si el código existe',
+        required=False,
+        initial=True,
+    )
+    actualizar_ubicacion = forms.BooleanField(
+        label='Actualizar ubicación si el código existe',
+        required=False,
+        initial=True,
+    )
 
             
             

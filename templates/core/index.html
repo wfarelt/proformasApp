@@ -157,47 +157,48 @@
 
       <!-- Sidebar Menu -->
       <nav class="mt-2">
-        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+        {% with current_url=request.resolver_match.url_name %}
+        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="true">
           <!-- Add icons to the links using the .nav-icon class
                with font-awesome or any other icon font library -->
 
           <!-- RECURSOS -->
           {% if user.can_access_core %}
-          <li class="nav-item">
-            <a href="#" class="nav-link">
+          <li class="nav-item {% if current_url == 'client_list' or current_url == 'cliente_new' or current_url == 'cliente_edit' or current_url == 'cliente_delete' or current_url == 'crear_clientes' or current_url == 'cliente_status' or current_url == 'supplier_list' or current_url == 'supplier_create' or current_url == 'supplier_update' or current_url == 'brand_list' or current_url == 'brand_create' or current_url == 'brand_update' or current_url == 'brand_status' or current_url == 'product_list' or current_url == 'product_detail' or current_url == 'producto_new' or current_url == 'product_edit' or current_url == 'product_catalog_import' or current_url == 'download_product_catalog_template' or current_url == 'cloud_catalog_list' or current_url == 'cloud_catalog_import_from_url' or current_url == 'approve_price' or current_url == 'reject_price' or current_url == 'kit_list' or current_url == 'kit_create' or current_url == 'kit_detail' or current_url == 'kit_edit' or current_url == 'kit_delete' or current_url == 'kit_add_item' or current_url == 'kit_remove_item' or current_url == 'get_kit_items' %}menu-open{% endif %}">
+            <a href="#" class="nav-link {% if current_url == 'client_list' or current_url == 'cliente_new' or current_url == 'cliente_edit' or current_url == 'cliente_delete' or current_url == 'crear_clientes' or current_url == 'cliente_status' or current_url == 'supplier_list' or current_url == 'supplier_create' or current_url == 'supplier_update' or current_url == 'brand_list' or current_url == 'brand_create' or current_url == 'brand_update' or current_url == 'brand_status' or current_url == 'product_list' or current_url == 'product_detail' or current_url == 'producto_new' or current_url == 'product_edit' or current_url == 'product_catalog_import' or current_url == 'download_product_catalog_template' or current_url == 'cloud_catalog_list' or current_url == 'cloud_catalog_import_from_url' or current_url == 'approve_price' or current_url == 'reject_price' or current_url == 'kit_list' or current_url == 'kit_create' or current_url == 'kit_detail' or current_url == 'kit_edit' or current_url == 'kit_delete' or current_url == 'kit_add_item' or current_url == 'kit_remove_item' or current_url == 'get_kit_items' %}active{% endif %}">
               <i class="nav-icon fas fa-boxes"></i>
               <p>
                 Recursos
                 <i class="fas fa-angle-left right"></i>
               </p>
             </a>
-            <ul class="nav nav-treeview" style="display: none;">
+            <ul class="nav nav-treeview" {% if current_url == 'client_list' or current_url == 'cliente_new' or current_url == 'cliente_edit' or current_url == 'cliente_delete' or current_url == 'crear_clientes' or current_url == 'cliente_status' or current_url == 'supplier_list' or current_url == 'supplier_create' or current_url == 'supplier_update' or current_url == 'brand_list' or current_url == 'brand_create' or current_url == 'brand_update' or current_url == 'brand_status' or current_url == 'product_list' or current_url == 'product_detail' or current_url == 'producto_new' or current_url == 'product_edit' or current_url == 'product_catalog_import' or current_url == 'download_product_catalog_template' or current_url == 'cloud_catalog_list' or current_url == 'cloud_catalog_import_from_url' or current_url == 'approve_price' or current_url == 'reject_price' or current_url == 'kit_list' or current_url == 'kit_create' or current_url == 'kit_detail' or current_url == 'kit_edit' or current_url == 'kit_delete' or current_url == 'kit_add_item' or current_url == 'kit_remove_item' or current_url == 'get_kit_items' %}style="display: block;"{% else %}style="display: none;"{% endif %}>
               <li class="nav-item">
-                <a href="{% url 'client_list' %}" class="nav-link">
+                <a href="{% url 'client_list' %}" class="nav-link {% if current_url == 'client_list' or current_url == 'cliente_new' or current_url == 'cliente_edit' or current_url == 'cliente_delete' or current_url == 'crear_clientes' or current_url == 'cliente_status' %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Clientes</p>
                 </a>
               </li>
               <li class="nav-item">
-                <a href="{% url 'supplier_list' %}" class="nav-link">
+                <a href="{% url 'supplier_list' %}" class="nav-link {% if current_url == 'supplier_list' or current_url == 'supplier_create' or current_url == 'supplier_update' %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Proveedores</p>
                 </a>
               </li>
               <li class="nav-item">
-                <a href="{% url 'brand_list' %}" class="nav-link">
+                <a href="{% url 'brand_list' %}" class="nav-link {% if current_url == 'brand_list' or current_url == 'brand_create' or current_url == 'brand_update' or current_url == 'brand_status' %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Marcas</p>
                 </a>
               </li>
               <li class="nav-item">
-                <a href="{% url 'product_list'%}" class="nav-link">
+                <a href="{% url 'product_list'%}" class="nav-link {% if current_url == 'product_list' or current_url == 'product_detail' or current_url == 'producto_new' or current_url == 'product_edit' or current_url == 'product_catalog_import' or current_url == 'download_product_catalog_template' or current_url == 'cloud_catalog_list' or current_url == 'cloud_catalog_import_from_url' or current_url == 'approve_price' or current_url == 'reject_price' %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Productos</p>
                 </a>
               </li>
               <li class="nav-item">
-                <a href="{% url 'kit_list'%}" class="nav-link">
+                <a href="{% url 'kit_list'%}" class="nav-link {% if current_url == 'kit_list' or current_url == 'kit_create' or current_url == 'kit_detail' or current_url == 'kit_edit' or current_url == 'kit_delete' or current_url == 'kit_add_item' or current_url == 'kit_remove_item' or current_url == 'get_kit_items' %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Kits</p>
                 </a>
@@ -208,29 +209,29 @@
 
           <!-- INVENTARIO -->
           {% if user.can_access_inventory %}
-          <li class="nav-item">
-            <a href="#" class="nav-link">
+          <li class="nav-item {% if current_url == 'movement_list' or current_url == 'purchase_list' or current_url == 'cargar_inventario_inicial' %}menu-open{% endif %}">
+            <a href="#" class="nav-link {% if current_url == 'movement_list' or current_url == 'purchase_list' or current_url == 'cargar_inventario_inicial' %}active{% endif %}">
               <i class="nav-icon fas fa-warehouse"></i>
               <p>
                 Inventario
                 <i class="fas fa-angle-left right"></i>
               </p>
             </a>
-            <ul class="nav nav-treeview" style="display: none;">
+            <ul class="nav nav-treeview" {% if current_url == 'movement_list' or current_url == 'purchase_list' or current_url == 'cargar_inventario_inicial' %}style="display: block;"{% else %}style="display: none;"{% endif %}>
               <li class="nav-item">
-                <a href="{% url 'movement_list' %}" class="nav-link">
+                <a href="{% url 'movement_list' %}" class="nav-link {% if current_url == 'movement_list' %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Movimientos</p><span class="badge badge-info right">0</span>
                 </a>
               </li>
               <li class="nav-item">
-                <a href="{% url 'purchase_list' %}" class="nav-link">
+                <a href="{% url 'purchase_list' %}" class="nav-link {% if current_url == 'purchase_list' %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Compras</p>
                 </a>
               </li>
               <li class="nav-item">
-                <a href="{% url 'cargar_inventario_inicial' %}" class="nav-link">
+                <a href="{% url 'cargar_inventario_inicial' %}" class="nav-link {% if current_url == 'cargar_inventario_inicial' %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Carga inicial de stock</p>
                 </a>
@@ -241,41 +242,41 @@
 
           <!-- REPORTES -->
           {% if user.can_access_inventory %}
-          <li class="nav-item">
-            <a href="#" class="nav-link">
+          <li class="nav-item {% if current_url == 'reporte_analitica_productos' or current_url == 'historial_ventas' or current_url == 'reporte_inventario' or current_url == 'proforma_report' or current_url == 'pre_inventario' %}menu-open{% endif %}">
+            <a href="#" class="nav-link {% if current_url == 'reporte_analitica_productos' or current_url == 'historial_ventas' or current_url == 'reporte_inventario' or current_url == 'proforma_report' or current_url == 'pre_inventario' %}active{% endif %}">
               <i class="nav-icon fas fa-chart-line"></i>
               <p>
                 Reportes
                 <i class="fas fa-angle-left right"></i>
               </p>
             </a>
-            <ul class="nav nav-treeview" style="display: none;">
+            <ul class="nav nav-treeview" {% if current_url == 'reporte_analitica_productos' or current_url == 'historial_ventas' or current_url == 'reporte_inventario' or current_url == 'proforma_report' or current_url == 'pre_inventario' %}style="display: block;"{% else %}style="display: none;"{% endif %}>
               <li class="nav-item">
-                <a href="{% url 'reporte_analitica_productos' %}" class="nav-link">
+                <a href="{% url 'reporte_analitica_productos' %}" class="nav-link {% if current_url == 'reporte_analitica_productos' %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Analítica de productos</p>
                 </a>
               </li>
               <li class="nav-item">
-                <a href="{% url 'historial_ventas' %}" class="nav-link">
+                <a href="{% url 'historial_ventas' %}" class="nav-link {% if current_url == 'historial_ventas' %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Historial de producto</p>
                 </a>
               </li>
               <li class="nav-item">
-                <a href="{% url 'reporte_inventario' %}" class="nav-link">
+                <a href="{% url 'reporte_inventario' %}" class="nav-link {% if current_url == 'reporte_inventario' %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Reporte de inventario</p>
                 </a>
               </li>
               <li class="nav-item">
-                <a href="{% url 'proforma_report' %}" class="nav-link">
+                <a href="{% url 'proforma_report' %}" class="nav-link {% if current_url == 'proforma_report' %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Reporte de ventas</p>
                 </a>
               </li>
               <li class="nav-item">
-                <a href="{% url 'pre_inventario' %}" class="nav-link">
+                <a href="{% url 'pre_inventario' %}" class="nav-link {% if current_url == 'pre_inventario' %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Pre inventario</p>
                 </a>
@@ -285,36 +286,36 @@
           {% endif %}      
           
           <!-- OPCIONES -->
-          <li class="nav-item">
-            <a href="#" class="nav-link">
+          <li class="nav-item {% if current_url == 'edit_profile' or current_url == 'password_change' or current_url == 'password_change_done' or current_url == 'company_edit' or current_url == 'exchange_rate_list' or current_url == 'user_list' or current_url == 'user_create' or current_url == 'user_update' or current_url == 'user_status' or '/admin/' in request.path %}menu-open{% endif %}">
+            <a href="#" class="nav-link {% if current_url == 'edit_profile' or current_url == 'password_change' or current_url == 'password_change_done' or current_url == 'company_edit' or current_url == 'exchange_rate_list' or current_url == 'user_list' or current_url == 'user_create' or current_url == 'user_update' or current_url == 'user_status' or '/admin/' in request.path %}active{% endif %}">
               <i class="nav-icon fas fa-sliders-h"></i>
               <p>
                 Opciones
                 <i class="fas fa-angle-left right"></i>
               </p>
             </a>
-            <ul class="nav nav-treeview" style="display: none;">
+            <ul class="nav nav-treeview" {% if current_url == 'edit_profile' or current_url == 'password_change' or current_url == 'password_change_done' or current_url == 'company_edit' or current_url == 'exchange_rate_list' or current_url == 'user_list' or current_url == 'user_create' or current_url == 'user_update' or current_url == 'user_status' or '/admin/' in request.path %}style="display: block;"{% else %}style="display: none;"{% endif %}>
               <li class="nav-item">
-                <a href="{% url 'edit_profile' %}" class="nav-link">
+                <a href="{% url 'edit_profile' %}" class="nav-link {% if current_url == 'edit_profile' or current_url == 'password_change' or current_url == 'password_change_done' %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Perfil</p>
                 </a>
               </li>
               {% if user.is_admin %}
               <li class="nav-item">
-                <a href="{% url 'company_edit' %}" class="nav-link">
+                <a href="{% url 'company_edit' %}" class="nav-link {% if current_url == 'company_edit' %}active{% endif %}">
                   <i class="far fa-building nav-icon"></i>
                   <p>Mi empresa</p>
                 </a>
               </li>
               <li class="nav-item">
-                <a href="{% url 'exchange_rate_list' %}" class="nav-link">
+                <a href="{% url 'exchange_rate_list' %}" class="nav-link {% if current_url == 'exchange_rate_list' %}active{% endif %}">
                   <i class="fas fa-exchange-alt nav-icon"></i>
                   <p>Tipos de cambio</p>
                 </a>
               </li>
               <li class="nav-item">
-                <a href="{% url 'user_list' %}" class="nav-link">
+                <a href="{% url 'user_list' %}" class="nav-link {% if current_url == 'user_list' or current_url == 'user_create' or current_url == 'user_update' or current_url == 'user_status' %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Usuarios</p>
                 </a>
@@ -322,7 +323,7 @@
               {% endif %}
               {% if user.can_access_settings %}
               <li class="nav-item">
-                <a href="/admin/" class="nav-link">
+                <a href="/admin/" class="nav-link {% if '/admin/' in request.path %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Panel de configuración</p>
                 </a>
@@ -332,6 +333,7 @@
           </li>   
           
         </ul>
+        {% endwith %}
       </nav>
       <!-- /.sidebar-menu -->
     </div>

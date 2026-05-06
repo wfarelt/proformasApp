@@ -97,8 +97,9 @@ class MovementItem(models.Model):
 
     @property
     def subtotal(self):
-        price = self.unit_price or self.product.cost or 0
-        return price * self.quantity
+        # Usar unit_price si está definido (costo histórico), de lo contrario usar costo actual
+        price = self.unit_price if self.unit_price else self.product.cost
+        return (price or 0) * self.quantity
 
     
     

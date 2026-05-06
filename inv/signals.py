@@ -8,13 +8,17 @@ from .models import Purchase, Movement, MovementItem, Producto
 def create_movement_on_purchase_confirmed(sender, instance, created, **kwargs):
     # Verificar que la compra ha sido confirmada y no es nueva
     if not created and instance.status == 'confirmed':
+        ct = ContentType.objects.get_for_model(Purchase)
+        if Movement.objects.filter(content_type=ct, object_id=instance.id, movement_type='IN').exists():
+            return
+
         # Crear un movimiento de tipo IN (Ingreso)
         movement = Movement.objects.create(
             movement_type='IN',
             description=f"Ingreso por compra #{instance.id} de {instance.supplier.name}",
             user=instance.user,
             status='COMPLETED',
-            content_type=ContentType.objects.get_for_model(Purchase),
+            content_type=ct,
             object_id=instance.id
         )
 
@@ -23,5 +27,6 @@ def create_movement_on_purchase_confirmed(sender, instance, created, **kwargs):
             MovementItem.objects.create(
                 movement=movement,
                 product=detail.product,
-                quantity=detail.quantity
+                quantity=detail.quantity,
+                unit_price=detail.unit_price  # Guardar el costo histórico de compra
             )
