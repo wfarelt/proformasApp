@@ -294,6 +294,7 @@
       </form>
       <br>
 
+      <div class="table-responsive">
       <table class="table table-bordered table-sm">
         <tr class="thead-light">
           <th>Codigo</th>
@@ -334,6 +335,7 @@
         </tr>
         {% endfor %}
       </table>
+      </div>
     
         <div class="card-footer justify-content-center d-flex">
           {% if page_obj.has_other_pages %}
@@ -402,6 +404,7 @@
           <small class="text-muted">Basado en proformas ejecutadas</small>
         </div>
 
+        <div class="table-responsive">
         <table class="table table-bordered table-sm">
           <tr class="thead-light">
             <th>Codigo</th>
@@ -442,6 +445,7 @@
           </tr>
           {% endfor %}
         </table>
+        </div>
       </div>
       {% endif %}
 
@@ -453,6 +457,7 @@
     <!-- Detalle de productos -->
     <div class="detalle">
       <h2>DETALLE DE PRODUCTOS</h2>
+      <div class="table-responsive">
       <table class="table table-sm table-bordered">
         <thead class="thead-light">
           <tr>
@@ -489,6 +494,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
     </div>
     
     <!-- Total y descuento - VERSIÓN MEJORADA -->
@@ -1271,17 +1277,24 @@ document.addEventListener('DOMContentLoaded', function () {
   function applyToggle(switchId, blockId, storageKey) {
     const sw    = document.getElementById(switchId);
     const block = document.getElementById(blockId);
-    if (!sw || !block) return;
 
-    // Default: hidden until the user explicitly enables it.
-    const saved = localStorage.getItem(storageKey);
-    const isEnabled = saved === 'true';
+    if (!sw) return;
+
+    // Si el bloque existe en el DOM, mostrarlo por defecto (hay contenido disponible).
+    // Si no existe, respetar lo que guardó el usuario en localStorage.
+    let isEnabled;
+    if (block) {
+      const saved = localStorage.getItem(storageKey);
+      isEnabled = saved === null ? true : saved === 'true';
+    } else {
+      isEnabled = false;
+    }
 
     sw.checked = isEnabled;
-    block.style.display = isEnabled ? '' : 'none';
+    if (block) block.style.display = isEnabled ? '' : 'none';
 
     sw.addEventListener('change', function () {
-      block.style.display = this.checked ? '' : 'none';
+      if (block) block.style.display = this.checked ? '' : 'none';
       localStorage.setItem(storageKey, this.checked);
     });
   }

@@ -48,11 +48,12 @@ class ProformaRecommendationTests(TestCase):
 			subtotal=precio * cantidad,
 		)
 
-	def test_recommended_products_use_only_executed_proformas_and_exclude_current_products(self):
+	def test_recommended_products_use_executed_first_then_pending_fallback(self):
 		producto_a = self._create_producto('A-001')
 		producto_b = self._create_producto('B-001')
 		producto_c = self._create_producto('C-001')
 		producto_d = self._create_producto('D-001')
+		producto_e = self._create_producto('E-001')
 
 		current_proforma = self._create_proforma()
 		self._add_detalle(current_proforma, producto_c, cantidad=1)
@@ -73,15 +74,47 @@ class ProformaRecommendationTests(TestCase):
 		self._add_detalle(pending_proforma, producto_c, cantidad=1)
 		self._add_detalle(pending_proforma, producto_d, cantidad=5)
 
+		anulado_proforma = self._create_proforma(estado='ANULADO')
+		self._add_detalle(anulado_proforma, producto_c, cantidad=1)
+		self._add_detalle(anulado_proforma, producto_e, cantidad=9)
+
 		response = self.client.get(reverse('proforma_edit', args=[current_proforma.id]))
 
 		recommended_products = response.context['recommended_products']
 		recommended_ids = [producto.id for producto in recommended_products]
 
-		self.assertEqual(recommended_ids, [producto_a.id, producto_b.id])
+		self.assertEqual(recommended_ids, [producto_a.id, producto_b.id, producto_d.id])
 		self.assertNotIn(producto_c.id, recommended_ids)
-		self.assertNotIn(producto_d.id, recommended_ids)
+		self.assertNotIn(producto_e.id, recommended_ids)
 		self.assertContains(response, 'Productos recomendados')
+
+	def test_recommended_products_limit_pending_fallback_to_two(self):
+		producto_base = self._create_producto('BASE-001')
+		producto_p1 = self._create_producto('P-001')
+		producto_p2 = self._create_producto('P-002')
+		producto_p3 = self._create_producto('P-003')
+
+		current_proforma = self._create_proforma()
+		self._add_detalle(current_proforma, producto_base, cantidad=1)
+
+		pending_1 = self._create_proforma(estado='PENDIENTE')
+		self._add_detalle(pending_1, producto_base, cantidad=1)
+		self._add_detalle(pending_1, producto_p1, cantidad=3)
+
+		pending_2 = self._create_proforma(estado='PENDIENTE')
+		self._add_detalle(pending_2, producto_base, cantidad=1)
+		self._add_detalle(pending_2, producto_p2, cantidad=2)
+
+		pending_3 = self._create_proforma(estado='PENDIENTE')
+		self._add_detalle(pending_3, producto_base, cantidad=1)
+		self._add_detalle(pending_3, producto_p3, cantidad=1)
+
+		response = self.client.get(reverse('proforma_edit', args=[current_proforma.id]))
+
+		recommended_ids = [producto.id for producto in response.context['recommended_products']]
+
+		self.assertEqual(recommended_ids, [producto_p1.id, producto_p2.id])
+		self.assertNotIn(producto_p3.id, recommended_ids)
 
 	def test_recommended_products_can_be_disabled_per_company(self):
 		self.company.enable_product_recommendations = False

@@ -854,7 +854,9 @@ class ProformaListView(ListView):
         return context
 
 
-def _get_recommended_products(proforma, query=None, tipo_busqueda='codigo', limit=3):
+def _get_recommended_products(proforma, query=None, tipo_busqueda='codigo', limit=5):
+    max_pending_fallback = 2
+
     current_product_ids = list(
         Detalle.objects.filter(proforma=proforma).values_list('producto_id', flat=True).distinct()
     )
@@ -863,47 +865,68 @@ def _get_recommended_products(proforma, query=None, tipo_busqueda='codigo', limi
     if not current_product_ids:
         return []
 
-    executed_proformas = Proforma.objects.filter(estado='EJECUTADO')
+    def get_candidate_proformas(states):
+        qs = Proforma.objects.filter(estado__in=states)
 
-    if proforma.company_id:
-        executed_proformas = executed_proformas.filter(company_id=proforma.company_id)
+        if proforma.company_id:
+            qs = qs.filter(company_id=proforma.company_id)
 
-    if proforma.pk:
-        executed_proformas = executed_proformas.exclude(id=proforma.pk)
+        if proforma.pk:
+            qs = qs.exclude(id=proforma.pk)
 
-    executed_proformas = executed_proformas.filter(
-        detalles__producto_id__in=current_product_ids
-    ).distinct()
+        return qs.filter(detalles__producto_id__in=current_product_ids).distinct()
 
-    recommended_details = Detalle.objects.filter(proforma__in=executed_proformas).exclude(
-        producto_id__in=current_product_ids
+    def rank_products(source_proformas, excluded_product_ids, take):
+        if take <= 0:
+            return []
+
+        details = Detalle.objects.filter(proforma__in=source_proformas).exclude(
+            producto_id__in=excluded_product_ids
+        )
+
+        if query:
+            if tipo_busqueda == 'id_producto':
+                if not query.isdigit():
+                    return []
+                details = details.filter(producto_id=int(query))
+            else:
+                palabras = [p.strip() for p in query.split('%') if p.strip()]
+                for palabra in palabras:
+                    details = details.filter(
+                        Q(producto__nombre__icontains=palabra) |
+                        Q(producto__referencia_cruzada__icontains=palabra) |
+                        Q(producto__descripcion__icontains=palabra)
+                    )
+
+        ranked = details.values('producto_id').annotate(
+            co_sold_times=Count('proforma_id', distinct=True),
+            total_quantity=Sum('cantidad'),
+            last_used=Max('proforma__fecha'),
+        ).order_by(
+            '-co_sold_times',
+            '-total_quantity',
+            '-last_used',
+        )
+
+        return list(ranked.values_list('producto_id', flat=True)[:take])
+
+    executed_ids = rank_products(
+        get_candidate_proformas(['EJECUTADO']),
+        excluded_product_ids=current_product_ids,
+        take=limit,
     )
 
-    if query:
-        if tipo_busqueda == 'id_producto':
-            if not query.isdigit():
-                return []
-            recommended_details = recommended_details.filter(producto_id=int(query))
-        else:
-            palabras = [p.strip() for p in query.split('%') if p.strip()]
-            for palabra in palabras:
-                recommended_details = recommended_details.filter(
-                    Q(producto__nombre__icontains=palabra) |
-                    Q(producto__referencia_cruzada__icontains=palabra) |
-                    Q(producto__descripcion__icontains=palabra)
-                )
+    missing = limit - len(executed_ids)
+    pending_ids = []
+    if missing > 0:
+        pending_take = min(missing, max_pending_fallback)
+        pending_ids = rank_products(
+            get_candidate_proformas(['PENDIENTE']),
+            excluded_product_ids=current_product_ids + executed_ids,
+            take=pending_take,
+        )
 
-    recommended_products = recommended_details.values('producto_id').annotate(
-        co_sold_times=Count('proforma_id', distinct=True),
-        total_quantity=Sum('cantidad'),
-        last_used=Max('proforma__fecha'),
-    ).order_by(
-        '-co_sold_times',
-        '-total_quantity',
-        '-last_used',
-    )
-
-    product_ids = list(recommended_products.values_list('producto_id', flat=True)[:limit])
+    product_ids = executed_ids + pending_ids
     products_by_id = Producto.objects.select_related('brand').in_bulk(product_ids)
 
     return [products_by_id[product_id] for product_id in product_ids if product_id in products_by_id]
