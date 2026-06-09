@@ -270,9 +270,6 @@ def proforma_report(request):
             fecha__lt=ff,
         )
 
-        if getattr(request.user, 'company_id', None):
-            base_queryset = base_queryset.filter(company=request.user.company)
-
         proformas_queryset = base_queryset.order_by('-fecha')
 
         # Calcular total general antes de paginar
