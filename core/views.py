@@ -1240,10 +1240,18 @@ def agregar_producto_a_detalle(request):
 
 @login_required(login_url='login')
 def eliminar_producto_a_detalle(request, id):
-    detalle = Detalle.objects.get(id=id)
+    proforma_id = request.GET.get('proforma_id')
+    try:
+        detalle = Detalle.objects.get(id=id)
+    except Detalle.DoesNotExist:
+        messages.warning(request, 'El producto ya fue eliminado de la proforma.')
+        if proforma_id:
+            return redirect(reverse_lazy('proforma_edit', args=[proforma_id]))
+        return redirect('proforma_list')
+
     proforma = detalle.proforma
-    proforma.total = float(proforma.total) - float(detalle.subtotal)
-    proforma.save()
+    proforma.total = (Decimal(proforma.total) - Decimal(detalle.subtotal)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    proforma.save(update_fields=['total'])
     detalle.delete()
     return redirect(reverse_lazy('proforma_edit', args=[proforma.id]))
 

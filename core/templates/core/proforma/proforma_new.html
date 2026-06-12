@@ -484,7 +484,7 @@
             <td style="text-align: center;">
                 <a href="{% url 'editar_cantidad_detalle' detalle.id %}" class="btn btn-warning btn-sm no-mostrar editar-cantidad"><i
                 class="fas fa-edit"></i></a> 
-                <a href="{% url 'eliminar_producto_a_detalle' detalle.id %}" class="btn btn-danger btn-sm no-mostrar"><i
+                <a href="{% url 'eliminar_producto_a_detalle' detalle.id %}?proforma_id={{ proforma.id }}" class="btn btn-danger btn-sm no-mostrar"><i
                   class="fas fa-trash-alt"></i></a></td>
           </tr>
           {% empty %}
@@ -1280,18 +1280,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (!sw) return;
 
-    // Si el bloque existe en el DOM, mostrarlo por defecto (hay contenido disponible).
-    // Si no existe, respetar lo que guardó el usuario en localStorage.
-    let isEnabled;
-    if (block) {
+    // Si el bloque no existe (no hay contenido), no tocamos localStorage
+    // para no perder la preferencia del usuario.
+    if (!block) {
       const saved = localStorage.getItem(storageKey);
-      isEnabled = saved === null ? true : saved === 'true';
-    } else {
-      isEnabled = false;
+      sw.checked = saved === null ? true : saved === 'true';
+      return;
     }
 
+    const saved = localStorage.getItem(storageKey);
+    const isEnabled = saved === null ? true : saved === 'true';
+
     sw.checked = isEnabled;
-    if (block) block.style.display = isEnabled ? '' : 'none';
+    block.style.display = isEnabled ? '' : 'none';
 
     sw.addEventListener('change', function () {
       if (block) block.style.display = this.checked ? '' : 'none';
