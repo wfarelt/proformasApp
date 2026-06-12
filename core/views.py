@@ -1509,6 +1509,42 @@ def cambiar_fecha_proforma(request, id):
                 messages.error(request, 'Fecha inválida.')
     return redirect('proforma_edit', id)
 
+@login_required
+@transaction.atomic
+def copiar_proforma(request, id):
+    """Copia una proforma: mantiene cliente, fecha actual, precio = max(precio_proforma, precio_actual)."""
+    origen = get_object_or_404(Proforma, id=id)
+    detalles_origen = Detalle.objects.select_related('producto').filter(proforma=origen)
+
+    nueva = Proforma.objects.create(
+        usuario=request.user,
+        cliente=origen.cliente,
+        estado='PENDIENTE',
+        # fecha usa default=timezone.now → ya es la fecha actual
+    )
+
+    total_nueva = Decimal('0.00')
+    for d in detalles_origen:
+        precio_usado = max(
+            Decimal(d.precio_venta or 0),
+            Decimal(d.producto.precio or 0),
+        ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        subtotal = (Decimal(d.cantidad) * precio_usado).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        Detalle.objects.create(
+            proforma=nueva,
+            producto=d.producto,
+            cantidad=d.cantidad,
+            precio_venta=precio_usado,
+            subtotal=subtotal,
+        )
+        total_nueva += subtotal
+
+    nueva.total = total_nueva
+    nueva.save(update_fields=['total'])
+
+    messages.success(request, f'Proforma #{origen.id} copiada como #{nueva.id}.')
+    return redirect('proforma_edit', nueva.id)
+
 # CLIENTE    
 class ClientListView(ListView):
     model = Cliente

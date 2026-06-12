@@ -57,6 +57,7 @@ urlpatterns = [
     path('proforma/<int:proforma_id>/pdf/', proforma_pdf, name='proforma_pdf'),
     path('proforma/<int:proforma_id>/almacen/', proforma_almacen, name='proforma_almacen'),
     path('proforma/<int:id>/cambiar_fecha/', cambiar_fecha_proforma, name='cambiar_fecha_proforma'),
+    path('proforma/<int:id>/copiar/', copiar_proforma, name='copiar_proforma'),
 
     #clientes
     #path('clientes/', clientes_list, name='clientes_list'),

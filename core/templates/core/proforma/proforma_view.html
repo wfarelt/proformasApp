@@ -159,9 +159,11 @@
     <div class="card-footer no-print">
         <div class="proforma-actions mb-3">
             <div class="proforma-actions-group">
+                {% if proforma.estado == 'PENDIENTE' %}
                 <a href="{% url 'proforma_edit' proforma.id %}" class="btn btn-warning">
                     <i class="fas fa-edit"></i> Editar Proforma
                 </a>
+                {% endif %}
                 <a href="{% url 'proforma_list' %}" class="btn btn-secondary">
                     <i class="fas fa-arrow-left"></i> Volver a la lista
                 </a>
