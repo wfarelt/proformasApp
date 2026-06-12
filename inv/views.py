@@ -218,20 +218,75 @@ def buscar_productos(request):
 
 @login_required
 def reporte_inventario(request):
-    # Solo productos con stock > 0
-    productos = Producto.objects.filter(stock__gt=0).order_by('location')  
-    
-    # Sumar costos y precios totales
-    total_cost = sum(p.cost * p.stock for p in productos if p.cost)
-    total_price = sum(p.precio * p.stock for p in productos if p.precio)
-    
+    productos = Producto.objects.filter(stock__gt=0).select_related('brand').order_by('location')
+
+    total_cost = sum((p.cost or 0) * p.stock for p in productos)
+    total_price = sum((p.precio or 0) * p.stock for p in productos)
+    total_productos = productos.count()
+
+    # Resumen por marca
+    brand_summary = {}
+    for p in productos:
+        brand_name = p.brand.name if p.brand else "Sin Marca"
+        if brand_name not in brand_summary:
+            brand_summary[brand_name] = {"count": 0, "stock": 0, "cost_value": 0, "price_value": 0}
+        brand_summary[brand_name]["count"] += 1
+        brand_summary[brand_name]["stock"] += p.stock
+        brand_summary[brand_name]["cost_value"] += float(p.cost or 0) * p.stock
+        brand_summary[brand_name]["price_value"] += float(p.precio or 0) * p.stock
+    brand_summary = sorted(brand_summary.items(), key=lambda x: x[1]["stock"], reverse=True)
+
+    # Resumen por ubicación
+    location_summary = {}
+    for p in productos:
+        loc = p.location or "Sin Ubicación"
+        if loc not in location_summary:
+            location_summary[loc] = {"count": 0, "stock": 0}
+        location_summary[loc]["count"] += 1
+        location_summary[loc]["stock"] += p.stock
+    location_summary = sorted(location_summary.items(), key=lambda x: x[1]["stock"], reverse=True)
+
+    # Exportar a Excel
+    if request.GET.get("export") == "excel":
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Inventario"
+        ws.append(["ID", "Nombre", "Referencia Cruzada", "Marca", "Stock", "Ubicación", "Costo", "Precio"])
+        for p in productos:
+            ws.append([
+                p.id,
+                p.nombre,
+                p.referencia_cruzada or "",
+                p.brand.name if p.brand else "",
+                p.stock,
+                p.location or "",
+                float(p.cost or 0),
+                float(p.precio or 0),
+            ])
+        # Fila de totales
+        ws.append(["", "TOTALES", "", "", sum(p.stock for p in productos), "",
+                   float(total_cost), float(total_price)])
+
+        from io import BytesIO
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        response = HttpResponse(
+            output.read(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = 'attachment; filename="reporte_inventario.xlsx"'
+        return response
+
     context = {
         "title": "Reporte de Inventario",
-        "productos": productos,
         "total_cost": total_cost,
         "total_price": total_price,
+        "total_productos": total_productos,
+        "brand_summary": brand_summary,
+        "location_summary": location_summary,
     }
-   
+
     return render(request, "inv/reports/reporte_inventario.html", context)
     
 def proforma_report(request):

@@ -1,92 +1,153 @@
 {% extends 'core/index.html' %}
 
-{% block title %}{{title}}{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 
 {% load static %}
 
 {% block style %}
+<style>
+    .stat-card {
+        border: none;
+        border-radius: 8px;
+    }
+    .stat-card.products  { background: linear-gradient(135deg, #17a2b8, #0e7a90); }
+    .stat-card.cost      { background: linear-gradient(135deg, #e74c3c, #b03028); }
+    .stat-card.price     { background: linear-gradient(135deg, #28a745, #1a7a30); }
+
+    .stat-card .stat-label {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: rgba(255,255,255,0.8);
+    }
+    .stat-card .stat-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        line-height: 1.1;
+        color: #fff;
+    }
+    .stat-icon {
+        font-size: 2.5rem;
+        opacity: 0.25;
+        color: #fff !important;
+    }
+    .brand-table thead th {
+        background-color: #f8f9fa;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: #555;
+        border-bottom: 2px solid #dee2e6;
+    }
+    .brand-table tbody tr:hover {
+        background-color: #f1f8ff;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="card">
-    <div class="card-header">
-        
-        <div class="d-flex justify-content-between align-items-center mb-4">
 
-        <!-- Título -->
-        <div class="card shadow-sm px-4 py-3" style="border-radius: 12px; min-width: 250px;">
-            <h2 class="text-center m-0" style="font-weight: 600;">
-                📦 Reporte de Inventario
-            </h2>
-        </div>
-
-        <!-- Total Costo -->
-        <div class="card shadow-sm text-center px-4 py-3" style="border-radius: 12px; min-width: 180px;">
-            <p class="m-0" style="font-size: 0.9rem; color: #555;">Total Costo</p>
-            <p class="summary-number m-0" style="font-size: 2rem; font-weight: bold;">
-                ${{ total_cost|floatformat:2 }}
-            </p>
-        </div>
-
-        <!-- Total Precio -->
-        <div class="card shadow-sm text-center px-4 py-3" style="border-radius: 12px; min-width: 180px;">
-            <p class="m-0" style="font-size: 0.9rem; color: #555;">Total Precio</p>
-            <p class="summary-number m-0" style="font-size: 2rem; font-weight: bold;">
-                ${{ total_price|floatformat:2 }}
-            </p>
-        </div>
-
+    <!-- Card Header -->
+    <div class="card-header d-flex align-items-center">
+        <h3 class="card-title mb-0">
+            <i class="fas fa-boxes mr-2 text-secondary"></i> Reporte de Inventario
+        </h3>
+        <a href="?export=excel" class="btn btn-success btn-sm ml-auto">
+            <i class="fas fa-file-excel mr-1"></i> Descargar Excel
+        </a>
     </div>
-        
-    </div>
+
     <div class="card-body">
-        <div class="table table-responsive table-sm">
-            <table class="table table-bordered table-striped">
-                <thead class="thead-dark">
-                    <tr>
-                        <th>ID</th>
-                        <th>Nombre</th>
-                        <th>Descripcion</th>
-                        <th>Marca</th>
-                        <th>Stock</th>
-                        <th class="text-right">Costo($)</th>
-                        <th class="text-right">Precio($)</th>
-                        <th class="text-center">Ubicación</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for producto in productos %}
-                    <tr>
-                        <td>{{ producto.id }}</td>
-                        <td>{{ producto.nombre }}</td>
-                        <td>{{ producto.descripcion }}</td>
-                        <td class="text-center">{{ producto.brand.nombre|default:"N/A" }}</td>
-                        <td class="text-right">{{ producto.stock }}</td>
-                        <td class="text-right">{{ producto.cost|floatformat:2 }}</td>
-                        <td class="text-right">{{ producto.precio|floatformat:2 }}</td>
-                        <td class="text-center">{{ producto.location|default:"-" }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="text-center">No hay productos con stock disponible.</td>
-                    </tr>
-                    {% endfor %}
-                    <tr>
-                        <td colspan="4" class="text-right font-weight-bold">Totales:</td>
-                        <td class="text-right font-weight-bold">{{ productos|length }}</td>
-                        <td class="text-right font-weight-bold">{{ total_cost|floatformat:2 }}</td>
-                        <td class="text-right font-weight-bold">{{ total_price|floatformat:2 }}</td>
-                        <td> -- </td>
-                    </tr>
-                </tbody>
-            </table>
+
+        <!-- Tarjetas KPI -->
+        <div class="row mb-4">
+
+            <div class="col-sm-4 mb-3">
+                <div class="card stat-card products shadow h-100">
+                    <div class="card-body d-flex justify-content-between align-items-center py-3">
+                        <div>
+                            <div class="stat-label">Productos con Stock</div>
+                            <div class="stat-value">{{ total_productos }}</div>
+                        </div>
+                        <i class="fas fa-cubes stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-sm-4 mb-3">
+                <div class="card stat-card cost shadow h-100">
+                    <div class="card-body d-flex justify-content-between align-items-center py-3">
+                        <div>
+                            <div class="stat-label">Valor en Costo</div>
+                            <div class="stat-value">${{ total_cost|floatformat:2 }}</div>
+                        </div>
+                        <i class="fas fa-dollar-sign stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-sm-4 mb-3">
+                <div class="card stat-card price shadow h-100">
+                    <div class="card-body d-flex justify-content-between align-items-center py-3">
+                        <div>
+                            <div class="stat-label">Valor en Precio</div>
+                            <div class="stat-value">${{ total_price|floatformat:2 }}</div>
+                        </div>
+                        <i class="fas fa-chart-line stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+
         </div>
-    </div>
-    <div class="card-footer">
-        
-    </div>
-</div>
+
+        <!-- Tabla Por Marca -->
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-tags mr-2 text-secondary"></i> Resumen por Marca
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0 brand-table">
+                        <thead>
+                            <tr>
+                                <th class="pl-3">Marca</th>
+                                <th class="text-center">Productos</th>
+                                <th class="text-right">Stock Total</th>
+                                <th class="text-right pr-3">Valor en Precio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for brand_name, data in brand_summary %}
+                            <tr>
+                                <td class="pl-3">
+                                    <i class="fas fa-tag mr-1 text-muted" style="font-size:.8rem;"></i>
+                                    {{ brand_name }}
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge badge-info">{{ data.count }}</span>
+                                </td>
+                                <td class="text-right">{{ data.stock }}</td>
+                                <td class="text-right pr-3 font-weight-bold">${{ data.price_value|floatformat:2 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">
+                                    <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                    Sin datos de inventario
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /card-body -->
+
+</div><!-- /card -->
 {% endblock %}
 
-{% block scripts %}
-{% endblock %}
