@@ -173,15 +173,18 @@
           <h2>Proforma: {{proforma.id}}</h2>
         </strong>
       </div>
+      <!-- Información del cliente -->
       <div class="col-md-4">
           Cliente: <span id="selected-client-name">{{ proforma.cliente|default:'Sin cliente' }}</span>
           <button type="button" id="open-client-modal" class="btn btn-warning btn-sm no-mostrar">
           <i class="fas fa-user-plus"></i>
           </button>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-2">
           Nit: <span id="selected-client-nit">{% if proforma.cliente %}{{ proforma.cliente.nit|default:'-' }}{% else %}-{% endif %}</span>
       </div>
+      
+      <!-- Fecha de la proforma -->
       <div class="col-md-4 text-right">
         <form method="post" action="{% url 'cambiar_fecha_proforma' proforma.id %}" class="d-inline">
           {% csrf_token %}
@@ -192,8 +195,13 @@
                 style="width: 160px;"
                 {% if proforma.estado == 'EJECUTADO' %}disabled{% endif %}>
           <button type="submit" class="btn btn-primary btn-sm" {% if proforma.estado == 'EJECUTADO' %}disabled{% endif %}>Actualizar</button>
-      </form>
+        </form>
       </div>
+      <!-- Tipo de cambio de la proforma -->
+       <div class="col-md-2 text-right">
+          <strong>TC:</strong> {{ exchange_rate_info.rate|floatformat:2 }} ({{ exchange_rate_info.source_currency }}/{{ exchange_rate_info.target_currency }})
+       </div>
+      
     </div>
   </div>
   

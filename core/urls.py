@@ -21,6 +21,7 @@ urlpatterns = [
     path('config/catalogos/eliminar/', superadmin_cloud_catalog_delete, name='superadmin_cloud_catalog_delete'),
     path('empresa/editar/', company_edit, name='company_edit'),
     path('empresa/tipo-cambio/', exchange_rate_list_create, name='exchange_rate_list'),
+    path('empresa/tipo-cambio/bcb/', get_bcb_exchange_rate, name='get_bcb_exchange_rate'),
     path('usuarios/', UserListView.as_view(), name='user_list'),
     path('usuarios/nuevo/', user_create, name='user_create'),
     path('usuarios/<int:pk>/editar/', user_update, name='user_update'),

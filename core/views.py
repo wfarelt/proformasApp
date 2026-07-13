@@ -20,6 +20,7 @@ from django.utils.timezone import make_aware
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 import json
+import requests as http_requests
 import weasyprint
 from faker import Faker
 from nlt import numlet as nl
@@ -118,6 +119,34 @@ def company_edit(request):
 
 
 @login_required(login_url='login')
+@login_required(login_url='login')
+def get_bcb_exchange_rate(request):
+    """Proxy hacia la API del BCB para obtener el tipo de cambio oficial actual."""
+    if not is_admin(request.user):
+        return JsonResponse({'success': False, 'error': 'Sin permisos'}, status=403)
+    try:
+        resp = http_requests.get(
+            'https://apibcb.cucu.bo/api/v1/tc/oficial',
+            timeout=5,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        tc = data.get('tc_oficial', {})
+        valor = tc.get('valor')
+        if valor is None:
+            return JsonResponse({'success': False, 'error': 'La API no devolvió el campo valor'}, status=502)
+        return JsonResponse({
+            'success': True,
+            'valor': valor,
+            'moneda': tc.get('moneda', 'USD/BOB'),
+            'fecha': tc.get('fecha', ''),
+        })
+    except http_requests.exceptions.Timeout:
+        return JsonResponse({'success': False, 'error': 'La API del BCB no respondió a tiempo'}, status=504)
+    except Exception:
+        return JsonResponse({'success': False, 'error': 'No se pudo obtener el tipo de cambio del BCB'}, status=502)
+
+
 def exchange_rate_list_create(request):
     if not is_admin(request.user):
         messages.error(request, 'No tienes permisos para administrar tipos de cambio.')
@@ -665,6 +694,57 @@ def _apply_exchange_rate_snapshot(proforma):
     proforma.exchange_rate_date = proforma_date
 
 
+def _refresh_exchange_rate_to_active(proforma):
+    """Actualiza el tipo de cambio de la proforma al activo en la fecha actual. Solo para proformas no ejecutadas."""
+    if proforma.estado == 'EJECUTADO':
+        return
+
+    company = proforma.company or getattr(proforma.usuario, 'company', None)
+    today = timezone.now().date()
+
+    if not company:
+        proforma.currency_source = PROFORMA_BASE_CURRENCY
+        proforma.currency_target = PROFORMA_REFERENCE_CURRENCY
+        proforma.exchange_rate_applied = DEFAULT_USD_BOB_RATE
+        proforma.exchange_rate_date = today
+        proforma.save(update_fields=['currency_source', 'currency_target', 'exchange_rate_applied', 'exchange_rate_date'])
+        return
+
+    source_currency = PROFORMA_BASE_CURRENCY
+    target_currency = PROFORMA_REFERENCE_CURRENCY
+
+    if source_currency == target_currency:
+        proforma.currency_source = source_currency
+        proforma.currency_target = target_currency
+        proforma.exchange_rate_applied = Decimal('1.000000')
+        proforma.exchange_rate_date = today
+        proforma.save(update_fields=['currency_source', 'currency_target', 'exchange_rate_applied', 'exchange_rate_date'])
+        return
+
+    rate = ExchangeRate.objects.filter(
+        company=company,
+        from_currency=source_currency,
+        to_currency=target_currency,
+        is_active=True,
+        valid_from__lte=today,
+    ).order_by('-valid_from', '-created_at').first()
+
+    if rate:
+        proforma.currency_source = rate.from_currency
+        proforma.currency_target = rate.to_currency
+        proforma.exchange_rate_applied = rate.rate
+        proforma.exchange_rate_date = rate.valid_from
+        proforma.save(update_fields=['currency_source', 'currency_target', 'exchange_rate_applied', 'exchange_rate_date'])
+        return
+
+    # Fallback
+    proforma.currency_source = target_currency
+    proforma.currency_target = target_currency
+    proforma.exchange_rate_applied = DEFAULT_USD_BOB_RATE
+    proforma.exchange_rate_date = today
+    proforma.save(update_fields=['currency_source', 'currency_target', 'exchange_rate_applied', 'exchange_rate_date'])
+
+
 def _get_exchange_rate_preview(proforma):
     """Calcula el tipo de cambio visible en pantalla sin persistir snapshot."""
     proforma_date = timezone.localtime(proforma.fecha).date() if proforma.fecha else timezone.now().date()
@@ -1013,6 +1093,7 @@ def proforma_edit(request, id):
     if not proforma.company and request.user.company:
         proforma.company = request.user.company
         proforma.save(update_fields=['company'])
+    _refresh_exchange_rate_to_active(proforma)
     context = _get_proforma_context(proforma, request)
     return render(request, 'core/proforma/proforma_new.html', context)
 
@@ -1168,6 +1249,7 @@ def agregar_producto_a_detalle(request):
 
         proforma.total = (Decimal(proforma.total) + subtotal).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         proforma.save(update_fields=['total'])
+        _refresh_exchange_rate_to_active(proforma)
 
         producto.latest_price = precio
         producto.save(update_fields=['latest_price'])
@@ -1252,6 +1334,7 @@ def eliminar_producto_a_detalle(request, id):
     proforma = detalle.proforma
     proforma.total = (Decimal(proforma.total) - Decimal(detalle.subtotal)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
     proforma.save(update_fields=['total'])
+    _refresh_exchange_rate_to_active(proforma)
     detalle.delete()
     return redirect(reverse_lazy('proforma_edit', args=[proforma.id]))
 
@@ -1316,6 +1399,7 @@ def editar_cantidad_detalle(request, detalle_id):
         # Actualizar total de la proforma (restar viejo subtotal y sumar nuevo)
         proforma.total = (Decimal(proforma.total) - old_subtotal + detalle.subtotal).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         proforma.save()
+        _refresh_exchange_rate_to_active(proforma)
 
         return JsonResponse({
             "success": True,

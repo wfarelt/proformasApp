@@ -26,8 +26,17 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>{{ form.rate.label }}</label>
-                                    {{ form.rate }}
-                                    <small class="form-text text-muted d-block mt-1">Ejemplo: 6.960000</small>
+                                    <div class="input-group">
+                                        {{ form.rate }}
+                                        <div class="input-group-append">
+                                            <button type="button" class="btn btn-outline-secondary" id="btn-cargar-bcb" title="Cargar tipo de cambio oficial BCB">
+                                                <i class="fas fa-sync-alt"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <small class="form-text text-muted d-block mt-1" id="bcb-rate-hint">
+                                        Cargando TC oficial BCB&hellip;
+                                    </small>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -115,6 +124,40 @@
     </div>
 </div>
 <script>
+const BCB_URL = "{% url 'get_bcb_exchange_rate' %}";
+const rateInput = document.getElementById('{{ form.rate.id_for_label }}');
+const hint = document.getElementById('bcb-rate-hint');
+const btnCargar = document.getElementById('btn-cargar-bcb');
+
+function cargarTCBcb(autoFill) {
+    if (btnCargar) {
+        btnCargar.disabled = true;
+        btnCargar.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    }
+    fetch(BCB_URL)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const val = parseFloat(data.valor).toFixed(6);
+                if (hint) hint.textContent = `TC oficial BCB: ${val} (${data.moneda}, ${data.fecha})`;
+                if (autoFill && rateInput && !rateInput.value) {
+                    rateInput.value = val;
+                }
+            } else {
+                if (hint) hint.textContent = `No se pudo cargar: ${data.error}`;
+            }
+        })
+        .catch(() => {
+            if (hint) hint.textContent = 'No se pudo conectar con la API del BCB.';
+        })
+        .finally(() => {
+            if (btnCargar) {
+                btnCargar.disabled = false;
+                btnCargar.innerHTML = '<i class="fas fa-sync-alt"></i>';
+            }
+        });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     var form = document.getElementById('exchange-rate-form');
     var submitBtn = document.getElementById('save-exchange-rate-btn');
@@ -127,6 +170,35 @@ document.addEventListener('DOMContentLoaded', function () {
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
     });
+
+    // Cargar automáticamente al abrir (auto-rellena si el campo está vacío)
+    cargarTCBcb(true);
+
+    if (btnCargar) {
+        btnCargar.addEventListener('click', function () {
+            // Al hacer clic siempre sobreescribe
+            fetch(BCB_URL)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        const val = parseFloat(data.valor).toFixed(6);
+                        if (hint) hint.textContent = `TC oficial BCB: ${val} (${data.moneda}, ${data.fecha})`;
+                        if (rateInput) rateInput.value = val;
+                    } else {
+                        if (hint) hint.textContent = `Error: ${data.error}`;
+                    }
+                })
+                .catch(() => {
+                    if (hint) hint.textContent = 'No se pudo conectar con la API del BCB.';
+                })
+                .finally(() => {
+                    btnCargar.disabled = false;
+                    btnCargar.innerHTML = '<i class="fas fa-sync-alt"></i>';
+                });
+            btnCargar.disabled = true;
+            btnCargar.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        });
+    }
 });
 </script>
 {% endblock %}
