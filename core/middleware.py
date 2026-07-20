@@ -41,7 +41,19 @@ class RoleAccessMiddleware:
         return self.get_response(request)
 
     def _is_static_or_media(self, path):
-        return path.startswith('/static/') or path.startswith('/media/')
+        browser_public_paths = {
+            '/favicon.ico',
+            '/robots.txt',
+            '/manifest.json',
+            '/site.webmanifest',
+            '/service-worker.js',
+        }
+        return (
+            path.startswith('/static/')
+            or path.startswith('/media/')
+            or path in browser_public_paths
+            or path.startswith('/apple-touch-icon')
+        )
 
     def _self_service_allowed(self, path):
         allowed_paths = {
@@ -59,6 +71,7 @@ class RoleAccessMiddleware:
             'superadmin_cloud_catalog_upload',
             'superadmin_cloud_catalog_rename',
             'superadmin_cloud_catalog_delete',
+            'superadmin_company_list',
         ):
             try:
                 allowed_paths.add(reverse(route_name))
@@ -73,6 +86,7 @@ class RoleAccessMiddleware:
             pass
 
         catalog_base_prefix = '/config/catalogos'
+        company_base_prefix = '/config/empresas'
 
         return (
             self._self_service_allowed(path)
@@ -80,5 +94,7 @@ class RoleAccessMiddleware:
             or path in allowed_paths
             or path.startswith(f"{catalog_base_prefix}/")
             or path == catalog_base_prefix
+            or path.startswith(f"{company_base_prefix}/")
+            or path == company_base_prefix
             or (plantilla_path and (path == plantilla_path or path.startswith(plantilla_path)))
         )

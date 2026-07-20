@@ -14,6 +14,7 @@ from django.db import IntegrityError, OperationalError
 from django.db.models import Count, Max, Q, Sum
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
+from django.templatetags.static import static
 from django.utils import timezone
 from django.utils.timezone import make_aware
 
@@ -28,7 +29,7 @@ from nlt import numlet as nl
 from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand, Company, ProductKit, ProductKitItem, ProductPriceHistory, ExchangeRate
 from .forms import ProductoForm, ClienteForm, SupplierForm, BrandForm, \
                     CustomPasswordChangeForm, UserProfileForm, ProductKitForm, ProductKitItemForm, ProductCatalogImportForm, CloudCatalogUploadForm, \
-                    AdminUserCreateForm, AdminUserUpdateForm, CompanyDataForm, ExchangeRateForm
+                    AdminUserCreateForm, AdminUserUpdateForm, CompanyDataForm, SuperadminCompanyForm, ExchangeRateForm
 from .services.price_approval_service import PriceApprovalService
 from core.services.auto_price_service import AutoPriceService
 from core.services.product_catalog_import_service import ProductCatalogImportService
@@ -115,6 +116,38 @@ def company_edit(request):
         'form': form,
         'title': 'Datos de la empresa',
         'company': company,
+    })
+
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: getattr(user, 'is_superadmin', False))
+def superadmin_company_list(request):
+    companies = Company.objects.all().order_by('name')
+    return render(request, 'core/company/company_superadmin_list.html', {
+        'title': 'Configuración de empresas',
+        'companies': companies,
+    })
+
+
+@login_required(login_url='login')
+@user_passes_test(lambda user: getattr(user, 'is_superadmin', False))
+def superadmin_company_edit(request, company_id):
+    company = get_object_or_404(Company, pk=company_id)
+
+    if request.method == 'POST':
+        form = SuperadminCompanyForm(request.POST, request.FILES, instance=company)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Configuración de empresa actualizada correctamente.')
+            return redirect('superadmin_company_edit', company_id=company.id)
+    else:
+        form = SuperadminCompanyForm(instance=company)
+
+    return render(request, 'core/company/company_form.html', {
+        'form': form,
+        'title': f'Configurar empresa: {company.name}',
+        'company': company,
+        'back_url_name': 'superadmin_company_list',
     })
 
 
@@ -347,7 +380,7 @@ def product_detail(request, id):
 def producto_new(request):
     form = ProductoForm(company=request.user.company)
     if request.method == 'POST':
-        form = ProductoForm(request.POST, company=request.user.company)
+        form = ProductoForm(request.POST, request.FILES, company=request.user.company)
         if form.is_valid():
             form.save()
             messages.success(request, 'Producto creado correctamente.')
@@ -364,7 +397,7 @@ def product_edit(request, id):
     old_price = producto.precio 
 
     if request.method == 'POST':
-        form = ProductoForm(request.POST, instance=producto, company=request.user.company)
+        form = ProductoForm(request.POST, request.FILES, instance=producto, company=request.user.company)
         # Bloquear el campo de costo al editar
         form.fields['cost'].disabled = True
         if is_admin_role:
@@ -401,6 +434,25 @@ def product_edit(request, id):
         form.fields['cost'].disabled = True
     
     return render(request, 'core/product/producto_new.html', {'form': form, 'title': title})
+
+
+@login_required(login_url='login')
+def product_detail_api(request, id):
+    producto = get_object_or_404(Producto, pk=id)
+    image_url = producto.imagen.url if producto.imagen else static('img/no-image.png')
+    brand = producto.brand.initials if producto.brand else ''
+
+    return JsonResponse({
+        'id': producto.id,
+        'codigo': producto.nombre,
+        'nombre': producto.nombre,
+        'descripcion': producto.descripcion or '',
+        'marca': brand,
+        'precio': str(producto.precio),
+        'stock': producto.stock or 0,
+        'ubicacion': producto.location or '',
+        'imagen': image_url,
+    })
 
 class ProductListView(LoginRequiredMixin, ListView):   
     model = Producto
@@ -491,6 +543,11 @@ def download_product_catalog_template(request):
 @user_passes_test(lambda user: getattr(user, 'is_admin', False))
 def cloud_catalog_list(request):
     """Muestra los catálogos disponibles en el repositorio de la nube."""
+    company = getattr(request.user, 'company', None)
+    if not company or not getattr(company, 'enable_cloud_catalog', False):
+        messages.error(request, 'El catálogo nube está deshabilitado para tu empresa.')
+        return redirect('product_list')
+
     try:
         catalogs = ProductCatalogImportService.fetch_cloud_index()
         error = None
@@ -509,6 +566,11 @@ def cloud_catalog_list(request):
 @user_passes_test(lambda user: getattr(user, 'is_admin', False))
 def cloud_catalog_import_from_url(request):
     """Descarga e importa el catálogo seleccionado desde la nube."""
+    company = getattr(request.user, 'company', None)
+    if not company or not getattr(company, 'enable_cloud_catalog', False):
+        messages.error(request, 'El catálogo nube está deshabilitado para tu empresa.')
+        return redirect('product_list')
+
     if request.method != 'POST':
         return redirect('cloud_catalog_list')
 

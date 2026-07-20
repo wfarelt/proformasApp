@@ -6,32 +6,35 @@
 
 {% block content %}
 <div class="row mt-4">
-    <div class="col-lg-4 mb-4 mb-lg-0">
-        <div class="card border-primary shadow-sm h-100">
+    <div class="col-12 mb-4">
+        <div class="card border-primary shadow-sm">
             <div class="card-header bg-primary text-white">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-box-open mr-2"></i> {{ producto.nombre }}
-                </h5>
+                <h5 class="card-title mb-0"><i class="fas fa-box-open mr-2"></i>Ficha del Producto</h5>
             </div>
             <div class="card-body">
-                <p class="mb-2"><strong>Descripción:</strong> {{ producto.descripcion|default:"Sin descripción" }}</p>
-                <p class="mb-2"><strong>Referencia cruzada:</strong> {{ producto.referencia_cruzada|default:"No especificada" }}</p>
-                <p class="mb-2"><strong>Costo:</strong> <span class="badge badge-secondary">
-                    {% if user.company.currency == 'BOB' %}
-                        (Bs)
-                    {% elif user.company.currency == 'USD' %}
-                        ($)
-                    {% endif %}
-                    {{ producto.cost }}</span></p>
-                <p class="mb-2"><strong>Precio:</strong> <span class="badge badge-success">
-                    {% if user.company.currency == 'BOB' %}
-                        (Bs)
-                    {% elif user.company.currency == 'USD' %}
-                        ($)
-                    {% endif %}
-                    {{ producto.precio }}</span></p>
-                <p class="mb-2"><strong>Stock:</strong> <span class="badge badge-info">{{ producto.stock }}</span></p>
-                <p class="mb-0"><strong>Ubicación:</strong> {{ producto.location|default:"No especificada" }}</p>
+                <div class="row align-items-center">
+                    <div class="col-12 col-md-4 text-center mb-3 mb-md-0">
+                        {% if producto.imagen %}
+                            <img src="{{ producto.imagen.url }}" alt="Imagen de {{ producto.nombre }}" class="product-detail-image border rounded p-2">
+                        {% else %}
+                            <img src="{% static 'img/no-image.png' %}" alt="Sin imagen" class="product-detail-image border rounded p-2">
+                        {% endif %}
+                    </div>
+                    <div class="col-12 col-md-8">
+                        <p class="mb-2"><strong>Código:</strong> {{ producto.nombre }}</p>
+                        <p class="mb-2"><strong>Nombre:</strong> {{ producto.nombre }}</p>
+                        <p class="mb-2"><strong>Marca:</strong> {% if producto.brand %}{{ producto.brand.initials }}{% else %}-{% endif %}</p>
+                        <p class="mb-2"><strong>Precio:</strong>
+                            <span class="badge badge-success">
+                                {% if user.company.currency == 'BOB' %}(Bs){% elif user.company.currency == 'USD' %}($){% endif %}
+                                {{ producto.precio }}
+                            </span>
+                        </p>
+                        <p class="mb-2"><strong>Stock:</strong> <span class="badge badge-info">{{ producto.stock }}</span></p>
+                        <p class="mb-2"><strong>Ubicación:</strong> {{ producto.location|default:"No especificada" }}</p>
+                        <p class="mb-0"><strong>Descripción:</strong> {{ producto.descripcion|default:"Sin descripción" }}</p>
+                    </div>
+                </div>
 
                 {% if custom_attributes_display %}
                     <hr>
@@ -60,7 +63,8 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-8">
+
+    <div class="col-12">
         <div class="card shadow-sm">
             <div class="card-header bg-light">
                 <h5 class="card-title mb-0">Historial de Precios</h5>

@@ -1,0 +1,31 @@
+{% load static %}
+<div class="modal fade" id="productImageModal" tabindex="-1" role="dialog" aria-labelledby="productImageModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="productImageModalLabel">Detalle del producto</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-6 text-center mb-3 mb-md-0">
+            <img id="product-modal-image" src="{% static 'img/no-image.png' %}" alt="Imagen de producto" class="img-fluid product-modal-image">
+          </div>
+          <div class="col-md-6">
+            <p class="mb-1"><strong>Nombre:</strong> <span id="product-modal-nombre">-</span></p>
+            <p class="mb-1"><strong>Código:</strong> <span id="product-modal-codigo">-</span></p>
+            <p class="mb-1"><strong>Descripción:</strong> <span id="product-modal-descripcion">-</span></p>
+            <p class="mb-1"><strong>Marca:</strong> <span id="product-modal-marca">-</span></p>
+            <p class="mb-1"><strong>Precio:</strong> <span id="product-modal-precio">-</span></p>
+            <p class="mb-0"><strong>Stock:</strong> <span id="product-modal-stock">-</span></p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>

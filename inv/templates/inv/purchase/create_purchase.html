@@ -149,7 +149,10 @@
             });
         });
         
-        // Funciones para calcular precio de venta (35%) y subtotales/total
+        // Funciones para calcular precio de venta (margen configurable por empresa) y subtotales/total
+        const saleMarginPct = parseFloat('{{ default_sale_margin_percentage|default:35 }}') || 35;
+        const saleMultiplier = 1 + (saleMarginPct / 100);
+
         function parseFloatOrZero(v) {
             var n = parseFloat(String(v).replace(/,/g, ''));
             return isNaN(n) ? 0 : n;
@@ -168,7 +171,7 @@
 
                 // Si está vacío o fue auto-calculado previamente (no manual), recalculamos
                 if (!saleCurrent || autoAttr !== 'false') {
-                    var sale = +(unit * 1.35).toFixed(2);
+                    var sale = +(unit * saleMultiplier).toFixed(2);
                     $saleInput.val(sale);
                     $saleInput.attr('data-auto-calculated', 'true');
                 }

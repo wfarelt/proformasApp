@@ -231,10 +231,12 @@
                 </a>
               </li>
               <li class="nav-item">
-                <a href="{% url 'cargar_inventario_inicial' %}" class="nav-link {% if current_url == 'cargar_inventario_inicial' %}active{% endif %}">
-                  <i class="far fa-circle nav-icon"></i>
-                  <p>Carga inicial de stock</p>
-                </a>
+                {% if user.company and user.company.enable_initial_stock_load %}
+                  <a href="{% url 'cargar_inventario_inicial' %}" class="nav-link {% if current_url == 'cargar_inventario_inicial' %}active{% endif %}">
+                    <i class="far fa-circle nav-icon"></i>
+                    <p>Carga inicial de stock</p>
+                  </a>
+                {% endif %}
               </li>
             </ul>
           </li>
@@ -286,15 +288,15 @@
           {% endif %}      
           
           <!-- OPCIONES -->
-          <li class="nav-item {% if current_url == 'edit_profile' or current_url == 'password_change' or current_url == 'password_change_done' or current_url == 'company_edit' or current_url == 'exchange_rate_list' or current_url == 'user_list' or current_url == 'user_create' or current_url == 'user_update' or current_url == 'user_status' or '/admin/' in request.path %}menu-open{% endif %}">
-            <a href="#" class="nav-link {% if current_url == 'edit_profile' or current_url == 'password_change' or current_url == 'password_change_done' or current_url == 'company_edit' or current_url == 'exchange_rate_list' or current_url == 'user_list' or current_url == 'user_create' or current_url == 'user_update' or current_url == 'user_status' or '/admin/' in request.path %}active{% endif %}">
+          <li class="nav-item {% if current_url == 'edit_profile' or current_url == 'password_change' or current_url == 'password_change_done' or current_url == 'company_edit' or current_url == 'exchange_rate_list' or current_url == 'user_list' or current_url == 'user_create' or current_url == 'user_update' or current_url == 'user_status' or current_url == 'superadmin_company_list' or current_url == 'superadmin_company_edit' or '/admin/' in request.path %}menu-open{% endif %}">
+            <a href="#" class="nav-link {% if current_url == 'edit_profile' or current_url == 'password_change' or current_url == 'password_change_done' or current_url == 'company_edit' or current_url == 'exchange_rate_list' or current_url == 'user_list' or current_url == 'user_create' or current_url == 'user_update' or current_url == 'user_status' or current_url == 'superadmin_company_list' or current_url == 'superadmin_company_edit' or '/admin/' in request.path %}active{% endif %}">
               <i class="nav-icon fas fa-sliders-h"></i>
               <p>
                 Opciones
                 <i class="fas fa-angle-left right"></i>
               </p>
             </a>
-            <ul class="nav nav-treeview" {% if current_url == 'edit_profile' or current_url == 'password_change' or current_url == 'password_change_done' or current_url == 'company_edit' or current_url == 'exchange_rate_list' or current_url == 'user_list' or current_url == 'user_create' or current_url == 'user_update' or current_url == 'user_status' or '/admin/' in request.path %}style="display: block;"{% else %}style="display: none;"{% endif %}>
+            <ul class="nav nav-treeview" {% if current_url == 'edit_profile' or current_url == 'password_change' or current_url == 'password_change_done' or current_url == 'company_edit' or current_url == 'exchange_rate_list' or current_url == 'user_list' or current_url == 'user_create' or current_url == 'user_update' or current_url == 'user_status' or current_url == 'superadmin_company_list' or current_url == 'superadmin_company_edit' or '/admin/' in request.path %}style="display: block;"{% else %}style="display: none;"{% endif %}>
               <li class="nav-item">
                 <a href="{% url 'edit_profile' %}" class="nav-link {% if current_url == 'edit_profile' or current_url == 'password_change' or current_url == 'password_change_done' %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>
@@ -322,6 +324,12 @@
               </li>
               {% endif %}
               {% if user.can_access_settings %}
+              <li class="nav-item">
+                <a href="{% url 'superadmin_company_list' %}" class="nav-link {% if current_url == 'superadmin_company_list' or current_url == 'superadmin_company_edit' %}active{% endif %}">
+                  <i class="far fa-building nav-icon"></i>
+                  <p>Config. de empresas</p>
+                </a>
+              </li>
               <li class="nav-item">
                 <a href="/admin/" class="nav-link {% if '/admin/' in request.path %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>

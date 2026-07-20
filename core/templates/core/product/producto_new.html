@@ -1,81 +1,35 @@
 {% extends 'core/index.html' %}
+{% load static %}
 
 {% block title %}{{title}}{% endblock %}
 
 {% block content %}
     
-        <div class="col-md-6 offset-md-3 mt-3">
+        <div class="col-lg-8 offset-lg-2 mt-3">
             <div class="card card-dark">
                 <div class="card-header">
                   <h3 class="card-title">{{ form.instance.id|yesno:"Editar Producto,Nuevo Producto" }}</h3>
                 </div>
-                <form method="post">
+                <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="card-body">
-                        {# Fila 1: Código y Marca #}
+                        {# Fila 1: Datos principales #}
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="form-group">
                                     <label>{{ form.nombre.label }}</label>
                                     {{ form.nombre }}
                                     {{ form.nombre.errors }}
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="form-group">
                                     <label>{{ form.brand.label }}</label>
                                     {{ form.brand }}
                                     {{ form.brand.errors }}
                                 </div>
                             </div>
-                        </div>
-                        {# Fila 2: Descripción #}
-                        <div class="row">
-                            <div class="col-md-12">
-                                <div class="form-group">
-                                    <label>{{ form.descripcion.label }}</label>
-                                    {{ form.descripcion }}
-                                    {{ form.descripcion.errors }}
-                                </div>
-                            </div>
-                        </div>
-                        {# Fila 3: Costo y Precio de Venta #}
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>{{ form.cost.label }}</label>
-                                    {{ form.cost }}
-                                    {{ form.cost.errors }}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>{{ form.precio.label }}</label>
-                                    {{ form.precio }}
-                                    {{ form.precio.errors }}
-                                </div>
-                            </div>
-                        </div>
-                        {# Fila 4: Stock y Ubicación #}
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>{{ form.stock.label }}</label>
-                                    {{ form.stock }}
-                                    {{ form.stock.errors }}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>{{ form.location.label }}</label>
-                                    {{ form.location }}
-                                    {{ form.location.errors }}
-                                </div>
-                            </div>
-                        </div>
-                        {# Fila 5: Referencia cruzada #}
-                        <div class="row">
-                            <div class="col-md-12">
+                            <div class="col-md-4">
                                 <div class="form-group">
                                     <label>{{ form.referencia_cruzada.label }}</label>
                                     {{ form.referencia_cruzada }}
@@ -83,11 +37,55 @@
                                 </div>
                             </div>
                         </div>
+
+                        {# Fila 2: Datos de precio e inventario #}
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>{{ form.stock.label }}</label>
+                                    {{ form.stock }}
+                                    {{ form.stock.errors }}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>{{ form.location.label }}</label>
+                                    {{ form.location }}
+                                    {{ form.location.errors }}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>{{ form.cost.label }}</label>
+                                    {{ form.cost }}
+                                    {{ form.cost.errors }}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>{{ form.precio.label }}</label>
+                                    {{ form.precio }}
+                                    {{ form.precio.errors }}
+                                </div>
+                            </div>
+                        </div>
+
+                        {# Fila 3: Descripción #}
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label>{{ form.descripcion.label }}</label>
+                                    {{ form.descripcion }}
+                                    {{ form.descripcion.errors }}
+                                </div>
+                            </div>
+                        </div>
+
                         {# Campos personalizados de la empresa #}
                         {% for field in form %}
                             {% if field.html_name|slice:":8" == "custom__" %}
                             <div class="row">
-                                <div class="col-md-12">
+                                <div class="col-md-6">
                                     <div class="form-group">
                                         <label>{{ field.label }}</label>
                                         {{ field }}
@@ -100,6 +98,24 @@
                             </div>
                             {% endif %}
                         {% endfor %}
+
+                        <hr>
+
+                        {# Imagen al final #}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">{{ form.imagen.label }}</label>
+                                    {{ form.imagen }}
+                                    <small class="form-text text-muted">Formatos permitidos: JPG, JPEG, PNG, WEBP. Tamaño máximo: 2 MB.</small>
+                                    {{ form.imagen.errors }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted d-block mb-1">Imagen actual o vista previa</small>
+                                <img src="{% if form.instance.imagen %}{{ form.instance.imagen.url }}{% else %}{% static 'img/no-image.png' %}{% endif %}" alt="Imagen del producto" class="product-thumb border rounded p-1" id="image-preview">
+                            </div>
+                        </div>
                     </div>
                     <div class="card-footer text-center">
                         <button type="submit" class="btn btn-success">Guardar <i class="fa fa-save"></i></button>
@@ -110,4 +126,41 @@
             </div>
         </div>
     
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('id_imagen');
+    const preview = document.getElementById('image-preview');
+    const fallback = '{% static "img/no-image.png" %}';
+
+    if (!input || !preview) return;
+
+    input.addEventListener('change', function () {
+        const file = input.files && input.files[0];
+        if (!file) {
+            preview.src = fallback;
+            return;
+        }
+
+        const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!allowed.includes(file.type)) {
+            alert('Formato no permitido. Solo se aceptan JPG, JPEG, PNG y WEBP.');
+            input.value = '';
+            preview.src = fallback;
+            return;
+        }
+
+        if (file.size > 2 * 1024 * 1024) {
+            alert('La imagen no puede superar los 2 MB.');
+            input.value = '';
+            preview.src = fallback;
+            return;
+        }
+
+        preview.src = URL.createObjectURL(file);
+    });
+});
+</script>
 {% endblock %}

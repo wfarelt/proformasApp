@@ -402,6 +402,8 @@ def purchase_list(request):
 
 @login_required(login_url='login')
 def create_purchase(request):
+    company = getattr(request.user, 'company', None)
+    default_sale_margin_percentage = float(getattr(company, 'default_sale_margin_percentage', 35) or 35)
         
     if request.method == 'POST':
         form = PurchaseForm(request.POST)
@@ -454,11 +456,14 @@ def create_purchase(request):
         'form': form,
         'formset': formset,
         'title': 'Registrar Compra',
+        'default_sale_margin_percentage': default_sale_margin_percentage,
     })
 
 @login_required(login_url='login')
 def update_purchase(request, pk):
     purchase = get_object_or_404(Purchase, pk=pk)
+    company = getattr(request.user, 'company', None)
+    default_sale_margin_percentage = float(getattr(company, 'default_sale_margin_percentage', 35) or 35)
     
     if purchase.status == 'confirmed':
         messages.warning(request, "Esta compra ya está confirmada y no se puede modificar.")
@@ -533,6 +538,7 @@ def update_purchase(request, pk):
         'purchase': purchase,
         'details': details_with_subtotals,
         'title': 'Actualizar Compra',
+        'default_sale_margin_percentage': default_sale_margin_percentage,
     })
 
 def revert_purchase_movement(purchase):
@@ -800,6 +806,11 @@ def movement_pdf(request, pk):
 @login_required
 def cargar_inventario_inicial(request):
     from core.services.price_evaluation_service import PriceEvaluationService
+    company = getattr(request.user, 'company', None)
+    if not company or not getattr(company, 'enable_initial_stock_load', False):
+        messages.error(request, 'La carga inicial de stock está deshabilitada para tu empresa.')
+        return redirect('movement_list')
+
     if request.method == 'POST':
         form = InventoryUploadForm(request.POST, request.FILES)
         if form.is_valid():

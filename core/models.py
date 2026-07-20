@@ -1,12 +1,16 @@
 from django.db import models
 from django.conf import settings
+from django.core.files.base import ContentFile
 from django.utils import timezone
 from decimal import Decimal, ROUND_HALF_UP
+from io import BytesIO
+from pathlib import Path
 from typing import cast
 
 from urllib.parse import quote
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
+from PIL import Image, UnidentifiedImageError
 
 # Create your models here.
 
@@ -43,6 +47,23 @@ class Company(models.Model):
         default=True,
         verbose_name='Habilitar Productos Recomendados',
         help_text='Muestra sugerencias de productos en proformas según historial de proformas ejecutadas'
+    )
+    enable_initial_stock_load = models.BooleanField(
+        default=True,
+        verbose_name='Habilitar Carga Inicial de Stock',
+        help_text='Permite acceder al módulo de carga inicial de stock'
+    )
+    enable_cloud_catalog = models.BooleanField(
+        default=True,
+        verbose_name='Habilitar Catálogo Nube',
+        help_text='Permite acceder a la importación desde catálogo nube en productos'
+    )
+    default_sale_margin_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=cast(Decimal, 35),
+        verbose_name='Margen de Venta por Defecto (%)',
+        help_text='Porcentaje usado para sugerir precio de venta desde costo en compras (ej: 35.00)'
     )
     product_custom_fields_config = models.JSONField(
         default=dict,
@@ -234,6 +255,7 @@ class Producto(models.Model):
     referencia_cruzada = models.CharField(max_length=100, blank=True, null=True, db_index=True)
     descripcion = models.TextField(blank=True, null=True)
     brand = models.ForeignKey(Brand, on_delete=models.CASCADE, blank=True, null=True)
+    imagen = models.ImageField(upload_to='productos/', blank=True, null=True, verbose_name='Imagen')
     cost = models.DecimalField(default=cast(Decimal, 0), max_digits=10, decimal_places=2, blank=True, null=True)
     precio = models.DecimalField(default=cast(Decimal, 0), max_digits=10, decimal_places=2)
     latest_price = models.DecimalField(default=cast(Decimal, 0), max_digits=10, decimal_places=2 )
@@ -265,6 +287,33 @@ class Producto(models.Model):
     def set_custom_attribute(self, key, value):
         """Establece un atributo personalizado"""
         self.custom_attributes[key] = value
+
+    def save(self, *args, **kwargs):
+        """Optimiza la imagen del producto en formato WEBP y max 600x600."""
+        if self.imagen:
+            should_process = (not getattr(self.imagen, '_committed', True)) or (not self.imagen.name.lower().endswith('.webp'))
+            if should_process:
+                try:
+                    self.imagen.open('rb')
+                    image = Image.open(self.imagen)
+                    if image.mode in ('RGBA', 'LA', 'P'):
+                        image = image.convert('RGBA').convert('RGB')
+                    elif image.mode != 'RGB':
+                        image = image.convert('RGB')
+
+                    image.thumbnail((600, 600), Image.Resampling.LANCZOS)
+
+                    output = BytesIO()
+                    image.save(output, format='WEBP', quality=85, optimize=True)
+                    output.seek(0)
+
+                    base_name = Path(self.imagen.name).stem or 'producto'
+                    self.imagen.save(f'{base_name}.webp', ContentFile(output.read()), save=False)
+                except (UnidentifiedImageError, OSError, ValueError):
+                    # Si el archivo no puede procesarse como imagen, delegar validacion al formulario.
+                    pass
+
+        super().save(*args, **kwargs)
 
 # PROFORMA
 class Proforma(models.Model):

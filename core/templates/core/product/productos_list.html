@@ -1,5 +1,5 @@
 {% extends 'core/list.html' %}
-{% load core_tags %}
+{% load core_tags static %}
 
 {% block columns %}                
 <th>Id</th>
@@ -36,7 +36,9 @@
 
 {% block rows %}                       
 <td>{{ obj.id }}</td>
-<td>{{ obj.nombre }}</td>
+<td>
+    <button type="button" class="btn btn-link btn-sm p-0" data-product-modal-id="{{ obj.id }}">{{ obj.nombre }}</button>
+</td>
 <td>{{ obj.descripcion|truncatechars:45 }}</td>
 <td>{{ obj.referencia_cruzada|default:"-"|truncatechars:45 }}</td>
 <td>{{ obj.brand.initials }}</td>
@@ -62,10 +64,18 @@
 
 {% block create %}
 {% if user.is_admin %}
+{% if user.company and user.company.enable_cloud_catalog %}
 <a href="{% url 'cloud_catalog_list' %}" class="btn btn-primary mr-2">Catálogo nube <i class="fa fa-cloud-download"></i></a>
+{% endif %}
 <a href="{% url 'product_catalog_import' %}" class="btn btn-info mr-2">Importar catálogo <i class="fa fa-upload"></i></a>
 {% endif %}
 <a href="{% url 'producto_new' %}" class="btn btn-success">Producto <i class="fa fa-plus"></i></a>
 {% endblock create %}
+
+{% block scripts %}
+{{ block.super }}
+{% include 'core/includes/product_image_modal.html' %}
+<script src="{% static 'js/product_modal.js' %}"></script>
+{% endblock %}
 
 

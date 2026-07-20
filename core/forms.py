@@ -184,7 +184,7 @@ class AdminUserUpdateForm(forms.ModelForm):
 class CompanyDataForm(forms.ModelForm):
     class Meta:
         model = Company
-        fields = ['name', 'logo', 'tax_id', 'phone', 'email', 'address', 'city', 'website', 'industry']
+        fields = ['name', 'logo', 'tax_id', 'phone', 'email', 'address', 'city', 'website', 'industry', 'default_sale_margin_percentage']
         labels = {
             'name': 'Nombre de la empresa',
             'logo': 'Logo',
@@ -195,6 +195,7 @@ class CompanyDataForm(forms.ModelForm):
             'city': 'Ciudad',
             'website': 'Sitio web',
             'industry': 'Rubro',
+            'default_sale_margin_percentage': 'Margen de venta por defecto (%)',
         }
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -206,6 +207,7 @@ class CompanyDataForm(forms.ModelForm):
             'city': forms.TextInput(attrs={'class': 'form-control'}),
             'website': forms.URLInput(attrs={'class': 'form-control'}),
             'industry': forms.TextInput(attrs={'class': 'form-control'}),
+            'default_sale_margin_percentage': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -213,6 +215,77 @@ class CompanyDataForm(forms.ModelForm):
         self.fields['logo'].widget.clear_checkbox_label = 'Eliminar'
         self.fields['logo'].widget.initial_text = 'Logo actual'
         self.fields['logo'].widget.input_text = 'Cambiar'
+
+
+class SuperadminCompanyForm(forms.ModelForm):
+    class Meta:
+        model = Company
+        fields = [
+            'name',
+            'logo',
+            'tax_id',
+            'phone',
+            'email',
+            'address',
+            'city',
+            'website',
+            'industry',
+            'currency',
+            'default_sale_margin_percentage',
+            'enable_product_kits',
+            'enable_product_recommendations',
+            'enable_initial_stock_load',
+            'enable_cloud_catalog',
+            'product_custom_fields_config',
+            'is_active',
+        ]
+        labels = {
+            'name': 'Nombre de la empresa',
+            'logo': 'Logo',
+            'tax_id': 'NIT / Identificación fiscal',
+            'phone': 'Teléfono',
+            'email': 'Correo',
+            'address': 'Dirección',
+            'city': 'Ciudad',
+            'website': 'Sitio web',
+            'industry': 'Rubro',
+            'currency': 'Moneda por defecto',
+            'default_sale_margin_percentage': 'Margen de venta por defecto (%)',
+            'enable_product_kits': 'Habilitar kits de productos',
+            'enable_product_recommendations': 'Habilitar productos recomendados',
+            'enable_initial_stock_load': 'Habilitar carga inicial de stock',
+            'enable_cloud_catalog': 'Habilitar catálogo nube',
+            'product_custom_fields_config': 'Configuración de campos personalizados',
+            'is_active': 'Empresa activa',
+        }
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'logo': forms.ClearableFileInput(attrs={'class': 'form-control-file'}),
+            'tax_id': forms.TextInput(attrs={'class': 'form-control'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'city': forms.TextInput(attrs={'class': 'form-control'}),
+            'website': forms.URLInput(attrs={'class': 'form-control'}),
+            'industry': forms.TextInput(attrs={'class': 'form-control'}),
+            'currency': forms.Select(attrs={'class': 'form-control'}),
+            'default_sale_margin_percentage': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'enable_product_kits': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'enable_product_recommendations': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'enable_initial_stock_load': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'enable_cloud_catalog': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'product_custom_fields_config': forms.Textarea(attrs={'class': 'form-control', 'rows': 5}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['logo'].widget.clear_checkbox_label = 'Eliminar'
+        self.fields['logo'].widget.initial_text = 'Logo actual'
+        self.fields['logo'].widget.input_text = 'Cambiar'
+        self.fields['product_custom_fields_config'].help_text = (
+            'Formato JSON. Ejemplo: {"color": {"type": "text", "label": "Color"}}'
+        )
 
 
 class ExchangeRateForm(forms.ModelForm):
@@ -299,12 +372,13 @@ class ExchangeRateForm(forms.ModelForm):
 class ProductoForm(forms.ModelForm):
     class Meta:
         model = Producto
-        fields = ['nombre', 'referencia_cruzada', 'descripcion', 'brand', 'stock', 'cost', 'precio', 'location']
+        fields = ['nombre', 'referencia_cruzada', 'descripcion', 'brand', 'imagen', 'stock', 'cost', 'precio', 'location']
         labels = {
             'nombre': 'Código',
             'referencia_cruzada': 'Referencia cruzada',
             'descripcion': 'Descripción',
             'brand': 'Marca',
+            'imagen': 'Imagen',
             'cost': 'Costo',
             'stock': 'Stock',
             'precio': 'Precio Venta',
@@ -315,6 +389,7 @@ class ProductoForm(forms.ModelForm):
             'referencia_cruzada': forms.TextInput(attrs={'class': 'form-control'}),
             'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'brand': forms.Select(attrs={'class': 'form-control'}), # 'type': 'text
+            'imagen': forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp'}),
             'stock': forms.NumberInput(attrs={'class': 'form-control', 'readonly': 'readonly'}), # 'type': 'number
             'cost': forms.NumberInput(attrs={'class': 'form-control'}), # 'type': 'number
             'precio': forms.NumberInput(attrs={'class': 'form-control'}),            
@@ -416,6 +491,26 @@ class ProductoForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+    def clean_imagen(self):
+        imagen = self.cleaned_data.get('imagen')
+        if not imagen:
+            return imagen
+
+        max_size = 2 * 1024 * 1024
+        if imagen.size > max_size:
+            raise forms.ValidationError('La imagen no puede superar los 2 MB.')
+
+        allowed_types = {'image/jpeg', 'image/png', 'image/webp'}
+        content_type = getattr(imagen, 'content_type', '')
+        if content_type and content_type.lower() not in allowed_types:
+            raise forms.ValidationError('Formato no permitido. Solo se aceptan JPG, JPEG, PNG y WEBP.')
+
+        ext = (imagen.name.rsplit('.', 1)[-1] if '.' in imagen.name else '').lower()
+        if ext not in {'jpg', 'jpeg', 'png', 'webp'}:
+            raise forms.ValidationError('Extensión no permitida. Solo se aceptan JPG, JPEG, PNG y WEBP.')
+
+        return imagen
 
 
 class ProductCatalogImportForm(forms.Form):
