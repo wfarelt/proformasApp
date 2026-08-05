@@ -52,7 +52,7 @@
         </div>
         
 
-        <button type="submit" class="btn btn-primary">Guardar Movimiento</button>
+        <button type="submit" class="btn btn-primary js-submit-movement">Guardar Movimiento</button>
         <a href="{% url 'movement_list' %}" class="btn btn-secondary">Cancelar</a>
     </form>
 
@@ -144,8 +144,18 @@
 
     $(document).on('change', 'select, input[name="quantity"]', updateSubtotals);
 
+    let movementSubmitting = false;
+
     $('#movement-form').submit(function (e) {
       e.preventDefault();
+
+      if (movementSubmitting) {
+        return;
+      }
+
+      movementSubmitting = true;
+      const $submitBtn = $(this).find('.js-submit-movement');
+      $submitBtn.prop('disabled', true).html('Guardando...');
 
       const movement = {
         movement_type: $('select[name="movement_type"]').val(),
@@ -181,16 +191,22 @@
         .then(data => {
         if (data.redirect_url) {
             window.location.href = data.redirect_url;
+          return;
         }
         if (data.error) {
             alert("❌ " + data.error);
+          movementSubmitting = false;
+          $submitBtn.prop('disabled', false).html('Guardar Movimiento');
         } else {
             alert("✅ Movimiento guardado: ID " + data.movement_id);
-            // Redireccionar o limpiar formulario aquí si deseas
+          movementSubmitting = false;
+          $submitBtn.prop('disabled', false).html('Guardar Movimiento');
         }
         })
         .catch(error => {
         console.error('Error de red:', error);
+        movementSubmitting = false;
+        $submitBtn.prop('disabled', false).html('Guardar Movimiento');
         });
 
       // Aquí podrías enviar vía fetch o AJAX

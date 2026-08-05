@@ -50,7 +50,7 @@ from django.http import HttpResponse
 from weasyprint import HTML
 from io import BytesIO
 
-from core.services.purchase_price_service import create_price_history_from_purchase
+from inv.services.purchase_confirmation_service import confirm_purchase_and_apply_inventory
 import json
 
 
@@ -435,8 +435,7 @@ def create_purchase(request):
                     purchase.save()
 
                     if purchase.status == 'confirmed':
-                        create_purchase_movement(purchase)
-                        create_price_history_from_purchase(purchase, request.user)
+                        confirm_purchase_and_apply_inventory(purchase, user=request.user)
                         messages.success(request, "Compra confirmada correctamente.")
                         return redirect('purchase_list')
                     else:
@@ -495,10 +494,7 @@ def update_purchase(request, pk):
                 
                 if purchase.status == 'confirmed':
                     # Redirigir a la lista de compras
-                    create_purchase_movement(purchase)
-                    
-                    # Generar historial de precios PENDING
-                    create_price_history_from_purchase(purchase, request.user)
+                    confirm_purchase_and_apply_inventory(purchase, user=request.user)
                     
                     messages.success(request, "Compra confirmada y actualizada correctamente.")
                     return redirect('purchase_list')  
@@ -643,41 +639,8 @@ def purchase_detail(request, pk):
     return render(request, 'inv/purchase/purchase.html', context)
 
 def create_purchase_movement(purchase):
-    if purchase.status != 'confirmed':
-        return None  # Solo crea movimiento si está confirmado
-
-    # Verificar si ya se creó un movimiento para evitar duplicados y enviar mensaje de error
-    if hasattr(purchase, 'movement') and purchase.movement:
-        return None
-
-    movement = Movement.objects.create(
-        movement_type='IN',
-        content_type=ContentType.objects.get_for_model(purchase),
-        object_id=purchase.id,
-        user=purchase.user,
-        description=f"Ingreso generado por la compra #{purchase.id}"
-    )
-
-    for detail in purchase.details.all():
-        MovementItem.objects.create(
-            movement=movement,
-            product=detail.product,
-            quantity=detail.quantity,
-            unit_price=detail.unit_price  # Guardar el costo de compra histórico
-        )
-
-        # Actualizar stock del producto
-        detail.product.stock += detail.quantity
-        
-        # Actualizar costo de producto
-        detail.product.cost = detail.unit_price
-        
-        # Actualizar precio de venta del producto
-        # detail.product.precio = detail.sale_price
-        
-        detail.product.save()
-        
-    return movement
+    # Compatibilidad temporal: delega al servicio unico para evitar rutas duplicadas.
+    return confirm_purchase_and_apply_inventory(purchase, user=getattr(purchase, 'user', None))
 
 # MOVIMIENTOS DE INVENTARIO
 @login_required

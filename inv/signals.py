@@ -1,32 +1,7 @@
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from django.contrib.contenttypes.models import ContentType
-from .models import Purchase, Movement, MovementItem, Producto
+"""
+Las compras confirmadas ya no deben crear movimientos desde señales.
 
-
-@receiver(post_save, sender=Purchase)
-def create_movement_on_purchase_confirmed(sender, instance, created, **kwargs):
-    # Verificar que la compra ha sido confirmada y no es nueva
-    if not created and instance.status == 'confirmed':
-        ct = ContentType.objects.get_for_model(Purchase)
-        if Movement.objects.filter(content_type=ct, object_id=instance.id, movement_type='IN').exists():
-            return
-
-        # Crear un movimiento de tipo IN (Ingreso)
-        movement = Movement.objects.create(
-            movement_type='IN',
-            description=f"Ingreso por compra #{instance.id} de {instance.supplier.name}",
-            user=instance.user,
-            status='COMPLETED',
-            content_type=ct,
-            object_id=instance.id
-        )
-
-        # Crear los MovementItems correspondientes a cada detalle de la compra
-        for detail in instance.details.all():
-            MovementItem.objects.create(
-                movement=movement,
-                product=detail.product,
-                quantity=detail.quantity,
-                unit_price=detail.unit_price  # Guardar el costo histórico de compra
-            )
+Se centraliza la logica en inv.services.purchase_confirmation_service
+para garantizar que movimiento + stock + costo se apliquen siempre en
+la misma transaccion e impedir desincronizaciones.
+"""
