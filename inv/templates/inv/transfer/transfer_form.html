@@ -1,0 +1,187 @@
+{% extends 'core/index.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'plugins/select2/css/select2.min.css' %}">
+<link rel="stylesheet" href="{% static 'plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="card mt-3">
+  <div class="card-header">
+    <h1 class="h4 mb-0">{{ title }}</h1>
+  </div>
+  <form id="transfer-form" class="card-body">
+    {% csrf_token %}
+    <div class="row">
+      <div class="col-md-5 form-group">
+        <label for="origin_warehouse_id">Almacén de origen</label>
+        <select id="origin_warehouse_id" name="origin_warehouse_id" class="form-control" required>
+          <option value="">-- Seleccione --</option>
+          {% for warehouse in warehouses %}
+          <option value="{{ warehouse.id }}" {% if warehouse.id == default_warehouse.id %}selected{% endif %}>{{ warehouse.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2 d-flex align-items-center justify-content-center">
+        <i class="fas fa-arrow-right text-muted mt-3" aria-hidden="true"></i>
+      </div>
+      <div class="col-md-5 form-group">
+        <label for="destination_warehouse_id">Almacén de destino</label>
+        <select id="destination_warehouse_id" name="destination_warehouse_id" class="form-control" required>
+          <option value="">-- Seleccione --</option>
+          {% for warehouse in warehouses %}
+          <option value="{{ warehouse.id }}">{{ warehouse.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="description">Referencia</label>
+      <textarea id="description" name="description" class="form-control" rows="2"></textarea>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-bordered table-sm" id="transfer-items-table">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th style="width: 140px;">Cantidad</th>
+            <th>Observación</th>
+            <th style="width: 48px;">
+              <button type="button" id="add-item" class="btn btn-success btn-sm" title="Agregar producto" aria-label="Agregar producto">
+                <i class="fas fa-plus"></i>
+              </button>
+            </th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="d-flex justify-content-end">
+      <a href="{% url 'movement_list' %}" class="btn btn-secondary mr-2">Cancelar</a>
+      <button type="submit" class="btn btn-primary js-submit-transfer">
+        <i class="fas fa-exchange-alt"></i> Registrar transferencia
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'plugins/select2/js/select2.min.js' %}"></script>
+<script>
+  $(function () {
+    function initProductSelect(select) {
+      select.select2({
+        placeholder: 'Seleccione un producto',
+        theme: 'bootstrap4',
+        width: '100%',
+        ajax: {
+          url: '{% url "buscar_productos" %}',
+          dataType: 'json',
+          delay: 250,
+          data: function (params) { return { q: params.term }; },
+          processResults: function (data) {
+            return { results: data.results.map(function (product) {
+              return { id: product.id, text: product.nombre + ' | ' + product.description };
+            }) };
+          },
+          cache: true
+        }
+      });
+    }
+
+    function addItemRow() {
+      const row = $(
+        '<tr>' +
+          '<td><select class="form-control transfer-product" required></select></td>' +
+          '<td><input type="number" min="1" value="1" class="form-control transfer-quantity" required></td>' +
+          '<td><input type="text" class="form-control transfer-observation"></td>' +
+          '<td><button type="button" class="btn btn-outline-danger btn-sm remove-item" title="Quitar producto" aria-label="Quitar producto"><i class="fas fa-times"></i></button></td>' +
+        '</tr>'
+      );
+      $('#transfer-items-table tbody').append(row);
+      initProductSelect(row.find('.transfer-product'));
+    }
+
+    $('#add-item').on('click', addItemRow);
+    $(document).on('click', '.remove-item', function () {
+      $(this).closest('tr').remove();
+    });
+
+    let submitting = false;
+    $('#transfer-form').on('submit', function (event) {
+      event.preventDefault();
+      if (submitting) {
+        return;
+      }
+
+      const originWarehouseId = $('#origin_warehouse_id').val();
+      const destinationWarehouseId = $('#destination_warehouse_id').val();
+      if (!originWarehouseId || !destinationWarehouseId) {
+        alert('Selecciona almacén de origen y destino.');
+        return;
+      }
+      if (originWarehouseId === destinationWarehouseId) {
+        alert('El almacén de origen y destino deben ser diferentes.');
+        return;
+      }
+
+      const items = [];
+      $('#transfer-items-table tbody tr').each(function () {
+        const row = $(this);
+        const productId = row.find('.transfer-product').val();
+        const quantity = Number(row.find('.transfer-quantity').val());
+        if (productId && Number.isInteger(quantity) && quantity > 0) {
+          items.push({
+            product_id: productId,
+            quantity: quantity,
+            observation: row.find('.transfer-observation').val()
+          });
+        }
+      });
+      if (!items.length) {
+        alert('Agrega al menos un producto con cantidad válida.');
+        return;
+      }
+
+      submitting = true;
+      const submitButton = $('.js-submit-transfer');
+      submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Registrando...');
+      fetch('{% url "create_transfer_json" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+          origin_warehouse_id: originWarehouseId,
+          destination_warehouse_id: destinationWarehouseId,
+          description: $('#description').val(),
+          items: items
+        })
+      })
+      .then(function (response) { return response.json(); })
+      .then(function (data) {
+        if (data.redirect_url) {
+          window.location.href = data.redirect_url;
+          return;
+        }
+        throw new Error(data.error || 'No se pudo registrar la transferencia.');
+      })
+      .catch(function (error) {
+        alert(error.message);
+        submitting = false;
+        submitButton.prop('disabled', false).html('<i class="fas fa-exchange-alt"></i> Registrar transferencia');
+      });
+    });
+
+    addItemRow();
+  });
+</script>
+{% endblock %}

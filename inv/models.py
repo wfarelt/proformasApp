@@ -1,5 +1,5 @@
 from django.db import models
-from core.models import Producto, User, Supplier
+from core.models import Producto, User, Supplier, Warehouse
 # Para modificar el modelo de movimiento de inventario
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -18,6 +18,7 @@ class Purchase(models.Model):
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     invoice_number = models.CharField(max_length=100, blank=True, null=True)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
+    warehouse = models.ForeignKey(Warehouse, on_delete=models.PROTECT, related_name='purchases', null=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     
     def __str__(self):
@@ -69,6 +70,14 @@ class Movement(models.Model):
     date = models.DateField(auto_now_add=True)
     description = models.TextField(blank=True)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    warehouse = models.ForeignKey(Warehouse, on_delete=models.PROTECT, related_name='movements', null=True, blank=True)
+    transfer = models.ForeignKey(
+        'StockTransfer',
+        on_delete=models.PROTECT,
+        related_name='movements',
+        null=True,
+        blank=True,
+    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='COMPLETED')
 
     # Generic relation for purchase or proforma
@@ -100,6 +109,49 @@ class MovementItem(models.Model):
         # Usar unit_price si está definido (costo histórico), de lo contrario usar costo actual
         price = self.unit_price if self.unit_price else self.product.cost
         return (price or 0) * self.quantity
+
+
+class StockTransfer(models.Model):
+    origin_warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        related_name='outgoing_transfers',
+    )
+    destination_warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        related_name='incoming_transfers',
+    )
+    date = models.DateTimeField(auto_now_add=True)
+    description = models.TextField(blank=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        ordering = ['-id']
+        constraints = [
+            models.CheckConstraint(
+                check=~models.Q(origin_warehouse=models.F('destination_warehouse')),
+                name='transfer_requires_different_warehouses',
+            ),
+        ]
+
+    def __str__(self):
+        return f'Transferencia #{self.id}: {self.origin_warehouse} a {self.destination_warehouse}'
+
+
+class StockTransferItem(models.Model):
+    transfer = models.ForeignKey(StockTransfer, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Producto, on_delete=models.PROTECT)
+    quantity = models.PositiveIntegerField()
+    observation = models.TextField(blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['transfer', 'product'],
+                name='unique_product_per_transfer',
+            ),
+        ]
 
     
     

@@ -1,0 +1,44 @@
+{% extends 'core/index.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row mt-3">
+    <div class="col-lg-7 col-xl-6">
+        <form method="post" class="card">
+            {% csrf_token %}
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-warehouse mr-2"></i>{{ title }}</h3>
+            </div>
+            <div class="card-body">
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
+                <div class="form-group">
+                    <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+                    {{ form.name }}
+                    {% for error in form.name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.code.id_for_label }}">{{ form.code.label }}</label>
+                    {{ form.code }}
+                    <small class="form-text text-muted">Identificador corto para usar en documentos y reportes.</small>
+                    {% for error in form.code.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="form-check mb-2">
+                    {{ form.is_active }}
+                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">{{ form.is_active.label }}</label>
+                </div>
+                <div class="form-check">
+                    {{ form.is_default }}
+                    <label class="form-check-label" for="{{ form.is_default.id_for_label }}">{{ form.is_default.label }}</label>
+                </div>
+            </div>
+            <div class="card-footer d-flex justify-content-between">
+                <a href="{% url 'warehouse_list' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Regresar</a>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

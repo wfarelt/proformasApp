@@ -25,7 +25,8 @@ from django.utils.timezone import now
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from datetime import timedelta, time
-from django.db.models import Q, F, Value, IntegerField
+from django.db.models import Q, F, OuterRef, Subquery, Value, IntegerField
+from django.db.models.functions import Coalesce
 from datetime import datetime
 from django.utils.timezone import make_aware
 from django.utils import timezone
@@ -34,9 +35,9 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
 
-from core.models import Detalle, Proforma
+from core.models import Detalle, Proforma, ProductStock, Warehouse
 from .models import Producto, Purchase, PurchaseDetail, Movement, MovementItem
-from .forms import PurchaseForm, PurchaseDetailFormSet, MovementForm, MovementItemFormSet, InventoryUploadForm
+from .forms import PurchaseForm, PurchaseDetailFormSet, MovementForm, MovementItemFormSet, InventoryUploadForm, WarehouseForm
 
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
@@ -51,10 +52,138 @@ from weasyprint import HTML
 from io import BytesIO
 
 from inv.services.purchase_confirmation_service import confirm_purchase_and_apply_inventory
+from inv.services.warehouse_transfer_service import create_warehouse_transfer
+from core.services.inventory_service import InsufficientWarehouseStock, apply_warehouse_stock_change
+from core.services.warehouse_access_service import WarehouseAccessDenied, accessible_warehouses, default_user_warehouse, resolve_user_warehouse
 import json
 
 
 # INGRESOS
+
+
+def _can_manage_warehouses(user):
+    return getattr(user, 'can_manage_all_warehouses', False)
+
+
+def _selected_warehouse_for_user(request):
+    warehouse_id = request.GET.get('warehouse_id')
+    if request.user.can_manage_all_warehouses and not warehouse_id:
+        return None
+    return resolve_user_warehouse(request.user, warehouse_id)
+
+
+def _accessible_purchases(user):
+    purchases = Purchase.objects.all()
+    if not user.can_manage_all_warehouses:
+        purchases = purchases.filter(warehouse=default_user_warehouse(user))
+    return purchases
+
+
+def _accessible_movements(user):
+    movements = Movement.objects.all()
+    if not user.can_manage_all_warehouses:
+        movements = movements.filter(warehouse=default_user_warehouse(user))
+    return movements
+
+
+@login_required(login_url='login')
+def warehouse_list(request):
+    if not request.user.can_access_inventory:
+        messages.error(request, 'No tienes permisos para consultar almacenes.')
+        return redirect('home')
+
+    warehouses = (
+        accessible_warehouses(request.user)
+        .annotate(
+            product_count=Count('product_stocks', distinct=True),
+            total_quantity=Sum('product_stocks__quantity'),
+        )
+        .order_by('-is_default', 'name')
+    )
+    return render(request, 'inv/warehouse/warehouse_list.html', {
+        'title': 'Almacenes',
+        'warehouses': warehouses,
+    })
+
+
+@login_required(login_url='login')
+def warehouse_create(request):
+    if not _can_manage_warehouses(request.user):
+        messages.error(request, 'No tienes permisos para administrar almacenes.')
+        return redirect('home')
+
+    form = WarehouseForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        warehouse = form.save(commit=False)
+        if Warehouse.objects.filter(code=warehouse.code).exists():
+            form.add_error('code', 'Ya existe un almacén con este código.')
+        else:
+            with transaction.atomic():
+                if warehouse.is_default:
+                    Warehouse.objects.update(is_default=False)
+                warehouse.save()
+            messages.success(request, 'Almacén creado correctamente.')
+            return redirect('warehouse_list')
+
+    return render(request, 'inv/warehouse/warehouse_form.html', {
+        'title': 'Nuevo almacén',
+        'form': form,
+    })
+
+
+@login_required(login_url='login')
+def warehouse_edit(request, pk):
+    if not _can_manage_warehouses(request.user):
+        messages.error(request, 'No tienes permisos para administrar almacenes.')
+        return redirect('home')
+
+    warehouse = get_object_or_404(Warehouse, pk=pk)
+
+    form = WarehouseForm(request.POST or None, instance=warehouse)
+    if request.method == 'POST' and form.is_valid():
+        with transaction.atomic():
+            warehouse = form.save(commit=False)
+            if warehouse.is_default:
+                Warehouse.objects.exclude(pk=warehouse.pk).update(is_default=False)
+            warehouse.save()
+        messages.success(request, 'Almacén actualizado correctamente.')
+        return redirect('warehouse_list')
+
+    return render(request, 'inv/warehouse/warehouse_form.html', {
+        'title': 'Editar almacén',
+        'form': form,
+        'warehouse': warehouse,
+    })
+
+
+@login_required(login_url='login')
+def warehouse_detail(request, pk):
+    if not request.user.can_access_inventory:
+        messages.error(request, 'No tienes permisos para consultar almacenes.')
+        return redirect('home')
+
+    warehouse = get_object_or_404(accessible_warehouses(request.user), pk=pk)
+    query = request.GET.get('q', '').strip()
+    stocks = ProductStock.objects.filter(warehouse=warehouse).select_related('product', 'product__brand')
+    if query:
+        stocks = stocks.filter(
+            Q(product__nombre__icontains=query)
+            | Q(product__referencia_cruzada__icontains=query)
+            | Q(product__descripcion__icontains=query)
+        )
+    stocks = stocks.order_by('product__nombre')
+    paginator = Paginator(stocks, 25)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    totals = stocks.aggregate(total_quantity=Sum('quantity'), product_count=Count('product', distinct=True))
+    return render(request, 'inv/warehouse/warehouse_detail.html', {
+        'title': warehouse.name,
+        'warehouse': warehouse,
+        'page_obj': page_obj,
+        'query': query,
+        'total_quantity': totals['total_quantity'] or 0,
+        'product_count': totals['product_count'] or 0,
+    })
 
 @login_required       
 def product_search(request):
@@ -90,6 +219,18 @@ def reporte_analitica_productos(request):
         tipo = 'mas_vendidos'
 
     fecha_limite = now() - timedelta(days=dias)
+    warehouses = accessible_warehouses(request.user)
+    selected_warehouse = _selected_warehouse_for_user(request)
+    warehouse_stock = ProductStock.objects.filter(
+        product_id=OuterRef('producto_id'),
+        warehouse=selected_warehouse,
+    )
+    stock_actual = Coalesce(
+        Subquery(warehouse_stock.values('quantity')[:1]),
+        Value(0),
+        output_field=IntegerField(),
+    )
+    ubicacion_actual = Coalesce(Subquery(warehouse_stock.values('location')[:1]), Value(''))
 
     detalles_base = Detalle.objects.filter(
         proforma__estado='EJECUTADO',
@@ -98,6 +239,8 @@ def reporte_analitica_productos(request):
 
     if getattr(request.user, 'company_id', None):
         detalles_base = detalles_base.filter(proforma__company=request.user.company)
+    if selected_warehouse:
+        detalles_base = detalles_base.filter(proforma__warehouse=selected_warehouse)
 
     if tipo == 'mas_vendidos':
         resultados = (
@@ -106,8 +249,8 @@ def reporte_analitica_productos(request):
             .annotate(
                 codigo=F('producto__nombre'),
                 descripcion=F('producto__descripcion'),
-                stock_actual=F('producto__stock'),
-                ubicacion=F('producto__location'),
+                stock_actual=stock_actual if selected_warehouse else F('producto__stock'),
+                ubicacion=ubicacion_actual if selected_warehouse else F('producto__location'),
                 indicador=Sum('cantidad'),
             )
             .order_by('-indicador', 'codigo')
@@ -115,42 +258,50 @@ def reporte_analitica_productos(request):
     elif tipo == 'rotacion_sin_stock':
         resultados = (
             detalles_base
-            .filter(producto__stock__lte=0)
             .values('producto_id')
             .annotate(
                 codigo=F('producto__nombre'),
                 descripcion=F('producto__descripcion'),
-                stock_actual=F('producto__stock'),
-                ubicacion=F('producto__location'),
+                stock_actual=stock_actual if selected_warehouse else F('producto__stock'),
+                ubicacion=ubicacion_actual if selected_warehouse else F('producto__location'),
                 indicador=Sum('cantidad'),
             )
-            .order_by('-indicador', 'codigo')
         )
+        resultados = resultados.filter(stock_actual__lte=0).order_by('-indicador', 'codigo')
     elif tipo == 'menos_vendidos_con_stock':
         resultados = (
             detalles_base
-            .filter(producto__stock__gt=0)
             .values('producto_id')
             .annotate(
                 codigo=F('producto__nombre'),
                 descripcion=F('producto__descripcion'),
-                stock_actual=F('producto__stock'),
-                ubicacion=F('producto__location'),
+                stock_actual=stock_actual if selected_warehouse else F('producto__stock'),
+                ubicacion=ubicacion_actual if selected_warehouse else F('producto__location'),
                 indicador=Sum('cantidad'),
             )
-            .order_by('indicador', 'codigo')
         )
+        resultados = resultados.filter(stock_actual__gt=0).order_by('indicador', 'codigo')
     else:
         productos_con_movimiento = detalles_base.values_list('producto_id', flat=True).distinct()
+        if selected_warehouse:
+            productos_base = Producto.objects.filter(
+                warehouse_stocks__warehouse=selected_warehouse,
+                warehouse_stocks__quantity__gt=0,
+            )
+            stock_annotation = F('warehouse_stocks__quantity')
+            location_annotation = F('warehouse_stocks__location')
+        else:
+            productos_base = Producto.objects.filter(stock__gt=0)
+            stock_annotation = F('stock')
+            location_annotation = F('location')
         resultados = (
-            Producto.objects
-            .filter(stock__gt=0)
+            productos_base
             .exclude(id__in=productos_con_movimiento)
             .annotate(
                 producto_id=F('id'),
                 codigo=F('nombre'),
-                stock_actual=F('stock'),
-                ubicacion=F('location'),
+                stock_actual=stock_annotation,
+                ubicacion=location_annotation,
                 indicador=Value(0, output_field=IntegerField()),
             )
             .values('producto_id', 'codigo', 'descripcion', 'stock_actual', 'ubicacion', 'indicador')
@@ -170,11 +321,15 @@ def reporte_analitica_productos(request):
         'tipo_permitidos': tipo_permitidos,
         'tipo_label': tipo_permitidos[tipo],
         'indicador_label': 'Cantidad vendida' if tipo != 'otros' else 'Movimientos en el periodo',
+        'warehouses': warehouses,
+        'selected_warehouse': selected_warehouse,
     })
 
 def historial_ventas_producto(request):
     producto_id = request.GET.get("producto_id")
     dias = int(request.GET.get("dias", 30))  # Rango de días (por defecto, 30 días)
+    warehouses = accessible_warehouses(request.user)
+    selected_warehouse = _selected_warehouse_for_user(request)
 
     productos = Producto.objects.all()  # Para llenar el select de productos
     ventas = []
@@ -187,6 +342,8 @@ def historial_ventas_producto(request):
             .values("proforma__fecha", "proforma__id", "proforma__cliente__name", "cantidad", "precio_venta", "subtotal")
             .order_by("-proforma__fecha")
         )
+        if selected_warehouse:
+            ventas = ventas.filter(proforma__warehouse=selected_warehouse)
         producto = Producto.objects.get(id=producto_id)
     else:
         producto = None
@@ -197,6 +354,8 @@ def historial_ventas_producto(request):
         "producto": producto,
         "dias": dias,
         "title": "Historial de producto",
+        "warehouses": warehouses,
+        "selected_warehouse": selected_warehouse,
     })
     
 def buscar_productos(request):
@@ -218,11 +377,30 @@ def buscar_productos(request):
 
 @login_required
 def reporte_inventario(request):
-    productos = Producto.objects.filter(stock__gt=0).select_related('brand').order_by('location')
+    warehouses = accessible_warehouses(request.user)
+    selected_warehouse = _selected_warehouse_for_user(request)
 
-    total_cost = sum((p.cost or 0) * p.stock for p in productos)
-    total_price = sum((p.precio or 0) * p.stock for p in productos)
-    total_productos = productos.count()
+    if selected_warehouse:
+        stock_records = (
+            ProductStock.objects.filter(warehouse=selected_warehouse, quantity__gt=0)
+            .select_related('product', 'product__brand')
+            .order_by('location', 'product__nombre')
+        )
+        productos = []
+        for stock_record in stock_records:
+            product = stock_record.product
+            product.report_stock = stock_record.quantity
+            product.report_location = stock_record.location
+            productos.append(product)
+    else:
+        productos = list(Producto.objects.filter(stock__gt=0).select_related('brand').order_by('location'))
+        for product in productos:
+            product.report_stock = product.stock
+            product.report_location = product.location
+
+    total_cost = sum((p.cost or 0) * p.report_stock for p in productos)
+    total_price = sum((p.precio or 0) * p.report_stock for p in productos)
+    total_productos = len(productos)
 
     # Resumen por marca
     brand_summary = {}
@@ -231,19 +409,19 @@ def reporte_inventario(request):
         if brand_name not in brand_summary:
             brand_summary[brand_name] = {"count": 0, "stock": 0, "cost_value": 0, "price_value": 0}
         brand_summary[brand_name]["count"] += 1
-        brand_summary[brand_name]["stock"] += p.stock
-        brand_summary[brand_name]["cost_value"] += float(p.cost or 0) * p.stock
-        brand_summary[brand_name]["price_value"] += float(p.precio or 0) * p.stock
+        brand_summary[brand_name]["stock"] += p.report_stock
+        brand_summary[brand_name]["cost_value"] += float(p.cost or 0) * p.report_stock
+        brand_summary[brand_name]["price_value"] += float(p.precio or 0) * p.report_stock
     brand_summary = sorted(brand_summary.items(), key=lambda x: x[1]["stock"], reverse=True)
 
     # Resumen por ubicación
     location_summary = {}
     for p in productos:
-        loc = p.location or "Sin Ubicación"
+        loc = p.report_location or "Sin Ubicación"
         if loc not in location_summary:
             location_summary[loc] = {"count": 0, "stock": 0}
         location_summary[loc]["count"] += 1
-        location_summary[loc]["stock"] += p.stock
+        location_summary[loc]["stock"] += p.report_stock
     location_summary = sorted(location_summary.items(), key=lambda x: x[1]["stock"], reverse=True)
 
     # Exportar a Excel
@@ -258,13 +436,13 @@ def reporte_inventario(request):
                 p.nombre,
                 p.referencia_cruzada or "",
                 p.brand.name if p.brand else "",
-                p.stock,
-                p.location or "",
+                p.report_stock,
+                p.report_location or "",
                 float(p.cost or 0),
                 float(p.precio or 0),
             ])
         # Fila de totales
-        ws.append(["", "TOTALES", "", "", sum(p.stock for p in productos), "",
+        ws.append(["", "TOTALES", "", "", sum(p.report_stock for p in productos), "",
                    float(total_cost), float(total_price)])
 
         from io import BytesIO
@@ -285,6 +463,8 @@ def reporte_inventario(request):
         "total_productos": total_productos,
         "brand_summary": brand_summary,
         "location_summary": location_summary,
+        "warehouses": warehouses,
+        "selected_warehouse": selected_warehouse,
     }
 
     return render(request, "inv/reports/reporte_inventario.html", context)
@@ -379,7 +559,7 @@ def proforma_report(request):
 def purchase_list(request):
     query = request.GET.get('q')
     tipo = request.GET.get('tipo_busqueda', 'id')
-    purchases = Purchase.objects.all().order_by('-id', '-date', 'status')
+    purchases = _accessible_purchases(request.user).order_by('-id', '-date', 'status')
     if query:
         if tipo == 'id':
             purchases = purchases.filter(id__icontains=query)
@@ -406,7 +586,7 @@ def create_purchase(request):
     default_sale_margin_percentage = float(getattr(company, 'default_sale_margin_percentage', 35) or 35)
         
     if request.method == 'POST':
-        form = PurchaseForm(request.POST)
+        form = PurchaseForm(request.POST, user=request.user)
 
         # Primero validar el formulario principal para construir la instancia
         if form.is_valid():
@@ -448,7 +628,7 @@ def create_purchase(request):
             # form inválido: para renderizar la página con los datos POST
             formset = PurchaseDetailFormSet(request.POST)
     else:
-        form = PurchaseForm()
+        form = PurchaseForm(user=request.user)
         formset = PurchaseDetailFormSet()
 
     return render(request, 'inv/purchase/create_purchase.html', {
@@ -460,7 +640,7 @@ def create_purchase(request):
 
 @login_required(login_url='login')
 def update_purchase(request, pk):
-    purchase = get_object_or_404(Purchase, pk=pk)
+    purchase = get_object_or_404(_accessible_purchases(request.user), pk=pk)
     company = getattr(request.user, 'company', None)
     default_sale_margin_percentage = float(getattr(company, 'default_sale_margin_percentage', 35) or 35)
     
@@ -469,7 +649,7 @@ def update_purchase(request, pk):
         return redirect('purchase_list') 
     
     if request.method == 'POST':
-        form = PurchaseForm(request.POST, instance=purchase)
+        form = PurchaseForm(request.POST, instance=purchase, user=request.user)
         formset = PurchaseDetailFormSet(request.POST, instance=purchase)
 
         if form.is_valid() and formset.is_valid():
@@ -520,7 +700,7 @@ def update_purchase(request, pk):
             if form.errors or formset.errors:
                 messages.error(request, "Por favor, corrija los errores señalados.")
     else:
-        form = PurchaseForm(instance=purchase)
+        form = PurchaseForm(instance=purchase, user=request.user)
         formset = PurchaseDetailFormSet(instance=purchase)
 
     details_with_subtotals = [
@@ -552,11 +732,17 @@ def revert_purchase_movement(purchase):
     movement_in = purchase.movement
     if not movement_in:
         return None
+    if movement_in.warehouse_id is None:
+        raise ValueError('El movimiento de compra no tiene almacén asignado.')
 
     movement_items = list(movement_in.items.select_related('product'))
     insufficient = []
     for item in movement_items:
-        current_stock = item.product.stock or 0
+        warehouse_stock = ProductStock.objects.filter(
+            product=item.product,
+            warehouse=movement_in.warehouse,
+        ).first()
+        current_stock = warehouse_stock.quantity if warehouse_stock else 0
         if current_stock < item.quantity:
             insufficient.append(
                 f"{item.product.nombre} (stock actual: {current_stock}, requiere: {item.quantity})"
@@ -568,6 +754,7 @@ def revert_purchase_movement(purchase):
     # Crear movimiento de egreso solo si el stock alcanza para todos los items.
     movement_out = Movement.objects.create(
         movement_type='OUT',
+        warehouse=movement_in.warehouse,
         content_type=ct,
         object_id=purchase.id,
         user=purchase.user,
@@ -580,8 +767,7 @@ def revert_purchase_movement(purchase):
             quantity=item.quantity,  # misma cantidad que el ingreso
             unit_price=item.unit_price or item.product.cost  # Usar el costo guardado en el movimiento original
         )
-        item.product.stock = (item.product.stock or 0) - item.quantity
-        item.product.save(update_fields=['stock'])
+        apply_warehouse_stock_change(item.product, movement_in.warehouse, -item.quantity)
     return movement_out
 
 # No se puede eliminar una compra, solo se puede anular
@@ -590,7 +776,7 @@ def cancelled_purchase(request, pk):
     if request.method == 'POST':
         try:
             with transaction.atomic():
-                purchase = Purchase.objects.select_for_update().get(pk=pk)
+                purchase = get_object_or_404(_accessible_purchases(request.user).select_for_update(), pk=pk)
 
                 if purchase.status == 'cancelled':
                     messages.warning(request, "La compra ya estaba anulada.")
@@ -606,14 +792,14 @@ def cancelled_purchase(request, pk):
             messages.error(request, str(exc))
             return redirect('purchase_list')
 
-    purchase = get_object_or_404(Purchase, pk=pk)
+    purchase = get_object_or_404(_accessible_purchases(request.user), pk=pk)
     return render(request, 'inv/purchase/cancelled_purchase.html', {
         'purchase': purchase,
     })
 
 @login_required(login_url='login')
 def delete_purchase_detail(request, pk):
-    purchase_detail = get_object_or_404(PurchaseDetail, pk=pk)
+    purchase_detail = get_object_or_404(PurchaseDetail.objects.filter(purchase__in=_accessible_purchases(request.user)), pk=pk)
     if request.method == 'POST':
         purchase_detail.delete()
         messages.success(request, "Detalle de compra eliminado correctamente.")
@@ -622,9 +808,9 @@ def delete_purchase_detail(request, pk):
         'purchase_detail': purchase_detail,
     })
 
-# View purchase
+@login_required(login_url='login')
 def purchase_detail(request, pk):
-    purchase = get_object_or_404(Purchase, pk=pk)
+    purchase = get_object_or_404(_accessible_purchases(request.user), pk=pk)
     details = PurchaseDetail.objects.filter(purchase=purchase)
     print_mode = request.GET.get('print') == '1'
     context = {
@@ -646,7 +832,7 @@ def create_purchase_movement(purchase):
 @login_required
 def movement_list(request):
     product_id = request.GET.get('producto_id')
-    movements = Movement.objects.all().prefetch_related('items__product').order_by('-id', '-date')
+    movements = _accessible_movements(request.user).select_related('warehouse').prefetch_related('items__product').order_by('-id', '-date')
     selected_producto_nombre = None
     if product_id:
         try:
@@ -669,9 +855,10 @@ def movement_list(request):
     }   
     return render(request, 'inv/movement/movement_list.html', context)
 
+@login_required(login_url='login')
 def movement_detail(request, pk):
     # Obtener el movimiento usando el ID
-    movement = get_object_or_404(Movement, id=pk)
+    movement = get_object_or_404(_accessible_movements(request.user), id=pk)
 
     # Obtener los MovementItems relacionados con el movimiento
     movement_items = movement.items.all()
@@ -685,7 +872,7 @@ def movement_detail(request, pk):
 @login_required(login_url='login')
 def create_movement(request):
     if request.method == 'POST':
-        form = MovementForm(request.POST)
+        form = MovementForm(request.POST, user=request.user)
         formset = MovementItemFormSet(request.POST)
 
         if form.is_valid() and formset.is_valid():
@@ -710,18 +897,18 @@ def create_movement(request):
                         # Stock antes del movimiento
                         previous_stock = product.stock
 
-                        # Actualizar stock del producto
-                        if movement.movement_type == 'IN':
-                            product.stock += quantity
-                        else:
-                            product.stock -= quantity
-                        product.save()
+                        delta = quantity if movement.movement_type == 'IN' else -quantity
+                        warehouse_stock = apply_warehouse_stock_change(
+                            product,
+                            movement.warehouse,
+                            delta,
+                        )
 
                         # Completar los datos del MovementItem
                         item = item_form.save(commit=False)
                         item.unit_price = unit_price
                         item.subtotal = subtotal
-                        item.stock_after_movement = product.stock
+                        item.stock_after_movement = warehouse_stock.quantity
                         item.save()
 
                 # Guardar eliminados (si se usó `can_delete`)
@@ -732,12 +919,14 @@ def create_movement(request):
         else:
             messages.error(request, "Error al registrar el movimiento.")
     else:
-        form = MovementForm()
+        form = MovementForm(user=request.user)
         formset = MovementItemFormSet(queryset=MovementItem.objects.none())
 
     return render(request, 'inv/movement/movement_form.html', {
         'form': form,
         'formset': formset,
+        'warehouses': accessible_warehouses(request.user),
+        'default_warehouse': default_user_warehouse(request.user),
     })
 
 def get_producto(request, id):
@@ -748,8 +937,9 @@ def get_producto(request, id):
         'cost': float(producto.cost)
     })
 
+@login_required(login_url='login')
 def movement_pdf(request, pk):
-    movement = get_object_or_404(Movement, pk=pk)
+    movement = get_object_or_404(_accessible_movements(request.user), pk=pk)
     html_string = render_to_string('inv/movement/pdf.html', {
         'movement': movement,
         'items': movement.items.all()
@@ -775,7 +965,7 @@ def cargar_inventario_inicial(request):
         return redirect('movement_list')
 
     if request.method == 'POST':
-        form = InventoryUploadForm(request.POST, request.FILES)
+        form = InventoryUploadForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
             archivo = form.cleaned_data['archivo']
             nombre_archivo = archivo.name.lower()
@@ -858,6 +1048,7 @@ def cargar_inventario_inicial(request):
             with transaction.atomic():
                 movimiento = Movement.objects.create(
                     movement_type='IN',
+                    warehouse=form.cleaned_data['warehouse'],
                     description=form.cleaned_data.get('descripcion') or 'Inventario inicial',
                     user=request.user
                 )
@@ -868,9 +1059,12 @@ def cargar_inventario_inicial(request):
                         quantity=int(quantity),
                         unit_price=cost  # Guardar el costo con el que se creó el movimiento
                     )
-                    # Actualizar stock
-                    producto.stock = (producto.stock or 0) + int(quantity)
-                    producto.save()
+                    apply_warehouse_stock_change(
+                        producto,
+                        movimiento.warehouse,
+                        int(quantity),
+                        location=producto.location or '',
+                    )
                     # Crear historial de precio si corresponde
                     if crear_historial and precio is not None:
                         PriceEvaluationService.propose_new_price(
@@ -886,7 +1080,7 @@ def cargar_inventario_inicial(request):
             messages.success(request, "Inventario inicial cargado correctamente.")
             return redirect('movement_list')
     else:
-        form = InventoryUploadForm()
+        form = InventoryUploadForm(user=request.user)
     return render(request, 'inv/movement/cargar_inventario.html', {'form': form})
 
 @method_decorator(login_required, name='dispatch')
@@ -895,11 +1089,17 @@ class CreateMovementView(View):
     def post(self, request, *args, **kwargs):
         try:
             data = json.loads(request.body)
+            if not data.get('warehouse_id'):
+                raise ValueError('Debes seleccionar un almacén.')
+            if not data.get('items'):
+                raise ValueError('Debes agregar al menos un producto.')
+            warehouse = resolve_user_warehouse(request.user, data['warehouse_id'])
 
             with transaction.atomic():
                 # Crear movimiento principal
                 movement = Movement.objects.create(
                     movement_type=data['movement_type'],
+                    warehouse=warehouse,
                     description=data.get('description', ''),
                     user=request.user,
                     status='COMPLETED'
@@ -909,9 +1109,11 @@ class CreateMovementView(View):
                     producto = Producto.objects.get(id=item['product_id'])
                     cantidad = int(item['quantity'])
 
-                    # Validar stock si es egreso
-                    if movement.movement_type == 'OUT' and producto.stock < cantidad:
-                        raise ValueError(f"Stock insuficiente para el producto {producto.nombre}")
+                    if cantidad <= 0:
+                        raise ValueError('La cantidad debe ser mayor que cero.')
+
+                    delta = cantidad if movement.movement_type == 'IN' else -cantidad
+                    warehouse_stock = apply_warehouse_stock_change(producto, warehouse, delta)
 
                     # Crear ítem
                     MovementItem.objects.create(
@@ -919,26 +1121,82 @@ class CreateMovementView(View):
                         product=producto,
                         quantity=cantidad,
                         unit_price=producto.cost,
-                        stock_after_movement=producto.stock + cantidad if movement.movement_type == 'IN' else producto.stock - cantidad,
+                        stock_after_movement=warehouse_stock.quantity,
                         observation=item.get('observation', '')
                     )
 
-                    # Actualizar stock
-                    producto.stock += cantidad if movement.movement_type == 'IN' else -cantidad
-                    producto.save()
-                    
-                    
                 # Retornar respuesta exitosa y direccionar a la lista de movimientos
             return JsonResponse({'message': 'Movimiento guardado correctamente.', 'movement_id': movement.id, 'redirect_url': reverse('movement_list')}, status=201 )
 
 
 
-        except Producto.DoesNotExist:
-            return JsonResponse({'error': 'Producto no encontrado.'}, status=404)
-        except ValueError as ve:
+        except (Producto.DoesNotExist, Warehouse.DoesNotExist):
+            return JsonResponse({'error': 'Producto o almacén no encontrado.'}, status=404)
+        except (ValueError, WarehouseAccessDenied, InsufficientWarehouseStock) as ve:
             return JsonResponse({'error': str(ve)}, status=400)
         except Exception as e:
             return JsonResponse({'error': 'Ocurrió un error inesperado.', 'detalle': str(e)}, status=500)
+
+
+@login_required(login_url='login')
+def create_transfer(request):
+    if not _can_manage_warehouses(request.user):
+        messages.error(request, 'No tienes permisos para realizar transferencias.')
+        return redirect('home')
+
+    return render(request, 'inv/transfer/transfer_form.html', {
+        'title': 'Transferencia entre almacenes',
+        'warehouses': accessible_warehouses(request.user),
+        'default_warehouse': default_user_warehouse(request.user),
+    })
+
+
+@method_decorator(login_required, name='dispatch')
+class CreateTransferView(View):
+    def post(self, request, *args, **kwargs):
+        if not _can_manage_warehouses(request.user):
+            return JsonResponse({'error': 'No tienes permisos para realizar transferencias.'}, status=403)
+
+        try:
+            data = json.loads(request.body)
+            if not data.get('origin_warehouse_id') or not data.get('destination_warehouse_id'):
+                raise ValueError('Debes seleccionar almacén de origen y destino.')
+            if not data.get('items'):
+                raise ValueError('Debes agregar al menos un producto.')
+
+            origin_warehouse = resolve_user_warehouse(request.user, data['origin_warehouse_id'])
+            destination_warehouse = resolve_user_warehouse(request.user, data['destination_warehouse_id'])
+            product_ids = [int(item.get('product_id')) for item in data['items']]
+            products = Producto.objects.in_bulk(product_ids)
+            if len(products) != len(set(product_ids)):
+                raise Producto.DoesNotExist
+
+            items = [
+                {
+                    'product': products[product_id],
+                    'quantity': item.get('quantity'),
+                    'observation': item.get('observation', ''),
+                }
+                for item, product_id in zip(data['items'], product_ids)
+            ]
+            transfer = create_warehouse_transfer(
+                origin_warehouse=origin_warehouse,
+                destination_warehouse=destination_warehouse,
+                items=items,
+                user=request.user,
+                description=data.get('description', ''),
+            )
+            return JsonResponse({
+                'message': 'Transferencia registrada correctamente.',
+                'transfer_id': transfer.id,
+                'redirect_url': reverse('movement_list'),
+            }, status=201)
+        except (Producto.DoesNotExist, Warehouse.DoesNotExist):
+            return JsonResponse({'error': 'Producto o almacén no encontrado.'}, status=404)
+        except (TypeError, ValueError, WarehouseAccessDenied, InsufficientWarehouseStock) as exc:
+            return JsonResponse({'error': str(exc)}, status=400)
+        except Exception as exc:
+            return JsonResponse({'error': 'Ocurrió un error inesperado.', 'detalle': str(exc)}, status=500)
 
 
 # PRE-INVENTARIO
@@ -950,39 +1208,75 @@ def pre_inventario(request):
     con_stock = request.GET.get('con_stock') == 'on'
     sin_costo = request.GET.get('sin_costo') == 'on'
     sin_precio = request.GET.get('sin_precio') == 'on'
+    warehouses = accessible_warehouses(request.user)
+    selected_warehouse = _selected_warehouse_for_user(request)
 
-    productos = Producto.objects.all()
+    if selected_warehouse:
+        stocks = ProductStock.objects.filter(warehouse=selected_warehouse).select_related('product', 'product__brand')
+        if ubicacion == "":
+            stocks = stocks.filter(Q(location__exact="") | Q(location__isnull=True))
+        elif ubicacion != "__all__":
+            stocks = stocks.filter(location__iexact=ubicacion)
+        if query:
+            stocks = stocks.filter(
+                Q(product__nombre__icontains=query)
+                | Q(product__referencia_cruzada__icontains=query)
+                | Q(product__descripcion__icontains=query)
+            )
+        if con_stock:
+            stocks = stocks.filter(quantity__gt=0)
+        if sin_costo:
+            stocks = stocks.filter(Q(product__cost__isnull=True) | Q(product__cost=0))
+        if sin_precio:
+            stocks = stocks.filter(Q(product__precio__isnull=True) | Q(product__precio=0))
+
+        productos = []
+        for stock in stocks.order_by('location', 'product__nombre'):
+            product = stock.product
+            product.report_stock = stock.quantity
+            product.report_location = stock.location
+            productos.append(product)
+        ubicaciones = ProductStock.objects.filter(warehouse=selected_warehouse).exclude(location__exact="").values_list('location', flat=True).distinct().order_by('location')
+    else:
+        productos = Producto.objects.all()
 
     # Filtro de ubicación
-    if ubicacion == "":
+    if not selected_warehouse and ubicacion == "":
         # Solo productos sin ubicación (location vacío o None)
         productos = productos.filter(Q(location__exact="") | Q(location__isnull=True))
-    elif ubicacion != "__all__":
+    elif not selected_warehouse and ubicacion != "__all__":
         productos = productos.filter(location__iexact=ubicacion)
     # Si es "__all__", no se filtra por ubicación
 
     # Filtro de búsqueda
-    if query:
+    if not selected_warehouse and query:
         productos = productos.filter(
             Q(nombre__icontains=query)
             | Q(referencia_cruzada__icontains=query)
             | Q(descripcion__icontains=query)
         )
     # Filtro de stock
-    if con_stock:
+    if not selected_warehouse and con_stock:
         productos = productos.filter(stock__gt=0)
 
     # Filtro sin costo
-    if sin_costo:
+    if not selected_warehouse and sin_costo:
         productos = productos.filter(Q(cost__isnull=True) | Q(cost=0))
     
     # Filtro sin precio
-    if sin_precio:
+    if not selected_warehouse and sin_precio:
         productos = productos.filter(Q(precio__isnull=True) | Q(precio=0))
         
         
     # Lista de ubicaciones distintas (sin None ni vacío)
-    ubicaciones = Producto.objects.exclude(location__isnull=True).exclude(location__exact="").values_list('location', flat=True).distinct().order_by('location')
+    if not selected_warehouse:
+        ubicaciones = Producto.objects.exclude(location__isnull=True).exclude(location__exact="").values_list('location', flat=True).distinct().order_by('location')
+
+    if not selected_warehouse:
+        productos = list(productos)
+        for product in productos:
+            product.report_stock = product.stock
+            product.report_location = product.location
 
     paginator = Paginator(productos, 20)
     page_number = request.GET.get('page')
@@ -996,6 +1290,8 @@ def pre_inventario(request):
         'con_stock': con_stock,
         'sin_costo': sin_costo,
         'sin_precio': sin_precio,
+        'warehouses': warehouses,
+        'selected_warehouse': selected_warehouse,
         'title': 'Pre-inventario por ubicación',
         'placeholder': 'Buscar por código, referencia cruzada o descripción'
     }

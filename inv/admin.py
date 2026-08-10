@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Purchase, PurchaseDetail, Movement, MovementItem
+from .models import Purchase, PurchaseDetail, Movement, MovementItem, StockTransfer, StockTransferItem
 
 # Register your models here.
 
@@ -17,7 +17,7 @@ admin.site.register(PurchaseDetail)
 # MOVIMIENTOS
 
 class MovementAdmin(admin.ModelAdmin):
-    list_display = ('id', 'movement_type', 'user', 'date')
+    list_display = ('id', 'movement_type', 'warehouse', 'transfer', 'user', 'date')
     list_filter = ('movement_type', )
     search_fields = ('movement_type',)
     
@@ -30,3 +30,17 @@ class MovementItemAdmin(admin.ModelAdmin):
     
     
 admin.site.register(MovementItem, MovementItemAdmin)
+
+
+class StockTransferItemInline(admin.TabularInline):
+    model = StockTransferItem
+    extra = 0
+    readonly_fields = ('product', 'quantity', 'observation')
+
+
+@admin.register(StockTransfer)
+class StockTransferAdmin(admin.ModelAdmin):
+    list_display = ('id', 'origin_warehouse', 'destination_warehouse', 'user', 'date')
+    list_filter = ('origin_warehouse', 'destination_warehouse')
+    search_fields = ('description',)
+    inlines = [StockTransferItemInline]

@@ -7,6 +7,27 @@
     el.textContent = value || '-';
   }
 
+  function renderWarehouseStocks(items) {
+    var body = document.getElementById('product-modal-warehouse-stock-body');
+    if (!body) return;
+
+    if (!items || !items.length) {
+      body.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Sin datos de stock por almacén.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = items.map(function (item) {
+      var warehouseName = item.warehouse__name || '-';
+      var quantity = item.quantity != null ? item.quantity : 0;
+      var location = item.location || 'No especificada';
+      return '<tr>' +
+        '<td>' + warehouseName + '</td>' +
+        '<td>' + quantity + '</td>' +
+        '<td>' + location + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
   function openModal() {
     var modalEl = document.getElementById('productImageModal');
     if (!modalEl) return;
@@ -62,6 +83,7 @@
       setText('product-modal-marca', data.marca);
       setText('product-modal-precio', data.precio);
       setText('product-modal-stock', data.stock);
+      renderWarehouseStocks(data.warehouse_stocks || []);
 
       openModal();
     } catch (error) {

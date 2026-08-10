@@ -29,6 +29,14 @@
     <form method="get" class="mb-3">
         <div class="form-row align-items-end">
             <div class="col-md-3 mb-2">
+              <select name="warehouse_id" class="form-control">
+                  <option value="">Todos los almacenes</option>
+                  {% for warehouse in warehouses %}
+                  <option value="{{ warehouse.id }}" {% if selected_warehouse and warehouse.id == selected_warehouse.id %}selected{% endif %}>{{ warehouse.name }}</option>
+                  {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3 mb-2">
               <select name="ubicacion" class="form-control">
                   <option value="__all__" {% if ubicacion_actual == "__all__" %}selected{% endif %}>-- Todas las ubicaciones --</option>
                   <option value="" {% if ubicacion_actual == "" %}selected{% endif %}>Sin ubicación</option>
@@ -108,10 +116,10 @@
               <td>{{ obj.nombre }}</td>
               <td>{{ obj.descripcion|truncatechars:45 }}</td>
               <td>{{ obj.brand.initials }}</td>
-              <td class="text-right">{{ obj.stock }}</td>
+              <td class="text-right">{{ obj.report_stock }}</td>
               <td class="text-right">{{ obj.cost|floatformat:2 }}</td>
               <td class="text-right">{{ obj.precio|floatformat:2 }}</td>
-              <td class="text-center">{{ obj.location }}</td>
+              <td class="text-center">{{ obj.report_location }}</td>
             </tr>
           {% empty %}
             <tr>
@@ -128,7 +136,7 @@
         <ul class="pagination">
           {% if productos.has_previous %}
             <li class="page-item">
-              <a class="page-link" href="?q={{ query }}&ubicacion={{ ubicacion_actual }}{% if con_stock %}&con_stock=on{% endif %}{% if sin_costo %}&sin_costo=on{% endif %}{% if sin_precio %}&sin_precio=on{% endif %}&page={{ productos.previous_page_number }}">Anterior</a>
+              <a class="page-link" href="?q={{ query }}&ubicacion={{ ubicacion_actual }}{% if selected_warehouse %}&warehouse_id={{ selected_warehouse.id }}{% endif %}{% if con_stock %}&con_stock=on{% endif %}{% if sin_costo %}&sin_costo=on{% endif %}{% if sin_precio %}&sin_precio=on{% endif %}&page={{ productos.previous_page_number }}">Anterior</a>
             </li>
           {% else %}
             <li class="page-item disabled"><span class="page-link">Anterior</span></li>
@@ -140,7 +148,7 @@
                 <li class="page-item active"><span class="page-link">{{ num }}</span></li>
               {% else %}
                 <li class="page-item">
-                  <a class="page-link" href="?q={{ query }}&ubicacion={{ ubicacion_actual }}{% if con_stock %}&con_stock=on{% endif %}{% if sin_costo %}&sin_costo=on{% endif %}{% if sin_precio %}&sin_precio=on{% endif %}&page={{ num }}">{{ num }}</a>
+                  <a class="page-link" href="?q={{ query }}&ubicacion={{ ubicacion_actual }}{% if selected_warehouse %}&warehouse_id={{ selected_warehouse.id }}{% endif %}{% if con_stock %}&con_stock=on{% endif %}{% if sin_costo %}&sin_costo=on{% endif %}{% if sin_precio %}&sin_precio=on{% endif %}&page={{ num }}">{{ num }}</a>
                 </li>
               {% endif %}
             {% elif num == productos.number|add:'-3'|add:"0" or num == productos.number|add:'3'|add:"0" %}
@@ -150,7 +158,7 @@
 
           {% if productos.has_next %}
             <li class="page-item">
-              <a class="page-link" href="?q={{ query }}&ubicacion={{ ubicacion_actual }}{% if con_stock %}&con_stock=on{% endif %}{% if sin_costo %}&sin_costo=on{% endif %}{% if sin_precio %}&sin_precio=on{% endif %}&page={{ productos.next_page_number }}">Siguiente</a>
+              <a class="page-link" href="?q={{ query }}&ubicacion={{ ubicacion_actual }}{% if selected_warehouse %}&warehouse_id={{ selected_warehouse.id }}{% endif %}{% if con_stock %}&con_stock=on{% endif %}{% if sin_costo %}&sin_costo=on{% endif %}{% if sin_precio %}&sin_precio=on{% endif %}&page={{ productos.next_page_number }}">Siguiente</a>
             </li>
           {% else %}
             <li class="page-item disabled"><span class="page-link">Siguiente</span></li>

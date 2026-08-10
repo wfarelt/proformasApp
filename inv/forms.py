@@ -1,17 +1,19 @@
 from django import forms
 from django.forms import inlineformset_factory
 from .models import Purchase, PurchaseDetail, Producto as Product, Movement, MovementItem
-from core.models import Supplier
+from core.models import Supplier, Warehouse
+from core.services.warehouse_access_service import accessible_warehouses, default_user_warehouse
 
 # COMPRAS
 
 class PurchaseForm(forms.ModelForm):
     class Meta:
         model = Purchase
-        fields = ['supplier', 'invoice_number', 'date', 'total_amount', 'status']
+        fields = ['supplier', 'warehouse', 'invoice_number', 'date', 'total_amount', 'status']
         
         widgets = {
             'supplier': forms.Select(attrs={'class': 'form-control'}),
+            'warehouse': forms.Select(attrs={'class': 'form-control'}),
             'invoice_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número de factura'}),
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),            
             'total_amount': forms.NumberInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
@@ -21,6 +23,7 @@ class PurchaseForm(forms.ModelForm):
         # Cambiar nombre a los labels
         labels = {
             'supplier': 'Proveedor',
+            'warehouse': 'Almacén de ingreso',
             'invoice_number': 'Número de factura',
             'date': 'Fecha',
             'total_amount': 'Monto total',
@@ -28,9 +31,14 @@ class PurchaseForm(forms.ModelForm):
         }
         
     def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         # Optimizar la carga de proveedores con select_related
         self.fields['supplier'].queryset = Supplier.objects.all().order_by('name')
+        self.fields['warehouse'].queryset = accessible_warehouses(user) if user else Warehouse.objects.filter(is_active=True).order_by('name')
+        self.fields['warehouse'].required = True
+        if not self.instance.pk:
+            self.fields['warehouse'].initial = default_user_warehouse(user) if user else Warehouse.objects.filter(is_active=True, is_default=True).first()
         self.fields['invoice_number'].required = False
         
 class PurchaseDetailForm(forms.ModelForm):    
@@ -90,19 +98,29 @@ PurchaseDetailFormSet = inlineformset_factory(
 class MovementForm(forms.ModelForm):
     class Meta:
         model = Movement
-        fields = ['movement_type', 'description']
+        fields = ['movement_type', 'warehouse', 'description']
         
         widgets = {
             'movement_type': forms.Select(attrs={'class': 'form-control'}),
+            'warehouse': forms.Select(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Descripción'}),
             
         }
         
         labels = {
             'movement_type': 'Tipo de movimiento',
+            'warehouse': 'Almacén',
             'description': 'Descripción',
             
         }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['warehouse'].queryset = accessible_warehouses(user)
+            if not self.instance.pk:
+                self.fields['warehouse'].initial = default_user_warehouse(user)
 
 class MovementItemForm(forms.ModelForm):
     class Meta:
@@ -132,6 +150,11 @@ MovementItemFormSet = inlineformset_factory(
 )
 
 class InventoryUploadForm(forms.Form):
+    warehouse = forms.ModelChoiceField(
+        label='Almacén de ingreso',
+        queryset=Warehouse.objects.none(),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
     archivo = forms.FileField(label='Archivo XLSX')
     descripcion = forms.CharField(
         label='Descripción',
@@ -158,6 +181,33 @@ class InventoryUploadForm(forms.Form):
         required=False,
         initial=True,
     )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        self.fields['warehouse'].queryset = accessible_warehouses(user) if user else Warehouse.objects.filter(is_active=True).order_by('name')
+        self.fields['warehouse'].initial = default_user_warehouse(user) if user else Warehouse.objects.filter(is_active=True, is_default=True).first()
+
+
+class WarehouseForm(forms.ModelForm):
+    class Meta:
+        model = Warehouse
+        fields = ['name', 'code', 'is_active', 'is_default']
+        labels = {
+            'name': 'Nombre del almacén',
+            'code': 'Código',
+            'is_active': 'Activo',
+            'is_default': 'Almacén predeterminado',
+        }
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
+            'code': forms.TextInput(attrs={'class': 'form-control', 'style': 'text-transform: uppercase;'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_default': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def clean_code(self):
+        return self.cleaned_data['code'].strip().upper()
 
             
             

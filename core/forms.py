@@ -7,23 +7,26 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.utils.safestring import mark_safe
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
-from .models import Producto, Cliente, Supplier, Brand, User, Company, ExchangeRate
+from .models import Producto, Cliente, Supplier, Brand, User, Company, ExchangeRate, Warehouse
 
 
 # CREAR UN FORMULARIO PARA USUARIO
 class UserCreationForm(UserCreationForm):
     def __init__(self, *args, **kwargs):
         super(UserCreationForm, self).__init__(*args, **kwargs)
+        self.fields['default_warehouse'].queryset = Warehouse.objects.filter(is_active=True).order_by('name')
+        self.fields['default_warehouse'].required = True
     
     class Meta:
         model = User
-        fields = ['username', 'email', 'name', 'company', 'role']
+        fields = ['username', 'email', 'name', 'company', 'role', 'default_warehouse']
         labels = {
             'username': 'Usuario',
             'email': 'Correo',
             'name': 'Nombre',
             'company': 'Empresa',
             'role': 'Rol',
+            'default_warehouse': 'Almacén predeterminado',
         }
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
@@ -31,22 +34,26 @@ class UserCreationForm(UserCreationForm):
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'company': forms.Select(attrs={'class': 'form-control'}),
             'role': forms.Select(attrs={'class': 'form-control'}),
+            'default_warehouse': forms.Select(attrs={'class': 'form-control'}),
         }
 
 # CREAR UN FORMULARIO PARA MODIFICAR USUARIO
 class UserChangeForm(UserChangeForm):
     def __init__(self, *args, **kwargs):
         super(UserChangeForm, self).__init__(*args, **kwargs)
+        self.fields['default_warehouse'].queryset = Warehouse.objects.filter(is_active=True).order_by('name')
+        self.fields['default_warehouse'].required = True
     
     class Meta:
         model = User
-        fields = ['username', 'email', 'name', 'company', 'role']
+        fields = ['username', 'email', 'name', 'company', 'role', 'default_warehouse']
         labels = {
             'username': 'Usuario',
             'email': 'Correo',
             'name': 'Nombre',
             'company': 'Empresa',
             'role': 'Rol',
+            'default_warehouse': 'Almacén predeterminado',
         }
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control', 'autofocus': 'autofocus'}),
@@ -54,6 +61,7 @@ class UserChangeForm(UserChangeForm):
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'company': forms.Select(attrs={'class': 'form-control'}),
             'role': forms.Select(attrs={'class': 'form-control'}),
+            'default_warehouse': forms.Select(attrs={'class': 'form-control'}),
         }
 
 # PASSWORD CHANGE FORM
@@ -104,10 +112,25 @@ class UserProfileForm(forms.ModelForm):
     
     # Editar ClearableFileInput para los labes Change= Cambiar, Clear= Eliminar, y el checkbox
     def __init__(self, *args, **kwargs):
+        self.current_user = kwargs.pop('current_user', None)
         super(UserProfileForm, self).__init__(*args, **kwargs)
         self.fields['profile_picture'].widget.clear_checkbox_label = 'Eliminar'
         self.fields['profile_picture'].widget.initial_text = 'Foto actual'
         self.fields['profile_picture'].widget.input_text = 'Cambiar'
+
+        # Solo usuarios con rol ADMIN pueden cambiar la empresa desde su perfil.
+        if not getattr(self.current_user, 'is_admin', False):
+            self.fields['company'].disabled = True
+
+    def clean_company(self):
+        company = self.cleaned_data.get('company')
+        if getattr(self.current_user, 'is_admin', False):
+            return company
+
+        # Protección server-side: ignora cambios enviados manualmente por usuarios no admin.
+        if self.instance and self.instance.pk:
+            return self.instance.company
+        return company
 
 
 class AdminUserCreateForm(UserCreationForm):
@@ -129,7 +152,9 @@ class AdminUserCreateForm(UserCreationForm):
         self.fields['password2'].help_text = 'Ingresa la misma contraseña para confirmar.'
         self.fields['password1'].widget.attrs.update({'placeholder': 'Ingresa una contraseña segura'})
         self.fields['password2'].widget.attrs.update({'placeholder': 'Repite la contraseña'})
-        self.order_fields(['username', 'name', 'email', 'company', 'role', 'password1', 'password2'])
+        self.fields['default_warehouse'].queryset = Warehouse.objects.filter(is_active=True).order_by('name')
+        self.fields['default_warehouse'].required = True
+        self.order_fields(['username', 'name', 'email', 'company', 'role', 'default_warehouse', 'password1', 'password2'])
         self._restrict_available_choices()
 
     def _restrict_available_choices(self):
@@ -148,13 +173,14 @@ class AdminUserCreateForm(UserCreationForm):
 class AdminUserUpdateForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ['username', 'email', 'name', 'company', 'role', 'is_active']
+        fields = ['username', 'email', 'name', 'company', 'role', 'default_warehouse', 'is_active']
         labels = {
             'username': 'Usuario',
             'email': 'Correo',
             'name': 'Nombre',
             'company': 'Empresa',
             'role': 'Rol',
+            'default_warehouse': 'Almacén predeterminado',
             'is_active': 'Activo',
         }
         widgets = {
@@ -163,6 +189,7 @@ class AdminUserUpdateForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'company': forms.Select(attrs={'class': 'form-control'}),
             'role': forms.Select(attrs={'class': 'form-control'}),
+            'default_warehouse': forms.Select(attrs={'class': 'form-control'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
@@ -170,7 +197,9 @@ class AdminUserUpdateForm(forms.ModelForm):
         self.admin_user = kwargs.pop('admin_user', None)
         super().__init__(*args, **kwargs)
         self.fields['role'].choices = [choice for choice in self.fields['role'].choices if choice[0] != User.Roles.SUPERADMIN]
-        self.order_fields(['username', 'name', 'email', 'company', 'role', 'is_active'])
+        self.fields['default_warehouse'].queryset = Warehouse.objects.filter(is_active=True).order_by('name')
+        self.fields['default_warehouse'].required = True
+        self.order_fields(['username', 'name', 'email', 'company', 'role', 'default_warehouse', 'is_active'])
         if self.admin_user and self.admin_user.company_id:
             self.fields['company'].queryset = self.fields['company'].queryset.filter(id=self.admin_user.company_id)
 

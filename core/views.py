@@ -11,7 +11,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db import IntegrityError, OperationalError
-from django.db.models import Count, Max, Q, Sum
+from django.db.models import CharField, Count, IntegerField, Max, OuterRef, Q, Subquery, Sum, Value
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
 from django.templatetags.static import static
@@ -26,7 +27,7 @@ import weasyprint
 from faker import Faker
 from nlt import numlet as nl
 
-from .models import Proforma, Producto, Detalle, Cliente, Supplier, Brand, Company, ProductKit, ProductKitItem, ProductPriceHistory, ExchangeRate
+from .models import Proforma, Producto, ProductStock, Detalle, Cliente, Supplier, Brand, Company, ProductKit, ProductKitItem, ProductPriceHistory, ExchangeRate, Warehouse
 from .forms import ProductoForm, ClienteForm, SupplierForm, BrandForm, \
                     CustomPasswordChangeForm, UserProfileForm, ProductKitForm, ProductKitItemForm, ProductCatalogImportForm, CloudCatalogUploadForm, \
                     AdminUserCreateForm, AdminUserUpdateForm, CompanyDataForm, SuperadminCompanyForm, ExchangeRateForm
@@ -37,6 +38,8 @@ from core.services.product_catalog_import_service import ProductCatalogImportSer
 from inv.models import Movement, MovementItem  # Asegúrate de importar tus modelos correctamente
 
 from .services.price_evaluation_service import PriceEvaluationService
+from .services.inventory_service import apply_warehouse_stock_change
+from .services.warehouse_access_service import WarehouseAccessDenied, accessible_warehouses, default_user_warehouse, resolve_user_warehouse
 from .custom_attributes import ProductCustomAttributes
 
 # Create your views here.
@@ -82,12 +85,12 @@ class CustomPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
 def edit_profile(request):
     user = request.user
     if request.method == 'POST':
-        form = UserProfileForm(request.POST, request.FILES, instance=user)
+        form = UserProfileForm(request.POST, request.FILES, instance=user, current_user=request.user)
         if form.is_valid():
             form.save()
             return redirect('home')  # Cambia por tu vista de perfil si la tienes
     else:
-        form = UserProfileForm(instance=user)
+        form = UserProfileForm(instance=user, current_user=request.user)
     
     return render(request, 'core/registration/edit_profile.html', {'form': form})
 
@@ -364,6 +367,7 @@ def user_status(request, pk):
 def product_detail(request, id):
     producto = Producto.objects.get(id=id)
     price_history = producto.price_history.all().order_by('-created_at')
+    warehouse_stocks = producto.warehouse_stocks.select_related('warehouse').order_by('warehouse__name')
     company_config = (request.user.company.product_custom_fields_config if request.user.company else {}) or {}
     custom_attributes_display = ProductCustomAttributes.build_display_values(company_config, producto.custom_attributes or {})
     
@@ -372,6 +376,7 @@ def product_detail(request, id):
         'producto': producto, 
         'title': title,
         'price_history': price_history,
+        'warehouse_stocks': warehouse_stocks,
         'custom_attributes_display': custom_attributes_display,
     }
     return render(request, 'core/product/product_detail.html', context)
@@ -394,7 +399,14 @@ def product_edit(request, id):
     title = 'Editar producto'
     producto = get_object_or_404(Producto, pk=id)
     is_admin_role = getattr(request.user, 'is_admin', False)
-    old_price = producto.precio 
+    old_price = producto.precio
+    active_warehouse = default_user_warehouse(request.user)
+
+    warehouse_location = ''
+    if active_warehouse:
+        warehouse_stock = ProductStock.objects.filter(product=producto, warehouse=active_warehouse).first()
+        if warehouse_stock:
+            warehouse_location = warehouse_stock.location or ''
 
     if request.method == 'POST':
         form = ProductoForm(request.POST, request.FILES, instance=producto, company=request.user.company)
@@ -402,8 +414,11 @@ def product_edit(request, id):
         form.fields['cost'].disabled = True
         if is_admin_role:
             if form.is_valid():
-                
+                location_value = (form.cleaned_data.get('location') or '').strip()
+                original_global_location = producto.location
                 producto = form.save(commit=False)
+                # Mantener ubicación global legacy sin sobrescribirla desde este formulario.
+                producto.location = original_global_location
                 
                 if 'precio' in form.changed_data:
                     
@@ -422,7 +437,18 @@ def product_edit(request, id):
                     # Mantener precio anterior hasta aprobación
                     producto.precio = old_price
                 
-                producto.save()    
+                producto.save()
+
+                if active_warehouse:
+                    stock_record, _ = ProductStock.objects.get_or_create(
+                        product=producto,
+                        warehouse=active_warehouse,
+                        defaults={'quantity': 0, 'location': location_value},
+                    )
+                    if stock_record.location != location_value:
+                        stock_record.location = location_value
+                        stock_record.save(update_fields=['location'])
+
                 messages.success(request, 'Producto actualizado correctamente.')
                 return redirect('product_list')
         else:
@@ -432,6 +458,7 @@ def product_edit(request, id):
         form = ProductoForm(instance=producto, company=request.user.company)
         # Bloquear el campo de costo al editar
         form.fields['cost'].disabled = True
+        form.initial['location'] = warehouse_location
     
     return render(request, 'core/product/producto_new.html', {'form': form, 'title': title})
 
@@ -442,6 +469,28 @@ def product_detail_api(request, id):
     image_url = producto.imagen.url if producto.imagen else static('img/no-image.png')
     brand = producto.brand.initials if producto.brand else ''
 
+    stock_rows = producto.warehouse_stocks.select_related('warehouse').values(
+        'warehouse_id',
+        'quantity',
+        'location',
+    )
+    stock_by_warehouse_id = {
+        row['warehouse_id']: {
+            'quantity': row.get('quantity') or 0,
+            'location': row.get('location') or '',
+        }
+        for row in stock_rows
+    }
+
+    warehouse_stocks = []
+    for warehouse in accessible_warehouses(request.user):
+        row = stock_by_warehouse_id.get(warehouse.id, {'quantity': 0, 'location': ''})
+        warehouse_stocks.append({
+            'warehouse__name': warehouse.name,
+            'quantity': row['quantity'],
+            'location': row['location'],
+        })
+
     return JsonResponse({
         'id': producto.id,
         'codigo': producto.nombre,
@@ -451,6 +500,7 @@ def product_detail_api(request, id):
         'precio': str(producto.precio),
         'stock': producto.stock or 0,
         'ubicacion': producto.location or '',
+        'warehouse_stocks': warehouse_stocks,
         'imagen': image_url,
     })
 
@@ -483,6 +533,24 @@ class ProductListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         query = self.request.GET.get('q')
         object_list = Producto.objects.all().order_by('id')
+
+        selected_warehouse = default_user_warehouse(self.request.user)
+        if selected_warehouse:
+            location_subquery = ProductStock.objects.filter(
+                product=OuterRef('pk'),
+                warehouse=selected_warehouse,
+            ).values('location')[:1]
+            object_list = object_list.annotate(
+                report_location=Coalesce(
+                    Subquery(location_subquery),
+                    Value('', output_field=CharField()),
+                )
+            )
+        else:
+            object_list = object_list.annotate(
+                report_location=Value('', output_field=CharField())
+            )
+
         if query:
             palabras = [p.strip() for p in query.split('%') if p.strip()]
             for palabra in palabras:
@@ -926,6 +994,11 @@ class ProformaListView(ListView):
         tipo = self.request.GET.get('tipo_busqueda', 'id')
         fecha_inicio = self.request.GET.get('fecha_inicio')
         fecha_fin = self.request.GET.get('fecha_fin')
+        warehouse_id = self.request.GET.get('warehouse_id')
+        if not warehouse_id:
+            default_warehouse = default_user_warehouse(self.request.user)
+            if default_warehouse:
+                warehouse_id = str(default_warehouse.id)
 
         qs = Proforma.objects.order_by('-fecha')
         
@@ -933,6 +1006,10 @@ class ProformaListView(ListView):
         usuario_id = self.request.GET.get("usuario")
         if usuario_id:
             qs = qs.filter(usuario__id=usuario_id)
+
+        # 🔹 FILTRO POR ALMACÉN
+        if warehouse_id:
+            qs = qs.filter(warehouse_id=warehouse_id)
 
         # 🔹 FILTRO POR RANGO DE FECHAS
         fecha_inicio_obj = None
@@ -987,6 +1064,13 @@ class ProformaListView(ListView):
 
         User = get_user_model()
         context["usuarios"] = User.objects.filter(is_superuser=False)
+        context["warehouses"] = accessible_warehouses(self.request.user)
+        selected_warehouse_id = self.request.GET.get('warehouse_id')
+        if not selected_warehouse_id:
+            default_warehouse = default_user_warehouse(self.request.user)
+            if default_warehouse:
+                selected_warehouse_id = str(default_warehouse.id)
+        context["selected_warehouse_id"] = selected_warehouse_id or ''
 
         # 🔹 Copiar parámetros GET sin page
         query_params = self.request.GET.copy()
@@ -1098,6 +1182,15 @@ def _get_proforma_context(proforma, request):
                     | Q(referencia_cruzada__icontains=palabra)
                     | Q(descripcion__icontains=palabra)
                 )
+
+    warehouse_stock_filter = Q(warehouse_stocks__warehouse=proforma.warehouse)
+    productos_list = productos_list.annotate(
+        warehouse_quantity=Coalesce(
+            Sum('warehouse_stocks__quantity', filter=warehouse_stock_filter),
+            Value(0),
+            output_field=IntegerField(),
+        )
+    )
     
     paginator = Paginator(productos_list, 5)
     page_number = request.GET.get('page')
@@ -1117,12 +1210,26 @@ def _get_proforma_context(proforma, request):
             query=query,
             tipo_busqueda=tipo_busqueda,
         )
+        recommended_product_ids = [product.id for product in recommended_products]
+        recommended_by_id = Producto.objects.filter(id__in=recommended_product_ids).annotate(
+            warehouse_quantity=Coalesce(
+                Sum('warehouse_stocks__quantity', filter=warehouse_stock_filter),
+                Value(0),
+                output_field=IntegerField(),
+            )
+        ).in_bulk()
+        recommended_products = [
+            recommended_by_id[product_id]
+            for product_id in recommended_product_ids
+            if product_id in recommended_by_id
+        ]
         enable_product_recommendations = True
 
     exchange_rate_info = _get_exchange_rate_preview(proforma)
 
     return {
         'proforma': proforma,
+        'warehouses': accessible_warehouses(request.user),
         'productos_list': page_obj,
         'detalles': detalles,
         'page_obj': page_obj,
@@ -1142,9 +1249,14 @@ def proforma_new(request):
         proforma = last_proforma
         if not proforma.company and request.user.company:
             proforma.company = request.user.company
-            proforma.save(update_fields=['company'])
+        if not proforma.warehouse_id:
+            proforma.warehouse = default_user_warehouse(request.user)
+        proforma.save(update_fields=['company', 'warehouse'])
     else:
-        proforma = Proforma.objects.create(usuario=request.user)
+        proforma = Proforma.objects.create(
+            usuario=request.user,
+            warehouse=default_user_warehouse(request.user),
+        )
     
     context = _get_proforma_context(proforma, request)
     return render(request, 'core/proforma/proforma_new.html', context)
@@ -1152,12 +1264,55 @@ def proforma_new(request):
 @login_required(login_url='login')
 def proforma_edit(request, id):
     proforma = Proforma.objects.get(id=id)
+    update_fields = []
+
     if not proforma.company and request.user.company:
         proforma.company = request.user.company
-        proforma.save(update_fields=['company'])
+        update_fields.append('company')
+
+    should_sync_warehouse = proforma.estado != 'EJECUTADO'
+    if should_sync_warehouse:
+        try:
+            # Valida que el almacén actual sea accesible para el usuario activo.
+            if proforma.warehouse_id:
+                resolve_user_warehouse(request.user, proforma.warehouse_id)
+            warehouse_mismatch = proforma.usuario_id != request.user.id
+        except WarehouseAccessDenied:
+            warehouse_mismatch = True
+
+        if not proforma.warehouse_id or warehouse_mismatch:
+            current_default_warehouse = default_user_warehouse(request.user)
+            if proforma.warehouse_id != getattr(current_default_warehouse, 'id', None):
+                proforma.warehouse = current_default_warehouse
+                update_fields.append('warehouse')
+
+    if update_fields:
+        proforma.save(update_fields=update_fields)
+
     _refresh_exchange_rate_to_active(proforma)
     context = _get_proforma_context(proforma, request)
     return render(request, 'core/proforma/proforma_new.html', context)
+
+
+@login_required(login_url='login')
+def proforma_set_warehouse(request, id):
+    if request.method != 'POST':
+        return redirect('proforma_edit', id)
+
+    proforma = get_object_or_404(Proforma, id=id)
+    if proforma.estado == 'EJECUTADO':
+        messages.warning(request, 'No se puede cambiar el almacén de una proforma ejecutada.')
+        return redirect('proforma_edit', id)
+
+    try:
+        warehouse = resolve_user_warehouse(request.user, request.POST.get('warehouse_id'))
+    except WarehouseAccessDenied as exc:
+        messages.error(request, str(exc))
+        return redirect('proforma_edit', id)
+    proforma.warehouse = warehouse
+    proforma.save(update_fields=['warehouse'])
+    messages.success(request, f'Almacén de salida actualizado a {warehouse.name}.')
+    return redirect('proforma_edit', id)
 
 
 @login_required(login_url='login')
@@ -1507,6 +1662,9 @@ def cambiar_estado_proforma(request, id):
         
         if request.POST.get('estado') == 'EJECUTADO':
             if proforma.cliente:
+                if not proforma.warehouse_id:
+                    messages.error(request, 'Selecciona un almacén de salida antes de ejecutar la proforma.')
+                    return redirect('proforma_edit', id)
                 proforma.estado = 'EJECUTADO'
                 _apply_exchange_rate_snapshot(proforma)
                 from collections import defaultdict
@@ -1518,20 +1676,29 @@ def cambiar_estado_proforma(request, id):
                 # Verificar stock agrupado
                 for producto_id, cantidad_total in cantidades_por_producto.items():
                     producto = Producto.objects.get(id=producto_id)
-                    if producto.stock < cantidad_total:
-                        messages.error(request, f'No hay suficiente stock para el producto "{producto.nombre}".')
+                    warehouse_stock = ProductStock.objects.filter(
+                        product=producto,
+                        warehouse=proforma.warehouse,
+                    ).first()
+                    available = warehouse_stock.quantity if warehouse_stock else 0
+                    if available < cantidad_total:
+                        messages.error(
+                            request,
+                            f'No hay suficiente stock en {proforma.warehouse.name} para el producto "{producto.nombre}". '
+                            f'Disponible: {available}.',
+                        )
                         return redirect('proforma_edit', id)
 
                 # Descontar stock agrupado
                 for producto_id, cantidad_total in cantidades_por_producto.items():
                     producto = Producto.objects.get(id=producto_id)
-                    producto.stock -= cantidad_total
-                    producto.save(update_fields=['stock'])
+                    apply_warehouse_stock_change(producto, proforma.warehouse, -cantidad_total)
 
                 # Crear Movement (egreso)
                 proforma_content_type = ContentType.objects.get_for_model(Proforma)
                 movement = Movement.objects.create(
                     movement_type='OUT',
+                    warehouse=proforma.warehouse,
                     content_type=proforma_content_type,
                     object_id=proforma.id,
                     description=f'Egreso por venta de la proforma #{proforma.id}',
@@ -1603,20 +1770,30 @@ def anular_proforma(request, id):
         messages.warning(request, 'Solo se pueden anular proformas que ya fueron ejecutadas.')
         return redirect('proforma_edit', id)
 
+    proforma_content_type = ContentType.objects.get_for_model(Proforma)
+    sale_movement = Movement.objects.filter(
+        content_type=proforma_content_type,
+        object_id=proforma.id,
+        movement_type='OUT',
+    ).first()
+    warehouse = sale_movement.warehouse if sale_movement and sale_movement.warehouse_id else proforma.warehouse
+    if warehouse is None:
+        messages.error(request, 'No se encontró el almacén de salida de esta proforma.')
+        return redirect('proforma_edit', id)
+
     # Cambiar estado a ANULADO
     proforma.estado = 'ANULADO'
-    proforma.save()
+    proforma.save(update_fields=['estado'])
 
     # Revertir el stock (crear ingreso)
     for detalle in Detalle.productos_list(proforma):
         producto = Producto.objects.get(id=detalle.producto.id)
-        producto.stock += detalle.cantidad
-        producto.save()
+        apply_warehouse_stock_change(producto, warehouse, detalle.cantidad)
 
     # Crear movimiento tipo INGRESO
-    proforma_content_type = ContentType.objects.get_for_model(Proforma)
     ingreso_movement = Movement.objects.create(
         movement_type='IN',
+        warehouse=warehouse,
         content_type=proforma_content_type,
         object_id=proforma.id,
         description=f'Ingreso por anulación de proforma #{proforma.id}',

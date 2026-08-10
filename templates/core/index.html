@@ -209,15 +209,15 @@
 
           <!-- INVENTARIO -->
           {% if user.can_access_inventory %}
-          <li class="nav-item {% if current_url == 'movement_list' or current_url == 'purchase_list' or current_url == 'cargar_inventario_inicial' %}menu-open{% endif %}">
-            <a href="#" class="nav-link {% if current_url == 'movement_list' or current_url == 'purchase_list' or current_url == 'cargar_inventario_inicial' %}active{% endif %}">
+          <li class="nav-item {% if current_url == 'movement_list' or current_url == 'create_transfer' or current_url == 'purchase_list' or current_url == 'cargar_inventario_inicial' or current_url == 'warehouse_list' or current_url == 'warehouse_create' or current_url == 'warehouse_detail' or current_url == 'warehouse_edit' %}menu-open{% endif %}">
+            <a href="#" class="nav-link {% if current_url == 'movement_list' or current_url == 'create_transfer' or current_url == 'purchase_list' or current_url == 'cargar_inventario_inicial' or current_url == 'warehouse_list' or current_url == 'warehouse_create' or current_url == 'warehouse_detail' or current_url == 'warehouse_edit' %}active{% endif %}">
               <i class="nav-icon fas fa-warehouse"></i>
               <p>
                 Inventario
                 <i class="fas fa-angle-left right"></i>
               </p>
             </a>
-            <ul class="nav nav-treeview" {% if current_url == 'movement_list' or current_url == 'purchase_list' or current_url == 'cargar_inventario_inicial' %}style="display: block;"{% else %}style="display: none;"{% endif %}>
+            <ul class="nav nav-treeview" {% if current_url == 'movement_list' or current_url == 'purchase_list' or current_url == 'cargar_inventario_inicial' or current_url == 'warehouse_list' or current_url == 'warehouse_create' or current_url == 'warehouse_detail' or current_url == 'warehouse_edit' %}style="display: block;"{% else %}style="display: none;"{% endif %}>
               <li class="nav-item">
                 <a href="{% url 'movement_list' %}" class="nav-link {% if current_url == 'movement_list' %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>
@@ -225,9 +225,21 @@
                 </a>
               </li>
               <li class="nav-item">
+                <a href="{% url 'create_transfer' %}" class="nav-link {% if current_url == 'create_transfer' %}active{% endif %}">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Transferencias</p>
+                </a>
+              </li>
+              <li class="nav-item">
                 <a href="{% url 'purchase_list' %}" class="nav-link {% if current_url == 'purchase_list' %}active{% endif %}">
                   <i class="far fa-circle nav-icon"></i>
                   <p>Compras</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="{% url 'warehouse_list' %}" class="nav-link {% if current_url == 'warehouse_list' or current_url == 'warehouse_create' or current_url == 'warehouse_detail' or current_url == 'warehouse_edit' %}active{% endif %}">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Almacenes</p>
                 </a>
               </li>
               <li class="nav-item">

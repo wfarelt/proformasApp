@@ -48,6 +48,7 @@ urlpatterns = [
     path('proformas/', ProformaListView.as_view(), name='proforma_list'),
     path('proforma/new/', proforma_new, name='proforma_new'),
     path('proforma/edit/<int:id>/', proforma_edit, name='proforma_edit'),
+        path('proforma/<int:id>/almacen/seleccionar/', proforma_set_warehouse, name='proforma_set_warehouse'),
     path('proforma/agregar_producto_a_detalle/', agregar_producto_a_detalle, name='agregar_producto_a_detalle'),
     path('proforma/eliminar_producto_a_detalle/<int:id>/', eliminar_producto_a_detalle, name='eliminar_producto_a_detalle'),
     path('editar_cantidad_detalle/<int:detalle_id>/', editar_cantidad_detalle, name="editar_cantidad_detalle"),

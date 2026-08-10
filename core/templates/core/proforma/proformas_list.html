@@ -38,6 +38,17 @@
                     {% endfor %}
                 </select>
 
+                <!-- FILTRO POR ALMACÉN -->
+                <select name="warehouse_id" class="form-control mr-2">
+                    <option value="">Todos los almacenes</option>
+                    {% for warehouse in warehouses %}
+                        <option value="{{ warehouse.id }}"
+                            {% if selected_warehouse_id == warehouse.id|stringformat:"s" %}selected{% endif %}>
+                            {{ warehouse.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+
                 <!-- BUSCADOR -->
                 <input type="text" name="q" id="search-field" class="form-control mr-2"
                     placeholder="Buscar..." value="{{ request.GET.q }}">
@@ -121,7 +132,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="5">No se encontraron proformas.</td>
+                            <td colspan="10">No se encontraron proformas.</td>
                         </tr>
                     {% endfor %}
                 </tbody>

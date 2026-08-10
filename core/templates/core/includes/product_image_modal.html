@@ -14,13 +14,30 @@
             <img id="product-modal-image" src="{% static 'img/no-image.png' %}" alt="Imagen de producto" class="img-fluid product-modal-image">
           </div>
           <div class="col-md-6">
-            <p class="mb-1"><strong>Nombre:</strong> <span id="product-modal-nombre">-</span></p>
             <p class="mb-1"><strong>Código:</strong> <span id="product-modal-codigo">-</span></p>
             <p class="mb-1"><strong>Descripción:</strong> <span id="product-modal-descripcion">-</span></p>
             <p class="mb-1"><strong>Marca:</strong> <span id="product-modal-marca">-</span></p>
             <p class="mb-1"><strong>Precio:</strong> <span id="product-modal-precio">-</span></p>
             <p class="mb-0"><strong>Stock:</strong> <span id="product-modal-stock">-</span></p>
           </div>
+        </div>
+        <hr>
+        <h6 class="mb-2">Stock por almacén</h6>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered mb-0">
+            <thead class="thead-light">
+              <tr>
+                <th>Almacén</th>
+                <th>Stock</th>
+                <th>Ubicación</th>
+              </tr>
+            </thead>
+            <tbody id="product-modal-warehouse-stock-body">
+              <tr>
+                <td colspan="3" class="text-center text-muted">Sin datos de stock por almacén.</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
       <div class="modal-footer">

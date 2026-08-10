@@ -2,11 +2,15 @@ from django.test import TestCase
 from django.urls import reverse
 from unittest.mock import patch
 from io import BytesIO
+from django.db import IntegrityError, transaction
+from core.services.inventory_service import InsufficientWarehouseStock, apply_warehouse_stock_change
+from core.services.warehouse_access_service import WarehouseAccessDenied, resolve_user_warehouse
+from inv.services.warehouse_transfer_service import create_warehouse_transfer
 
 from openpyxl import Workbook, load_workbook
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from core.models import Company, Detalle, Producto, Proforma, User
+from core.models import Company, Detalle, Producto, ProductStock, Proforma, User, Warehouse
 from core.services.product_catalog_import_service import ProductCatalogImportService
 
 
@@ -355,3 +359,151 @@ class ProductCatalogImportTemplateTests(TestCase):
 		producto = Producto.objects.get(nombre='ABC-001')
 		self.assertEqual(producto.referencia_cruzada, 'REF-001')
 		self.assertEqual(producto.descripcion, 'Producto A')
+
+
+class WarehouseStockTests(TestCase):
+	def test_product_can_have_only_one_stock_record_per_warehouse(self):
+		warehouse = Warehouse.objects.create(name='Almacen A', code='A')
+		product = Producto.objects.create(nombre='WH-001', stock=10)
+		ProductStock.objects.create(product=product, warehouse=warehouse, quantity=10)
+
+		with self.assertRaises(IntegrityError):
+			with transaction.atomic():
+				ProductStock.objects.create(product=product, warehouse=warehouse, quantity=1)
+
+	def test_warehouse_stock_changes_keep_legacy_total_in_sync(self):
+		warehouse = Warehouse.objects.create(name='Almacen B', code='B')
+		product = Producto.objects.create(nombre='WH-002', stock=0)
+
+		apply_warehouse_stock_change(product, warehouse, 8)
+		product.refresh_from_db()
+		stock = ProductStock.objects.get(product=product, warehouse=warehouse)
+		self.assertEqual(stock.quantity, 8)
+		self.assertEqual(product.stock, 8)
+
+		with self.assertRaises(InsufficientWarehouseStock):
+			apply_warehouse_stock_change(product, warehouse, -9)
+
+		product.refresh_from_db()
+		stock.refresh_from_db()
+		self.assertEqual(stock.quantity, 8)
+		self.assertEqual(product.stock, 8)
+
+	def test_transfer_moves_stock_between_warehouses_without_changing_total(self):
+		origin = Warehouse.objects.create(name='Almacen origen', code='ORIGEN')
+		destination = Warehouse.objects.create(name='Almacen destino', code='DESTINO')
+		product = Producto.objects.create(nombre='WH-TRANSFER', stock=0, cost=12)
+		apply_warehouse_stock_change(product, origin, 8)
+
+		transfer = create_warehouse_transfer(
+			origin_warehouse=origin,
+			destination_warehouse=destination,
+			items=[{'product': product, 'quantity': 3, 'observation': 'Reposicion'}],
+			user=None,
+			description='Reposicion semanal',
+		)
+
+		product.refresh_from_db()
+		self.assertEqual(product.stock, 8)
+		self.assertEqual(ProductStock.objects.get(product=product, warehouse=origin).quantity, 5)
+		self.assertEqual(ProductStock.objects.get(product=product, warehouse=destination).quantity, 3)
+		self.assertEqual(transfer.movements.count(), 2)
+		self.assertEqual(transfer.items.count(), 1)
+
+	def test_transfer_with_insufficient_origin_stock_is_rolled_back(self):
+		origin = Warehouse.objects.create(name='Almacen bajo', code='BAJO')
+		destination = Warehouse.objects.create(name='Almacen alto', code='ALTO')
+		product = Producto.objects.create(nombre='WH-TRANSFER-FAIL', stock=0)
+		apply_warehouse_stock_change(product, origin, 2)
+
+		with self.assertRaises(InsufficientWarehouseStock):
+			create_warehouse_transfer(
+				origin_warehouse=origin,
+				destination_warehouse=destination,
+				items=[{'product': product, 'quantity': 3}],
+				user=None,
+			)
+
+		product.refresh_from_db()
+		self.assertEqual(product.stock, 2)
+		self.assertEqual(ProductStock.objects.get(product=product, warehouse=origin).quantity, 2)
+		self.assertFalse(ProductStock.objects.filter(product=product, warehouse=destination).exists())
+
+	def test_inventory_report_uses_selected_warehouse_stock(self):
+		origin = Warehouse.objects.create(name='Almacen reporte A', code='REPORTE-A')
+		destination = Warehouse.objects.create(name='Almacen reporte B', code='REPORTE-B')
+		product = Producto.objects.create(nombre='WH-REPORT', stock=0)
+		apply_warehouse_stock_change(product, origin, 2)
+		apply_warehouse_stock_change(product, destination, 5)
+		user = User.objects.create_user(
+			username='warehouse-reporter',
+			email='reporter@example.com',
+			name='Warehouse Reporter',
+			password='secret123',
+			role=User.Roles.ALMACEN,
+			default_warehouse=origin,
+		)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse('reporte_inventario'), {'warehouse_id': origin.id})
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.context['selected_warehouse'], origin)
+		self.assertEqual(response.context['total_productos'], 1)
+		self.assertEqual(dict(response.context['brand_summary'])['Sin Marca']['stock'], 2)
+
+	def test_pre_inventory_uses_selected_warehouse_stock(self):
+		origin = Warehouse.objects.create(name='Almacen preinventario A', code='PRE-A')
+		destination = Warehouse.objects.create(name='Almacen preinventario B', code='PRE-B')
+		product = Producto.objects.create(nombre='WH-PREINVENTORY', stock=0)
+		apply_warehouse_stock_change(product, origin, 3, location='A-1')
+		apply_warehouse_stock_change(product, destination, 6, location='B-1')
+		user = User.objects.create_user(
+			username='preinventory-reporter',
+			email='preinventory@example.com',
+			name='Preinventory Reporter',
+			password='secret123',
+			role=User.Roles.ALMACEN,
+			default_warehouse=origin,
+		)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse('pre_inventario'), {'warehouse_id': origin.id, 'con_stock': 'on'})
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.context['selected_warehouse'], origin)
+		self.assertEqual(response.context['productos'].object_list[0].report_stock, 3)
+		self.assertEqual(response.context['productos'].object_list[0].report_location, 'A-1')
+
+	def test_analytics_uses_selected_warehouse_stock(self):
+		warehouse = Warehouse.objects.create(name='Almacen analitica', code='ANALITICA')
+		user = User.objects.create_user(
+			username='analytics-reporter',
+			email='analytics@example.com',
+			name='Analytics Reporter',
+			password='secret123',
+			role=User.Roles.ALMACEN,
+			default_warehouse=warehouse,
+		)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse('reporte_analitica_productos'), {'warehouse_id': warehouse.id})
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.context['selected_warehouse'], warehouse)
+
+	def test_warehouse_user_cannot_resolve_another_warehouse(self):
+		assigned = Warehouse.objects.create(name='Almacen asignado', code='ASIGNADO')
+		other = Warehouse.objects.create(name='Almacen ajeno', code='AJENO')
+		user = User.objects.create_user(
+			username='warehouse-user',
+			email='warehouse-user@example.com',
+			name='Warehouse User',
+			password='secret123',
+			role=User.Roles.ALMACEN,
+			default_warehouse=assigned,
+		)
+
+		self.assertEqual(resolve_user_warehouse(user), assigned)
+		with self.assertRaises(WarehouseAccessDenied):
+			resolve_user_warehouse(user, other.id)

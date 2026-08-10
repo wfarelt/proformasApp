@@ -40,6 +40,11 @@
         
         <form id="inventory-upload-form" method="post" enctype="multipart/form-data">
             {% csrf_token %}
+            <div class="mb-3">
+                {{ form.warehouse.label_tag }}
+                {{ form.warehouse }}
+                {% for error in form.warehouse.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            </div>
             {{ form.archivo.label_tag }}
             {{ form.archivo }}
             <div class="mb-3">

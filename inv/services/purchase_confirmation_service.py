@@ -1,6 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 
+from core.services.inventory_service import apply_warehouse_stock_change
 from core.services.purchase_price_service import create_price_history_from_purchase
 from inv.models import Movement, MovementItem, Purchase
 
@@ -25,6 +26,8 @@ def confirm_purchase_and_apply_inventory(purchase, user=None):
 
         if purchase_locked.status != "confirmed":
             return None
+        if purchase_locked.warehouse_id is None:
+            raise ValueError('La compra debe tener un almacén de ingreso asignado.')
 
         ct = ContentType.objects.get_for_model(Purchase)
         existing_movement = Movement.objects.filter(
@@ -37,6 +40,7 @@ def confirm_purchase_and_apply_inventory(purchase, user=None):
 
         movement = Movement.objects.create(
             movement_type="IN",
+            warehouse=purchase_locked.warehouse,
             content_type=ct,
             object_id=purchase_locked.id,
             user=purchase_locked.user,
@@ -51,9 +55,13 @@ def confirm_purchase_and_apply_inventory(purchase, user=None):
                 unit_price=detail.unit_price,
             )
 
-            detail.product.stock = (detail.product.stock or 0) + detail.quantity
+            apply_warehouse_stock_change(
+                detail.product,
+                purchase_locked.warehouse,
+                detail.quantity,
+            )
             detail.product.cost = detail.unit_price
-            detail.product.save(update_fields=["stock", "cost"])
+            detail.product.save(update_fields=["cost"])
 
         create_price_history_from_purchase(purchase_locked, user or purchase_locked.user)
 

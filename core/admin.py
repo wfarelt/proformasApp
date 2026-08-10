@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import Producto, Proforma, Cliente, Detalle, Brand, \
-    Supplier, User, Company, ExchangeRate
+    Supplier, User, Company, ExchangeRate, Warehouse, ProductStock
 from import_export.admin import ImportExportModelAdmin
 from .resources import ProductResource
 
@@ -10,7 +10,7 @@ from .forms import UserCreationForm, UserChangeForm
 class UserAdmin(UserAdmin):
     finaly = (
         (None, {'fields': ('username', 'email', 'password')}),
-        ('Información personal', {'fields': ('name', 'company', 'role')}),
+        ('Información personal', {'fields': ('name', 'company', 'role', 'default_warehouse')}),
         ('Estado', {'fields': ('is_active',)}),
     )
     add_fieldsets = (
@@ -22,6 +22,7 @@ class UserAdmin(UserAdmin):
                 'name',
                 'company',
                 'role',
+                'default_warehouse',
                 'password1',
                 'password2',
                 'is_active',
@@ -30,8 +31,8 @@ class UserAdmin(UserAdmin):
     )
     form = UserChangeForm
     add_form = UserCreationForm
-    list_display = ('id', 'username', 'email', 'name', 'company', 'role', 'is_active')
-    list_filter = ('role', 'is_active', 'company')
+    list_display = ('id', 'username', 'email', 'name', 'company', 'role', 'default_warehouse', 'is_active')
+    list_filter = ('role', 'is_active', 'company', 'default_warehouse')
     fieldsets = finaly
     search_fields = ('username', 'email', 'name', 'company__name')
     ordering = ('id',)
@@ -76,6 +77,23 @@ class ExchangeRateAdmin(admin.ModelAdmin):
 
 
 admin.site.register(ExchangeRate, ExchangeRateAdmin)
+
+
+@admin.register(Warehouse)
+class WarehouseAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'code', 'is_default', 'is_active')
+    list_filter = ('is_default', 'is_active')
+    search_fields = ('name', 'code')
+    ordering = ('name',)
+
+
+@admin.register(ProductStock)
+class ProductStockAdmin(admin.ModelAdmin):
+    list_display = ('product', 'warehouse', 'quantity', 'location', 'updated_at')
+    list_filter = ('warehouse',)
+    search_fields = ('product__nombre', 'product__referencia_cruzada', 'warehouse__name')
+    ordering = ('warehouse__name', 'product__nombre')
+    list_select_related = ('product', 'warehouse')
 
 class ProformaAdmin(admin.ModelAdmin):
     list_display = ('id', 'fecha', 'cliente', 'usuario_username', 'estado', 'total', 'company')

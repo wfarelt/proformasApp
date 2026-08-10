@@ -160,6 +160,68 @@
     justify-content: center;
     font-weight: 600;
   }
+
+  .proforma-header-row {
+    row-gap: 10px;
+  }
+
+  .proforma-header-card {
+    min-height: 72px;
+    padding: 10px 12px;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    background: #fff;
+  }
+
+  .proforma-header-label {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6c757d;
+    line-height: 1.1;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .proforma-header-control {
+    height: 34px;
+    font-size: 13px;
+  }
+
+  .proforma-header-btn {
+    height: 34px;
+    min-width: 68px;
+    font-size: 13px;
+    padding: 0 12px;
+  }
+
+  .client-name-value {
+    display: block;
+    font-weight: 600;
+    color: #212529;
+    line-height: 1.2;
+  }
+
+  .client-nit-value {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #6c757d;
+    line-height: 1.2;
+  }
+
+  .exchange-rate-value {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .exchange-rate-currency {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #6c757d;
+  }
 </style>
 {% endblock style %}
 
@@ -167,40 +229,59 @@
 <div class="card">
 
   <div id="proforma" class="card-header">
-    <div class="row">
+    <div class="row proforma-header-row">
       <div class="col-md-12">
         <strong>
           <h2>Proforma: {{proforma.id}}</h2>
         </strong>
       </div>
-      <!-- Información del cliente -->
-      <div class="col-md-4">
-          Cliente: <span id="selected-client-name">{{ proforma.cliente|default:'Sin cliente' }}</span>
-          <button type="button" id="open-client-modal" class="btn btn-warning btn-sm no-mostrar">
-          <i class="fas fa-user-plus"></i>
+      <!-- Encabezado: Cliente, Almacén, Fecha y TC -->
+      <div class="col-12 col-lg-6 mt-2">
+        <div class="proforma-header-card d-flex align-items-center justify-content-between" style="gap: 10px;">
+          <div>
+            <p class="proforma-header-label">Cliente</p>
+            <span id="selected-client-name" class="client-name-value">{{ proforma.cliente|default:'Sin cliente' }}</span>
+            <span id="selected-client-nit" class="client-nit-value">
+              NIT: {% if proforma.cliente and proforma.cliente.nit %}{{ proforma.cliente.nit }}{% else %}Sin NIT{% endif %}
+            </span>
+          </div>
+          <button type="button" id="open-client-modal" class="btn btn-warning no-mostrar proforma-header-btn" title="Seleccionar cliente">
+            <i class="fas fa-user-plus"></i>
           </button>
+        </div>
       </div>
-      <div class="col-md-2">
-          Nit: <span id="selected-client-nit">{% if proforma.cliente %}{{ proforma.cliente.nit|default:'-' }}{% else %}-{% endif %}</span>
-      </div>
-      
-      <!-- Fecha de la proforma -->
-      <div class="col-md-4 text-right">
-        <form method="post" action="{% url 'cambiar_fecha_proforma' proforma.id %}" class="d-inline">
+
+      <div class="col-12 col-lg-2 mt-2">
+        <form method="post" action="{% url 'proforma_set_warehouse' proforma.id %}" id="warehouse-form" class="proforma-header-card d-flex align-items-center flex-wrap" style="gap: 6px;">
           {% csrf_token %}
-          <label for="fecha">Fecha:</label>
-          <input type="date" id="fecha" name="fecha"
-                value="{{ proforma.fecha|date:'Y-m-d' }}"
-                class="form-control form-control-sm d-inline-block"
-                style="width: 160px;"
-                {% if proforma.estado == 'EJECUTADO' %}disabled{% endif %}>
-          <button type="submit" class="btn btn-primary btn-sm" {% if proforma.estado == 'EJECUTADO' %}disabled{% endif %}>Actualizar</button>
+          <label for="warehouse_id" class="proforma-header-label w-100">Almacén</label>
+          <select id="warehouse_id" name="warehouse_id" class="form-control proforma-header-control" style="min-width: 170px;" {% if proforma.estado == 'EJECUTADO' %}disabled{% endif %}>
+            {% for warehouse in warehouses %}
+            <option value="{{ warehouse.id }}" {% if warehouse.id == proforma.warehouse_id %}selected{% endif %}>{{ warehouse.name }}</option>
+            {% endfor %}
+          </select>
         </form>
       </div>
-      <!-- Tipo de cambio de la proforma -->
-       <div class="col-md-2 text-right">
-          <strong>TC:</strong> {{ exchange_rate_info.rate|floatformat:2 }} ({{ exchange_rate_info.source_currency }}/{{ exchange_rate_info.target_currency }})
-       </div>
+
+      <div class="col-12 col-md-6 col-lg-2 mt-2">
+        <form method="post" action="{% url 'cambiar_fecha_proforma' proforma.id %}" id="proforma-date-form" class="proforma-header-card d-flex align-items-center flex-wrap" style="gap: 6px;">
+          {% csrf_token %}
+          <label for="fecha" class="proforma-header-label w-100">Fecha</label>
+          <input type="date" id="fecha" name="fecha"
+                value="{{ proforma.fecha|date:'Y-m-d' }}"
+                class="form-control proforma-header-control"
+                style="min-width: 150px;"
+                {% if proforma.estado == 'EJECUTADO' %}disabled{% endif %}>
+        </form>
+      </div>
+
+      <div class="col-12 col-md-6 col-lg-2 mt-2">
+        <div class="proforma-header-card text-lg-right">
+          <p class="proforma-header-label">Tipo de cambio</p>
+          <span class="exchange-rate-value">{{ exchange_rate_info.rate|floatformat:2 }}</span>
+          <small class="exchange-rate-currency">{{ exchange_rate_info.source_currency }}/{{ exchange_rate_info.target_currency }}</small>
+        </div>
+      </div>
       
     </div>
   </div>
@@ -333,7 +414,7 @@
               <td>{{ producto.brand.initials }}</td>
             {% endif %}
             
-            <td style="text-align: center;">{{ producto.stock }}</td>
+            <td style="text-align: center;">{{ producto.warehouse_quantity }}</td>
             <td style="text-align: right;">{{ producto.latest_price }}</td>
             <td><input type="number" id="precio{{ producto.id}}" name="precio" value="{{producto.precio}}" step="0.01" style="width: 80px; text-align: right;">
             </td> 
@@ -445,7 +526,7 @@
                 <td>{{ producto.brand.initials }}</td>
               {% endif %}
 
-              <td style="text-align: center;">{{ producto.stock }}</td>
+              <td style="text-align: center;">{{ producto.warehouse_quantity }}</td>
               <td style="text-align: right;">{{ producto.latest_price }}</td>
               <td><input type="number" id="rec-precio{{ producto.id }}" name="precio" value="{{ producto.precio }}" step="0.01" style="width: 80px; text-align: right;">
               </td>
@@ -501,7 +582,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="5">No se encontraron productos.</td>
+            <td colspan="8">No se encontraron productos.</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -1003,7 +1084,8 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       selectedClientName.textContent = clientName || data.client.name || 'Sin cliente';
-      selectedClientNit.textContent = (clientNit || data.client.nit || '').trim() || '-';
+      const nitValue = (clientNit || data.client.nit || '').trim();
+      selectedClientNit.textContent = `NIT: ${nitValue || 'Sin NIT'}`;
       showMessage('success', 'Cliente asignado correctamente.');
       setTimeout(closeModal, 450);
     } catch (error) {
@@ -1034,7 +1116,8 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       selectedClientName.textContent = data.client.name || 'Sin cliente';
-      selectedClientNit.textContent = (data.client.nit || '').trim() || '-';
+      const nitValue = (data.client.nit || '').trim();
+      selectedClientNit.textContent = `NIT: ${nitValue || 'Sin NIT'}`;
       quickCreateForm.reset();
       showMessage('success', 'Cliente creado y asignado correctamente.');
       searchInput.value = data.client.name || '';
@@ -1323,6 +1406,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  const warehouseForm = document.getElementById('warehouse-form');
+  const warehouseSelect = document.getElementById('warehouse_id');
+  const dateForm = document.getElementById('proforma-date-form');
+  const dateInput = document.getElementById('fecha');
+
+  if (warehouseForm && warehouseSelect && !warehouseSelect.disabled) {
+    warehouseSelect.addEventListener('change', function () {
+      warehouseForm.submit();
+    });
+  }
+
+  if (dateForm && dateInput && !dateInput.disabled) {
+    dateInput.addEventListener('change', function () {
+      dateForm.submit();
+    });
+  }
+
   const form = document.getElementById('proforma-state-form');
   const submitBtn = document.getElementById('proforma-save-btn');
 

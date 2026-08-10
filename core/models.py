@@ -79,6 +79,29 @@ class Company(models.Model):
         return self.name
 
 
+class Warehouse(models.Model):
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=20)
+    is_active = models.BooleanField(default=True)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Almacén'
+        verbose_name_plural = 'Almacenes'
+        ordering = ['name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['code'],
+                name='unique_warehouse_code',
+            ),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
 class ExchangeRate(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='exchange_rates')
     from_currency = models.CharField(max_length=3, choices=Company.CURRENCY_CHOICES, verbose_name='Moneda origen')
@@ -167,6 +190,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     company = models.ForeignKey(Company, on_delete=models.SET_NULL, null=True, blank=True)
     profile_picture = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
     role = models.CharField(max_length=20, choices=Roles.choices, default=Roles.VENTAS, verbose_name='Rol')
+    default_warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_users',
+        verbose_name='Almacén predeterminado',
+    )
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -221,6 +252,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def can_access_finance(self):
         return self.can_access_inventory
+
+    @property
+    def can_manage_all_warehouses(self):
+        return self.role == self.Roles.ADMIN
 
 # CLIENTE
 class Cliente(models.Model):
@@ -315,6 +350,36 @@ class Producto(models.Model):
 
         super().save(*args, **kwargs)
 
+
+class ProductStock(models.Model):
+    product = models.ForeignKey(
+        Producto,
+        on_delete=models.CASCADE,
+        related_name='warehouse_stocks',
+    )
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.CASCADE,
+        related_name='product_stocks',
+    )
+    quantity = models.PositiveIntegerField(default=0)
+    location = models.CharField(max_length=50, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Stock por almacén'
+        verbose_name_plural = 'Stock por almacén'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['product', 'warehouse'],
+                name='unique_product_stock_per_warehouse',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.product.nombre} - {self.warehouse.name}: {self.quantity}'
+
 # PROFORMA
 class Proforma(models.Model):
     # ESTADO (PENDIENTE, EJECUTADO, ANULADO)
@@ -333,6 +398,13 @@ class Proforma(models.Model):
     estado = models.CharField(max_length=10, choices=ESTADO, default='PENDIENTE')
     observacion = models.TextField(max_length=200, blank=True, null=True, help_text="Observaciones adicionales sobre la proforma")
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="proformas")
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='proformas',
+    )
     company = models.ForeignKey(
         Company,
         on_delete=models.SET_NULL,
