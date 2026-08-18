@@ -375,6 +375,25 @@ def buscar_productos(request):
     }
     return JsonResponse(data)
 
+
+@login_required
+def transfer_product_stock(request):
+    product_id = request.GET.get('product_id')
+
+    try:
+        warehouse = resolve_user_warehouse(request.user, request.GET.get('warehouse_id'))
+        product = Producto.objects.get(pk=product_id)
+    except (WarehouseAccessDenied, Producto.DoesNotExist, TypeError, ValueError):
+        return JsonResponse({'error': 'Producto o almacén no disponible.'}, status=400)
+
+    available_stock = ProductStock.objects.filter(
+        product=product,
+        warehouse=warehouse,
+    ).values_list('quantity', flat=True).first() or 0
+
+    return JsonResponse({'available_stock': available_stock})
+
+
 @login_required
 def reporte_inventario(request):
     warehouses = accessible_warehouses(request.user)

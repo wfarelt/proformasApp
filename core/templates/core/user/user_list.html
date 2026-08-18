@@ -16,6 +16,7 @@ Lista de usuarios
 <th>Correo</th>
 <th>Rol</th>
 <th>Empresa</th>
+<th>Almacen</th>
 <th>Estado</th>
 <th class="text-center">Acciones</th>
 {% endblock columns %}
@@ -26,6 +27,7 @@ Lista de usuarios
 <td>{{ obj.email }}</td>
 <td>{{ obj.get_role_display }}</td>
 <td>{{ obj.company|default:'-' }}</td>
+<td>{{ obj.default_warehouse|default:'-' }}</td>
 <td>
     {% if obj.is_active %}
         <span class="badge badge-success">Activo</span>

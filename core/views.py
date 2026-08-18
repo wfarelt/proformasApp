@@ -270,7 +270,7 @@ class UserListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         query = self.request.GET.get('q')
-        qs = get_user_model().objects.exclude(role='SUPERADMIN').order_by('name', 'username')
+        qs = get_user_model().objects.select_related('company', 'default_warehouse').exclude(role='SUPERADMIN').order_by('id')
 
         if self.request.user.company_id:
             qs = qs.filter(company=self.request.user.company)
@@ -402,6 +402,11 @@ def product_edit(request, id):
     old_price = producto.precio
     active_warehouse = default_user_warehouse(request.user)
 
+    def restrict_to_location(form):
+        for field_name, field in form.fields.items():
+            if field_name != 'location':
+                field.disabled = True
+
     warehouse_location = ''
     if active_warehouse:
         warehouse_stock = ProductStock.objects.filter(product=producto, warehouse=active_warehouse).first()
@@ -452,13 +457,27 @@ def product_edit(request, id):
                 messages.success(request, 'Producto actualizado correctamente.')
                 return redirect('product_list')
         else:
-            messages.error(request, 'No tienes permisos para editar este producto.')
-            return redirect('product_list')
+            restrict_to_location(form)
+            if form.is_valid():
+                location_value = (form.cleaned_data.get('location') or '').strip()
+                stock_record, _ = ProductStock.objects.get_or_create(
+                    product=producto,
+                    warehouse=active_warehouse,
+                    defaults={'quantity': 0, 'location': location_value},
+                )
+                if stock_record.location != location_value:
+                    stock_record.location = location_value
+                    stock_record.save(update_fields=['location'])
+
+                messages.success(request, f'Ubicación actualizada para el almacén {active_warehouse.name}.')
+                return redirect('product_list')
     else:
         form = ProductoForm(instance=producto, company=request.user.company)
         # Bloquear el campo de costo al editar
         form.fields['cost'].disabled = True
         form.initial['location'] = warehouse_location
+        if not is_admin_role:
+            restrict_to_location(form)
     
     return render(request, 'core/product/producto_new.html', {'form': form, 'title': title})
 

@@ -13,7 +13,7 @@
   <div class="card-header">
     <h1 class="h4 mb-0">{{ title }}</h1>
   </div>
-  <form id="transfer-form" class="card-body">
+  <form id="transfer-form" class="card-body" novalidate>
     {% csrf_token %}
     <div class="row">
       <div class="col-md-5 form-group">
@@ -48,9 +48,10 @@
       <table class="table table-bordered table-sm" id="transfer-items-table">
         <thead>
           <tr>
+            <th style="width: 56px;">#</th>
             <th>Producto</th>
+            <th style="width: 130px;">Stock disponible</th>
             <th style="width: 140px;">Cantidad</th>
-            <th>Observación</th>
             <th style="width: 48px;">
               <button type="button" id="add-item" class="btn btn-success btn-sm" title="Agregar producto" aria-label="Agregar producto">
                 <i class="fas fa-plus"></i>
@@ -63,12 +64,32 @@
     </div>
 
     <div class="d-flex justify-content-end">
-      <a href="{% url 'movement_list' %}" class="btn btn-secondary mr-2">Cancelar</a>
+      <a href="{% url 'movement_list' %}" id="cancel-transfer" class="btn btn-secondary mr-2">Cancelar</a>
       <button type="submit" class="btn btn-primary js-submit-transfer">
         <i class="fas fa-exchange-alt"></i> Registrar transferencia
       </button>
     </div>
   </form>
+</div>
+
+<div class="modal fade" id="transfer-confirmation-modal" tabindex="-1" role="dialog" aria-labelledby="transfer-confirmation-title" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header js-transfer-modal-header">
+        <h5 class="modal-title" id="transfer-confirmation-title">Confirmar transferencia</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0" id="transfer-confirmation-message"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary js-transfer-modal-close" data-dismiss="modal">Volver</button>
+        <button type="button" class="btn js-confirm-transfer-action"></button>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -94,27 +115,199 @@
           cache: true
         }
       });
+      select.on('select2:open', function () {
+        requestAnimationFrame(function () {
+          const select2 = select.data('select2');
+          const searchField = select2 && select2.dropdown && select2.dropdown.$search;
+          if (searchField && searchField.length) {
+            searchField[0].focus();
+          }
+        });
+      });
+      select.on('select2:select', function () {
+        const row = $(this).closest('tr');
+        updateAvailableStock(row);
+        const quantityInput = row.find('.transfer-quantity');
+        quantityInput.trigger('focus').trigger('select');
+      });
+    }
+
+    function updateAvailableStock(row) {
+      const productId = row.find('.transfer-product').val();
+      const warehouseId = $('#origin_warehouse_id').val();
+      const stockCell = row.find('.transfer-available-stock');
+
+      if (!productId || !warehouseId) {
+        stockCell.text('-');
+        return;
+      }
+
+      stockCell.text('...');
+      $.getJSON('{% url "transfer_product_stock" %}', {
+        product_id: productId,
+        warehouse_id: warehouseId
+      }).done(function (data) {
+        if (row.find('.transfer-product').val() === String(productId)) {
+          stockCell.text(data.available_stock);
+        }
+      }).fail(function () {
+        stockCell.text('-');
+      });
+    }
+
+    function updateItemIndexes() {
+      $('#transfer-items-table tbody tr').each(function (index) {
+        $(this).find('.transfer-item-index').text(index + 1);
+      });
+    }
+
+    function updateWarehouseOptions() {
+      const origin = $('#origin_warehouse_id');
+      const destination = $('#destination_warehouse_id');
+      const originId = origin.val();
+      const destinationId = destination.val();
+
+      origin.find('option').prop('disabled', false);
+      destination.find('option').prop('disabled', false);
+
+      if (destinationId) {
+        origin.find('option').filter(function () {
+          return this.value === destinationId;
+        }).prop('disabled', true);
+      }
+      if (originId) {
+        destination.find('option').filter(function () {
+          return this.value === originId;
+        }).prop('disabled', true);
+      }
+      if (originId && originId === destinationId) {
+        destination.val('');
+      }
     }
 
     function addItemRow() {
       const row = $(
         '<tr>' +
+          '<td class="text-center align-middle transfer-item-index"></td>' +
           '<td><select class="form-control transfer-product" required></select></td>' +
+          '<td class="text-center align-middle transfer-available-stock">-</td>' +
           '<td><input type="number" min="1" value="1" class="form-control transfer-quantity" required></td>' +
-          '<td><input type="text" class="form-control transfer-observation"></td>' +
           '<td><button type="button" class="btn btn-outline-danger btn-sm remove-item" title="Quitar producto" aria-label="Quitar producto"><i class="fas fa-times"></i></button></td>' +
         '</tr>'
       );
       $('#transfer-items-table tbody').append(row);
       initProductSelect(row.find('.transfer-product'));
+      updateItemIndexes();
+      return row;
     }
 
     $('#add-item').on('click', addItemRow);
     $(document).on('click', '.remove-item', function () {
       $(this).closest('tr').remove();
+      updateItemIndexes();
+    });
+    $(document).on('keydown', '.transfer-quantity', function (event) {
+      if (event.key !== 'Enter') {
+        return;
+      }
+
+      event.preventDefault();
+      const newRow = addItemRow();
+      newRow.find('.transfer-product').select2('open');
     });
 
+    $('#origin_warehouse_id').on('change', function () {
+      updateWarehouseOptions();
+      $('#transfer-items-table tbody tr').each(function () {
+        updateAvailableStock($(this));
+      });
+    });
+
+    $('#destination_warehouse_id').on('change', function () {
+      updateWarehouseOptions();
+      if ($(this).val()) {
+        $('#description').trigger('focus');
+      }
+    });
+
+    updateWarehouseOptions();
+    $('#destination_warehouse_id').trigger('focus');
+
     let submitting = false;
+    let pendingTransferData = null;
+
+    function showConfirmation(options) {
+      $('#transfer-confirmation-title').text(options.title);
+      $('#transfer-confirmation-message').text(options.message);
+      $('.js-transfer-modal-header')
+        .removeClass('bg-warning bg-danger text-dark text-white')
+        .addClass(options.headerClass || '');
+      $('.js-transfer-modal-close').text(options.closeLabel || 'Volver');
+      $('.js-confirm-transfer-action')
+        .text(options.confirmLabel)
+        .removeClass('btn-primary btn-warning btn-danger')
+        .addClass(options.confirmClass || '')
+        .data('action', options.action || '')
+        .toggle(Boolean(options.confirmLabel));
+      $('#transfer-confirmation-modal').modal('show');
+    }
+
+    $('#cancel-transfer').on('click', function (event) {
+      event.preventDefault();
+      showConfirmation({
+        title: 'Cancelar transferencia',
+        message: 'Se perderán los productos y datos ingresados que todavía no fueron registrados.',
+        confirmLabel: 'Sí, cancelar',
+        confirmClass: 'btn-danger',
+        headerClass: 'bg-danger text-white',
+        action: 'cancel'
+      });
+    });
+
+    $('.js-confirm-transfer-action').on('click', function () {
+      const action = $(this).data('action');
+      if (action === 'cancel') {
+        window.location.href = $('#cancel-transfer').attr('href');
+        return;
+      }
+      if (action === 'submit' && pendingTransferData) {
+        $('#transfer-confirmation-modal').modal('hide');
+        submitTransfer(pendingTransferData);
+      }
+    });
+
+    function submitTransfer(data) {
+      submitting = true;
+      const submitButton = $('.js-submit-transfer');
+      submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Registrando...');
+      fetch('{% url "create_transfer_json" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(data)
+      })
+      .then(function (response) { return response.json(); })
+      .then(function (data) {
+        if (data.redirect_url) {
+          window.location.href = data.redirect_url;
+          return;
+        }
+        throw new Error(data.error || 'No se pudo registrar la transferencia.');
+      })
+      .catch(function (error) {
+        showConfirmation({
+          title: 'No se pudo registrar la transferencia',
+          message: error.message,
+          headerClass: 'bg-danger text-white',
+          closeLabel: 'Entendido'
+        });
+        submitting = false;
+        submitButton.prop('disabled', false).html('<i class="fas fa-exchange-alt"></i> Registrar transferencia');
+      });
+    }
+
     $('#transfer-form').on('submit', function (event) {
       event.preventDefault();
       if (submitting) {
@@ -133,51 +326,85 @@
       }
 
       const items = [];
+      const validationErrors = [];
+      const requestedByProduct = {};
       $('#transfer-items-table tbody tr').each(function () {
         const row = $(this);
         const productId = row.find('.transfer-product').val();
-        const quantity = Number(row.find('.transfer-quantity').val());
-        if (productId && Number.isInteger(quantity) && quantity > 0) {
-          items.push({
-            product_id: productId,
-            quantity: quantity,
-            observation: row.find('.transfer-observation').val()
-          });
-        }
-      });
-      if (!items.length) {
-        alert('Agrega al menos un producto con cantidad válida.');
-        return;
-      }
+        const quantityInput = row.find('.transfer-quantity');
+        const quantity = Number(quantityInput.val());
+        quantityInput.removeClass('is-invalid');
 
-      submitting = true;
-      const submitButton = $('.js-submit-transfer');
-      submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Registrando...');
-      fetch('{% url "create_transfer_json" %}', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        },
-        body: JSON.stringify({
-          origin_warehouse_id: originWarehouseId,
-          destination_warehouse_id: destinationWarehouseId,
-          description: $('#description').val(),
-          items: items
-        })
-      })
-      .then(function (response) { return response.json(); })
-      .then(function (data) {
-        if (data.redirect_url) {
-          window.location.href = data.redirect_url;
+        if (!productId) {
           return;
         }
-        throw new Error(data.error || 'No se pudo registrar la transferencia.');
-      })
-      .catch(function (error) {
-        alert(error.message);
-        submitting = false;
-        submitButton.prop('disabled', false).html('<i class="fas fa-exchange-alt"></i> Registrar transferencia');
+        if (!Number.isInteger(quantity) || quantity <= 0) {
+          quantityInput.addClass('is-invalid');
+          validationErrors.push('Ingresa una cantidad mayor a cero para cada producto seleccionado.');
+          return;
+        }
+
+        const productData = row.find('.transfer-product').select2('data')[0] || {};
+        const productName = productData.text || 'el producto seleccionado';
+        const availableStock = Number(row.find('.transfer-available-stock').text());
+        if (!requestedByProduct[productId]) {
+          requestedByProduct[productId] = {
+            name: productName,
+            quantity: 0,
+            availableStock: Number.isFinite(availableStock) ? availableStock : null,
+            rows: []
+          };
+        }
+        requestedByProduct[productId].quantity += quantity;
+        requestedByProduct[productId].rows.push(quantityInput);
+        items.push({
+          product_id: productId,
+          quantity: quantity
+        });
+      });
+      Object.keys(requestedByProduct).forEach(function (productId) {
+        const product = requestedByProduct[productId];
+        if (product.availableStock !== null && product.quantity > product.availableStock) {
+          product.rows.forEach(function (quantityInput) {
+            quantityInput.addClass('is-invalid');
+          });
+          validationErrors.push(
+            'Stock insuficiente para ' + product.name + '. Disponible: ' +
+            product.availableStock + '. Solicitado: ' + product.quantity + '.'
+          );
+        }
+      });
+      if (validationErrors.length) {
+        showConfirmation({
+          title: 'Revisa las cantidades',
+          message: validationErrors[0],
+          headerClass: 'bg-danger text-white',
+          closeLabel: 'Entendido'
+        });
+        return;
+      }
+      if (!items.length) {
+        showConfirmation({
+          title: 'Agrega productos',
+          message: 'Agrega al menos un producto con una cantidad válida.',
+          headerClass: 'bg-danger text-white',
+          closeLabel: 'Entendido'
+        });
+        return;
+      }
+      pendingTransferData = {
+        origin_warehouse_id: originWarehouseId,
+        destination_warehouse_id: destinationWarehouseId,
+        description: $('#description').val(),
+        items: items
+      };
+      showConfirmation({
+        title: 'Confirmar transferencia',
+        message: 'Se registrará el movimiento de inventario. Esta acción afectará el stock de ambos almacenes.',
+        confirmLabel: 'Registrar transferencia',
+        confirmClass: 'btn-warning',
+        headerClass: 'bg-warning text-dark',
+        action: 'submit'
       });
     });
 

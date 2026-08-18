@@ -38,6 +38,7 @@ urlpatterns = [
     path('movimientos/nuevo2/', create_movement, name='create_movement'),
     path('transferencias/nueva/', create_transfer, name='create_transfer'),
     path('transferencias/registrar/', CreateTransferView.as_view(), name='create_transfer_json'),
+    path('transferencias/stock-producto/', transfer_product_stock, name='transfer_product_stock'),
     path('inventario/cargar/', cargar_inventario_inicial, name='cargar_inventario_inicial'),
     path('api/producto/<int:id>/', get_producto, name='get_producto'),
     path('inventario/plantilla/', download_inventory_template, name='download_inventory_template'),
