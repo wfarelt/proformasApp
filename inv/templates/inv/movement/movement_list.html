@@ -69,24 +69,37 @@
                     <tr>
                         <td>{{ movement.id }}</td>
                         <td>{{ movement.date|date:"d/m/Y" }}</td>
-                        <td>{{ movement.get_movement_type_display }}</td>
+                        <td>
+                            {% if movement.movement_type == 'IN' %}
+                                <span class="badge badge-success">Ingreso</span>
+                            {% elif movement.movement_type == 'OUT' %}
+                                <span class="badge badge-danger">Egreso</span>
+                            {% else %}
+                                <span class="badge badge-secondary">{{ movement.get_movement_type_display }}</span>
+                            {% endif %}
+                        </td>
                         <td>{{ movement.warehouse.name|default:'-' }}</td>
                         <td>{{ movement.description }}</td>
                         <td>{{ movement.user.name }}</td>
                         <td class="text-right">{{ movement.total|floatformat:2 }}</td>
                         <td>
                             {% if movement.status == 'PENDING' %}
-                                Pendiente
+                                <span class="badge badge-warning">Pendiente</span>
                             {% elif movement.status == 'COMPLETED' %}
-                                Completado
+                                <span class="badge badge-success">Confirmado</span>
                             {% else %}
-                                {{ movement.get_status_display }}
+                                <span class="badge badge-secondary">{{ movement.get_status_display }}</span>
                             {% endif %}
                         </td>
                         <td class="text-center">
                             <a href="javascript:void(0);" class="btn btn-info btn-sm" onclick="openMovementDetail({{ movement.id }})">
                                 <i class="fa fa-eye"></i>
                             </a>
+                            {% if movement.status == 'PENDING' %}
+                                <a href="{% url 'edit_movement' movement.id %}" class="btn btn-warning btn-sm" title="Editar movimiento">
+                                    <i class="fa fa-edit"></i>
+                                </a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}
@@ -182,6 +195,14 @@
 
     <script>
         $(document).ready(function () {
+            const savedMessage = new URLSearchParams(window.location.search).get('saved');
+            if (savedMessage) {
+                toastr.success(savedMessage, 'Éxito');
+                const cleanUrl = new URL(window.location.href);
+                cleanUrl.searchParams.delete('saved');
+                window.history.replaceState({}, document.title, cleanUrl.toString());
+            }
+
             $('#producto_id').select2({
                 placeholder: "Seleccione un producto",
                 allowClear: true,
@@ -231,7 +252,7 @@
                     $('#movementDetailModal').modal('show');
                 },
                 error: function() {
-                    alert('Error al cargar los detalles del movimiento.');
+                    toastr.error('Error al cargar los detalles del movimiento.', 'Error');
                 }
             });
         }

@@ -46,6 +46,7 @@
                     <table class="table table-bordered table-striped table-sm">
                         <thead>
                             <tr>
+                                <th style="width: 5%;">#</th>
                                 <th>Producto</th>
                                 <th>Cantidad</th>
                                 <th class="text-right">Costo ($)</th>
@@ -58,6 +59,7 @@
                             {% for form in formset %}
                             {{ form.id }} <!-- Campo oculto con el ID del objeto (importante) -->
                             <tr>
+                                <td class="text-center">{{ forloop.counter }}</td>
                                 <td>{{ form.product }}</td>
                                 <td>{{ form.quantity }}</td>
                                 <td>{{ form.unit_price }}</td>
@@ -77,13 +79,13 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="4">No hay productos en el detalle.</td>
+                                <td colspan="7">No hay productos en el detalle.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="3">
+                                <td colspan="4">
                                     <strong>Total:</strong>
                                 </td>
                                 <td class="text-right total">{{ purchase.total_amount|floatformat:2 }}</td>
@@ -102,12 +104,30 @@
         </div>
     </form>
 
+    {% include 'core/partials/confirmation_modal.html' %}
+
 {% endblock %}
 
 {% block scripts %}
     <script src="{% static 'plugins/select2/js/select2.min.js' %}"></script>
 
     <script>
+            let confirmedPurchaseSubmission = false;
+
+            function showConfirmationModal(options, onConfirm) {
+                $('#confirmation-modal-title').text(options.title || 'Confirmar acción');
+                $('#confirmation-modal-message').text(options.message || '¿Deseas continuar?');
+                const actionButton = $('#confirmation-modal-action');
+                actionButton.text(options.confirmLabel || 'Confirmar');
+                actionButton.removeClass('btn-primary btn-danger btn-success')
+                    .addClass(options.confirmClass || 'btn-primary');
+                actionButton.off('click').on('click', function () {
+                    $('#confirmation-modal').modal('hide');
+                    onConfirm();
+                });
+                $('#confirmation-modal').modal('show');
+            }
+
         $(document).ready(function () {
             $('.select2').select2({
                 placeholder: "Seleccione un producto",
@@ -215,8 +235,24 @@
         });
 
         // Previene doble envio por doble clic o Enter repetido.
-        $(document).on('submit', '#purchase-form', function () {
+        $(document).on('submit', '#purchase-form', function (event) {
             var $form = $(this);
+            var status = $form.find('[name="status"]').val();
+
+            if (status === 'confirmed' && !confirmedPurchaseSubmission) {
+                event.preventDefault();
+                showConfirmationModal({
+                    title: 'Confirmar compra',
+                    message: '¿Confirmas guardar esta compra? Se actualizará el inventario.',
+                    confirmLabel: 'Confirmar compra',
+                    confirmClass: 'btn-success'
+                }, function () {
+                    confirmedPurchaseSubmission = true;
+                    $form.trigger('submit');
+                });
+                return false;
+            }
+
             var alreadySubmitted = $form.data('submitted') === true;
             if (alreadySubmitted) {
                 return false;

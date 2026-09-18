@@ -35,6 +35,7 @@ urlpatterns = [
     path('movimientos/', movement_list, name='movement_list'),
     #movimiento_detail
     path('movimientos/<int:pk>/detalle', movement_detail, name='movement_detail'),
+    path('movimientos/<int:pk>/editar/', EditMovementView.as_view(), name='edit_movement'),
     path('movimientos/nuevo2/', create_movement, name='create_movement'),
     path('transferencias/nueva/', create_transfer, name='create_transfer'),
     path('transferencias/registrar/', CreateTransferView.as_view(), name='create_transfer_json'),

@@ -946,6 +946,8 @@ def create_movement(request):
         'formset': formset,
         'warehouses': accessible_warehouses(request.user),
         'default_warehouse': default_user_warehouse(request.user),
+        'initial_items': [],
+        'movement_save_url': reverse('create_movement_json'),
     })
 
 def get_producto(request, id):
@@ -1112,6 +1114,9 @@ class CreateMovementView(View):
                 raise ValueError('Debes seleccionar un almacén.')
             if not data.get('items'):
                 raise ValueError('Debes agregar al menos un producto.')
+            status = data.get('status', 'COMPLETED')
+            if status not in {'PENDING', 'COMPLETED'}:
+                raise ValueError('El estado del movimiento no es válido.')
             warehouse = resolve_user_warehouse(request.user, data['warehouse_id'])
 
             with transaction.atomic():
@@ -1121,7 +1126,7 @@ class CreateMovementView(View):
                     warehouse=warehouse,
                     description=data.get('description', ''),
                     user=request.user,
-                    status='COMPLETED'
+                    status=status,
                 )
 
                 for item in data['items']:
@@ -1131,8 +1136,10 @@ class CreateMovementView(View):
                     if cantidad <= 0:
                         raise ValueError('La cantidad debe ser mayor que cero.')
 
-                    delta = cantidad if movement.movement_type == 'IN' else -cantidad
-                    warehouse_stock = apply_warehouse_stock_change(producto, warehouse, delta)
+                    warehouse_stock = None
+                    if movement.status == 'COMPLETED':
+                        delta = cantidad if movement.movement_type == 'IN' else -cantidad
+                        warehouse_stock = apply_warehouse_stock_change(producto, warehouse, delta)
 
                     # Crear ítem
                     MovementItem.objects.create(
@@ -1140,7 +1147,7 @@ class CreateMovementView(View):
                         product=producto,
                         quantity=cantidad,
                         unit_price=producto.cost,
-                        stock_after_movement=warehouse_stock.quantity,
+                        stock_after_movement=warehouse_stock.quantity if warehouse_stock else None,
                         observation=item.get('observation', '')
                     )
 
@@ -1155,6 +1162,86 @@ class CreateMovementView(View):
             return JsonResponse({'error': str(ve)}, status=400)
         except Exception as e:
             return JsonResponse({'error': 'Ocurrió un error inesperado.', 'detalle': str(e)}, status=500)
+
+
+@method_decorator(login_required, name='dispatch')
+@method_decorator(csrf_exempt, name='dispatch')
+class EditMovementView(View):
+    def get(self, request, pk, *args, **kwargs):
+        movement = get_object_or_404(_accessible_movements(request.user), pk=pk, status='PENDING')
+        initial_items = [
+            {
+                'product_id': item.product_id,
+                'product_name': item.product.nombre,
+                'product_description': item.product.descripcion,
+                'quantity': item.quantity,
+                'observation': item.observation or '',
+            }
+            for item in movement.items.select_related('product').all()
+        ]
+        return render(request, 'inv/movement/movement_form.html', {
+            'title': 'Editar Movimiento',
+            'warehouses': accessible_warehouses(request.user),
+            'default_warehouse': movement.warehouse,
+            'movement': movement,
+            'initial_items': initial_items,
+            'movement_save_url': reverse('edit_movement', kwargs={'pk': movement.pk}),
+        })
+
+    def post(self, request, pk, *args, **kwargs):
+        try:
+            data = json.loads(request.body)
+            if not data.get('warehouse_id') or not data.get('items'):
+                raise ValueError('Debes seleccionar un almacén y agregar al menos un producto.')
+            status = data.get('status', 'PENDING')
+            if status not in {'PENDING', 'COMPLETED'}:
+                raise ValueError('El estado del movimiento no es válido.')
+
+            with transaction.atomic():
+                movement = get_object_or_404(
+                    _accessible_movements(request.user).select_for_update(),
+                    pk=pk,
+                    status='PENDING',
+                )
+                warehouse = resolve_user_warehouse(request.user, data['warehouse_id'])
+                movement.movement_type = data['movement_type']
+                movement.warehouse = warehouse
+                movement.description = data.get('description', '')
+                movement.status = status
+                movement.save(update_fields=['movement_type', 'warehouse', 'description', 'status'])
+                movement.items.all().delete()
+
+                for item in data['items']:
+                    producto = Producto.objects.get(id=item['product_id'])
+                    cantidad = int(item['quantity'])
+                    if cantidad <= 0:
+                        raise ValueError('La cantidad debe ser mayor que cero.')
+
+                    warehouse_stock = None
+                    if status == 'COMPLETED':
+                        delta = cantidad if movement.movement_type == 'IN' else -cantidad
+                        warehouse_stock = apply_warehouse_stock_change(producto, warehouse, delta)
+
+                    MovementItem.objects.create(
+                        movement=movement,
+                        product=producto,
+                        quantity=cantidad,
+                        unit_price=producto.cost,
+                        stock_after_movement=warehouse_stock.quantity if warehouse_stock else None,
+                        observation=item.get('observation', ''),
+                    )
+
+            return JsonResponse({
+                'message': 'Movimiento actualizado correctamente.',
+                'movement_id': movement.id,
+                'redirect_url': reverse('movement_list'),
+            }, status=200)
+        except (Producto.DoesNotExist, Warehouse.DoesNotExist):
+            return JsonResponse({'error': 'Producto o almacén no encontrado.'}, status=404)
+        except (ValueError, WarehouseAccessDenied, InsufficientWarehouseStock) as exc:
+            return JsonResponse({'error': str(exc)}, status=400)
+        except Exception as exc:
+            return JsonResponse({'error': 'Ocurrió un error inesperado.', 'detalle': str(exc)}, status=500)
 
 
 @login_required(login_url='login')
