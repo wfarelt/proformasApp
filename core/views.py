@@ -555,11 +555,20 @@ class ProductListView(LoginRequiredMixin, ListView):
 
         selected_warehouse = default_user_warehouse(self.request.user)
         if selected_warehouse:
+            stock_subquery = ProductStock.objects.filter(
+                product=OuterRef('pk'),
+                warehouse=selected_warehouse,
+            ).values('quantity')[:1]
             location_subquery = ProductStock.objects.filter(
                 product=OuterRef('pk'),
                 warehouse=selected_warehouse,
             ).values('location')[:1]
             object_list = object_list.annotate(
+                warehouse_quantity=Coalesce(
+                    Subquery(stock_subquery),
+                    Value(0),
+                    output_field=IntegerField(),
+                ),
                 report_location=Coalesce(
                     Subquery(location_subquery),
                     Value('', output_field=CharField()),
@@ -567,6 +576,7 @@ class ProductListView(LoginRequiredMixin, ListView):
             )
         else:
             object_list = object_list.annotate(
+                warehouse_quantity=Value(0, output_field=IntegerField()),
                 report_location=Value('', output_field=CharField())
             )
 
@@ -1202,7 +1212,8 @@ def _get_proforma_context(proforma, request):
                     | Q(descripcion__icontains=palabra)
                 )
 
-    warehouse_stock_filter = Q(warehouse_stocks__warehouse=proforma.warehouse)
+    warehouse = proforma.warehouse or default_user_warehouse(request.user)
+    warehouse_stock_filter = Q(warehouse_stocks__warehouse=warehouse)
     productos_list = productos_list.annotate(
         warehouse_quantity=Coalesce(
             Sum('warehouse_stocks__quantity', filter=warehouse_stock_filter),
@@ -2107,17 +2118,22 @@ def brand_status(request, pk):
     return redirect('brand_list')
 
 # Reporte PDF de profoma
-def _build_insufficient_stock_product_ids(detalles):
+def _build_insufficient_stock_product_ids(detalles, warehouse):
     """Retorna IDs de productos cuyo stock es menor al total solicitado en la proforma."""
     from collections import defaultdict
 
     requested_by_product = defaultdict(int)
-    stock_by_product = {}
 
     for detalle in detalles:
         product_id = detalle.producto.id
         requested_by_product[product_id] += int(detalle.cantidad)
-        stock_by_product[product_id] = int(detalle.producto.stock)
+
+    stock_by_product = dict(
+        ProductStock.objects.filter(
+            warehouse=warehouse,
+            product_id__in=requested_by_product,
+        ).values_list('product_id', 'quantity')
+    )
 
     return {
         product_id
@@ -2129,7 +2145,8 @@ def _build_insufficient_stock_product_ids(detalles):
 def proforma_pdf(request, proforma_id):
     proforma = Proforma.objects.get(id=proforma_id)
     detalles = list(Detalle.objects.select_related('producto').filter(proforma=proforma))
-    insufficient_stock_product_ids = _build_insufficient_stock_product_ids(detalles)
+    warehouse = proforma.warehouse or default_user_warehouse(proforma.usuario)
+    insufficient_stock_product_ids = _build_insufficient_stock_product_ids(detalles, warehouse)
     
     # Convertimos los valores a Decimal para mayor precisión
     total = Decimal(proforma.total)
@@ -2176,7 +2193,8 @@ def proforma_pdf(request, proforma_id):
 def proforma_almacen(request, proforma_id):
     proforma = Proforma.objects.get(id=proforma_id)
     detalles = list(Detalle.objects.select_related('producto').filter(proforma=proforma))
-    insufficient_stock_product_ids = _build_insufficient_stock_product_ids(detalles)
+    warehouse = proforma.warehouse or default_user_warehouse(proforma.usuario)
+    insufficient_stock_product_ids = _build_insufficient_stock_product_ids(detalles, warehouse)
     
     # Convertimos los valores a Decimal para mayor precisión
     total = Decimal(proforma.total)

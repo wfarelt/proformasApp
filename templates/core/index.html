@@ -136,6 +136,14 @@
               {% elif user.role == 'CAJA' %}
                 <small class="d-block text-muted">Panel de Caja</small>
               {% endif %}
+              <small class="d-block text-info">
+                <i class="fas fa-warehouse mr-1"></i>
+                {% if request.user.default_warehouse %}
+                  {{ request.user.default_warehouse.name }}
+                {% else %}
+                  Sin almacén asignado
+                {% endif %}
+              </small>
           {% else %}
               <a href="{% url 'login' %}" class="d-block">Iniciar sesión</a>
           {% endif %}

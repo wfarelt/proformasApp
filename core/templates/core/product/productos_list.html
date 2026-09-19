@@ -24,6 +24,7 @@
     {% endif %}
 </th>
 <th class="text-right">Stock</th>
+<th class="text-right">Total Stock</th>
 <th class="text-center">Ubicación</th>
 {% if show_custom_attributes %}
     {% for col in custom_attribute_columns %}
@@ -44,6 +45,7 @@
 <td>{{ obj.brand.initials }}</td>
 <td class="text-right">{{ obj.cost }}</td>
 <td class="text-right">{{ obj.precio }}</td>
+<td class="text-right">{{ obj.warehouse_quantity }}</td>
 <td class="text-right">{{ obj.stock }}</td>
 {% if obj.report_location %}
     <td class="text-center">{{ obj.report_location }}</td>

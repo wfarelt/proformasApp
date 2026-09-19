@@ -5,6 +5,7 @@ from io import BytesIO
 from django.db import IntegrityError, transaction
 from core.services.inventory_service import InsufficientWarehouseStock, apply_warehouse_stock_change
 from core.services.warehouse_access_service import WarehouseAccessDenied, resolve_user_warehouse
+from core.views import _build_insufficient_stock_product_ids
 from inv.services.warehouse_transfer_service import create_warehouse_transfer
 
 from openpyxl import Workbook, load_workbook
@@ -362,6 +363,52 @@ class ProductCatalogImportTemplateTests(TestCase):
 
 
 class WarehouseStockTests(TestCase):
+	def test_product_list_shows_stock_from_user_default_warehouse(self):
+		user_warehouse = Warehouse.objects.create(name='Almacen usuario', code='USUARIO')
+		other_warehouse = Warehouse.objects.create(name='Otro almacen lista', code='LISTA-OTRO')
+		product = Producto.objects.create(nombre='WH-LIST', stock=0)
+		apply_warehouse_stock_change(product, user_warehouse, 2)
+		apply_warehouse_stock_change(product, other_warehouse, 7)
+		user = User.objects.create_user(
+			username='product-list-user',
+			email='product-list@example.com',
+			name='Product List User',
+			password='secret123',
+			default_warehouse=user_warehouse,
+		)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse('product_list'))
+
+		listed_product = response.context['object_list'].get(id=product.id)
+		self.assertEqual(listed_product.warehouse_quantity, 2)
+
+	def test_proforma_stock_warning_uses_its_warehouse_stock(self):
+		proforma_warehouse = Warehouse.objects.create(name='Almacen proforma', code='PROFORMA')
+		other_warehouse = Warehouse.objects.create(name='Otro almacen', code='OTRO')
+		product = Producto.objects.create(nombre='WH-PROFORMA', stock=0)
+		apply_warehouse_stock_change(product, proforma_warehouse, 1)
+		apply_warehouse_stock_change(product, other_warehouse, 5)
+		user = User.objects.create_user(
+			username='proforma-stock-user',
+			email='proforma-stock@example.com',
+			name='Proforma Stock User',
+			password='secret123',
+			default_warehouse=proforma_warehouse,
+		)
+		proforma = Proforma.objects.create(usuario=user, warehouse=proforma_warehouse)
+		detalle = Detalle.objects.create(
+			proforma=proforma,
+			producto=product,
+			cantidad=2,
+			precio_venta=10,
+			subtotal=20,
+		)
+
+		insufficient_ids = _build_insufficient_stock_product_ids([detalle], proforma_warehouse)
+
+		self.assertEqual(insufficient_ids, {product.id})
+
 	def test_product_can_have_only_one_stock_record_per_warehouse(self):
 		warehouse = Warehouse.objects.create(name='Almacen A', code='A')
 		product = Producto.objects.create(nombre='WH-001', stock=10)
