@@ -30,3 +30,4 @@
 - `core`: Productos, clientes, proformas, usuarios, empresas, marcas, kits
 - `inv`: Inventario, compras, proveedores, movimientos de stock, reportes
 
+python manage.py shell < initial_stock.py
