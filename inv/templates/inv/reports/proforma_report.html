@@ -32,19 +32,41 @@
     </div>
     <div class="card-body">
         <form method="get" action="{% url 'proforma_report' %}" class="mb-4 row g-3 report-filters">
-            <div class="col-md-4">
-                <label>Fecha Inicio</label>
+            <div class="col-md-3">
+                <label for="fecha_inicio">Fecha Inicio</label>
                 <input type="date" id="fecha_inicio" name="fecha_inicio" class="form-control" value="{{ fecha_inicio }}" required>
             </div>
-            <div class="col-md-4">
-                <label>Fecha Fin</label>
+            <div class="col-md-3">
+                <label for="fecha_fin">Fecha Fin</label>
                 <input type="date" id="fecha_fin" name="fecha_fin" class="form-control" value="{{ fecha_fin }}" required>
             </div>
-            <div class="col-md-4 align-self-end report-actions">
+            <div class="col-md-3">
+                <label for="warehouse_id">Sucursal</label>
+                <select id="warehouse_id" name="warehouse_id" class="form-control">
+                    {% if request.user.can_manage_all_warehouses %}
+                    <option value="">Todas las sucursales</option>
+                    {% endif %}
+                    {% for warehouse in warehouses %}
+                    <option value="{{ warehouse.id }}" {% if selected_warehouse and warehouse.id == selected_warehouse.id %}selected{% endif %}>{{ warehouse.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="seller_id">Vendedor</label>
+                <select id="seller_id" name="seller_id" class="form-control">
+                    <option value="">Todos los vendedores</option>
+                    {% for seller in sellers %}
+                    <option value="{{ seller.id }}" {% if selected_seller and seller.id == selected_seller.id %}selected{% endif %}>
+                        {{ seller.name|default:seller.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 report-actions">
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-search"></i> Buscar
                 </button>
-                <a class="btn btn-secondary" target="_blank" href="?fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&print=1">
+                <a class="btn btn-secondary" target="_blank" href="?fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&warehouse_id={{ selected_warehouse.id|default:'' }}&seller_id={{ selected_seller_id }}&print=1">
                     <i class="fas fa-print"></i> Imprimir
                 </a>
             </div>
@@ -117,7 +139,7 @@
             <ul class="pagination">
                 {% if proformas.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&page={{ proformas.previous_page_number }}">Anterior</a>
+                    <a class="page-link" href="?fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&warehouse_id={{ selected_warehouse.id|default:'' }}&seller_id={{ selected_seller_id }}&page={{ proformas.previous_page_number }}">Anterior</a>
                 </li>
                 {% else %}
                 <li class="page-item disabled"><span class="page-link">Anterior</span></li>
@@ -128,14 +150,14 @@
                 <li class="page-item active"><span class="page-link">{{ num }}</span></li>
                 {% else %}
                 <li class="page-item">
-                    <a class="page-link" href="?fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&page={{ num }}">{{ num }}</a>
+                    <a class="page-link" href="?fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&warehouse_id={{ selected_warehouse.id|default:'' }}&seller_id={{ selected_seller_id }}&page={{ num }}">{{ num }}</a>
                 </li>
                 {% endif %}
                 {% endfor %}
     
                 {% if proformas.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&page={{ proformas.next_page_number }}">Siguiente</a>
+                    <a class="page-link" href="?fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&warehouse_id={{ selected_warehouse.id|default:'' }}&seller_id={{ selected_seller_id }}&page={{ proformas.next_page_number }}">Siguiente</a>
                 </li>
                 {% else %}
                 <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
@@ -148,154 +170,7 @@
 {% endblock %}
 
 {% block scripts %}
+{{ report_data|json_script:"proforma-report-data" }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    (function () {
-        const monthLabels = {{ month_labels_json|safe }};
-        const monthAmounts = {{ month_amounts_json|safe }};
-        const sellerLabels = {{ seller_labels_json|safe }};
-        const sellerSales = {{ seller_sales_json|safe }};
-
-        const sellerValueLabelsPlugin = {
-            id: 'sellerValueLabelsPlugin',
-            afterDatasetsDraw(chart) {
-                const dataset = chart.data.datasets[0];
-                if (!dataset || !dataset.data || dataset.data.length === 0) {
-                    return;
-                }
-
-                const ctx = chart.ctx;
-                const meta = chart.getDatasetMeta(0);
-
-                ctx.save();
-                ctx.font = '600 12px Arial';
-                ctx.fillStyle = '#1f2937';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'bottom';
-
-                meta.data.forEach((bar, index) => {
-                    const rawValue = Number(dataset.data[index] || 0);
-                    const label = '$ ' + rawValue.toLocaleString('en-US', {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 2
-                    });
-                    ctx.fillText(label, bar.x, bar.y - 6);
-                });
-
-                ctx.restore();
-            }
-        };
-
-        const monthCtx = document.getElementById('chartMonthDailyExecuted');
-        if (monthCtx) {
-            new Chart(monthCtx, {
-                type: 'line',
-                data: {
-                    labels: monthLabels,
-                    datasets: [{
-                        label: 'Monto neto ejecutado por dia',
-                        data: monthAmounts,
-                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.25,
-                        pointRadius: 3,
-                        pointHoverRadius: 5
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    layout: {
-                        padding: {
-                            left: 12,
-                            right: 8,
-                            top: 8,
-                            bottom: 0
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                font: {
-                                    size: 13,
-                                    weight: '600'
-                                },
-                                callback: function(value) {
-                                    return '$ ' + Number(value).toLocaleString('en-US', {
-                                        minimumFractionDigits: 0,
-                                        maximumFractionDigits: 0
-                                    });
-                                }
-                            }
-                        },
-                        x: {
-                            ticks: {
-                                font: {
-                                    size: 11
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        const sellerCtx = document.getElementById('chartTodaySalesBySeller');
-        if (sellerCtx) {
-            new Chart(sellerCtx, {
-                type: 'bar',
-                plugins: [sellerValueLabelsPlugin],
-                data: {
-                    labels: sellerLabels,
-                    datasets: [{
-                        label: 'Monto neto ejecutado',
-                        data: sellerSales,
-                        backgroundColor: 'rgba(40, 167, 69, 0.6)',
-                        borderColor: 'rgba(40, 167, 69, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return '$ ' + Number(value).toLocaleString('en-US', {
-                                        minimumFractionDigits: 0,
-                                        maximumFractionDigits: 0
-                                    });
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        const filterForm = document.querySelector('form[method="get"]');
-        const fechaInicioInput = document.getElementById('fecha_inicio');
-        const fechaFinInput = document.getElementById('fecha_fin');
-        if (filterForm && fechaInicioInput && fechaFinInput) {
-            filterForm.addEventListener('submit', function (ev) {
-                if (fechaInicioInput.value && fechaFinInput.value && fechaInicioInput.value >= fechaFinInput.value) {
-                    ev.preventDefault();
-                    alert('La fecha inicio debe ser menor que la fecha fin.');
-                }
-            });
-        }
-
-        const printMode = '{{ print_mode|yesno:"true,false" }}' === 'true';
-        if (printMode) {
-            window.setTimeout(function () {
-                window.print();
-            }, 250);
-        }
-    })();
-</script>
+<script src="{% static 'inv/js/proforma_report.js' %}"></script>
 {% endblock %}

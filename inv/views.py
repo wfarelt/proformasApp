@@ -21,6 +21,7 @@ def download_inventory_template(request):
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.utils.timezone import now
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
@@ -492,6 +493,34 @@ def proforma_report(request):
     proformas = Proforma.objects.none()
     total_general = 0
     print_mode = request.GET.get('print') == '1'
+    warehouses = accessible_warehouses(request.user)
+    warehouse_filter_invalid = False
+    try:
+        selected_warehouse = _selected_warehouse_for_user(request)
+    except WarehouseAccessDenied as exc:
+        messages.error(request, str(exc))
+        selected_warehouse = None
+        warehouse_filter_invalid = True
+
+    company_proformas = Proforma.objects.all()
+    if request.user.company_id:
+        company_proformas = company_proformas.filter(company_id=request.user.company_id)
+    else:
+        company_proformas = company_proformas.filter(company__isnull=True)
+
+    sellers = get_user_model().objects.filter(
+        proformas__in=company_proformas.filter(estado='EJECUTADO')
+    ).distinct().order_by('name', 'username')
+    selected_seller_id = request.GET.get('seller_id', '').strip()
+    selected_seller = None
+    if selected_seller_id:
+        try:
+            selected_seller = sellers.filter(pk=int(selected_seller_id)).first()
+        except ValueError:
+            selected_seller = None
+        if selected_seller is None:
+            messages.error(request, 'El vendedor seleccionado no está disponible.')
+            selected_seller_id = ''
 
     today = timezone.localdate()
     default_start = today.replace(day=1)
@@ -518,11 +547,17 @@ def proforma_report(request):
         fi = make_aware(datetime.combine(fi_date, time.min))
         ff = make_aware(datetime.combine(ff_date + timedelta(days=1), time.min))
 
-        base_queryset = Proforma.objects.filter(
+        base_queryset = company_proformas.filter(
             estado='EJECUTADO',
             fecha__gte=fi,
             fecha__lt=ff,
         )
+        if warehouse_filter_invalid:
+            base_queryset = base_queryset.none()
+        elif selected_warehouse:
+            base_queryset = base_queryset.filter(warehouse=selected_warehouse)
+        if selected_seller:
+            base_queryset = base_queryset.filter(usuario=selected_seller)
 
         proformas_queryset = base_queryset.order_by('-fecha')
 
@@ -562,13 +597,21 @@ def proforma_report(request):
         'proformas': proformas,
         'fecha_inicio': fecha_inicio,
         'fecha_fin': fecha_fin,
+        'warehouses': warehouses,
+        'selected_warehouse': selected_warehouse,
+        'sellers': sellers,
+        'selected_seller': selected_seller,
+        'selected_seller_id': selected_seller_id,
         'print_mode': print_mode,
         'total_general': total_general,
         'title': 'Reporte de Proformas',
-        'month_labels_json': json.dumps(month_labels),
-        'month_amounts_json': json.dumps(month_amounts),
-        'seller_labels_json': json.dumps(seller_labels),
-        'seller_sales_json': json.dumps(seller_sales),
+        'report_data': {
+            'month_labels': month_labels,
+            'month_amounts': month_amounts,
+            'seller_labels': seller_labels,
+            'seller_sales': seller_sales,
+            'print_mode': print_mode,
+        },
     }
     return render(request, 'inv/reports/proforma_report.html', context)
 
